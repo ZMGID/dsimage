@@ -1,7 +1,7 @@
 # 模板规范（模板的模板）
 
 > 新建或修改任何模板**之前必读本文件**。每个模板 JSON 是一个场景的完整执行规范：Agent 按 SKILL.md 匹配表命中后，以模板字段为准执行，SKILL.md 不含场景细节。
-> 写完必须：① 跑 `python3 scripts/validate_templates.py` 通过 → ② 在 SKILL.md 匹配表登记 → ③ 提交。
+> 写完必须：① 跑 `python3 scripts/check_templates.py` 通过 → ② 在 SKILL.md 匹配表登记 → ③ 提交。
 
 ## 一、文件约定
 
@@ -125,7 +125,7 @@
 
 ## 六、完整性校验清单
 
-- [ ] `python3 scripts/validate_templates.py` 全部通过
+- [ ] `python3 scripts/check_templates.py` 全部通过
 - [ ] keywords 与现有模板无重复
 - [ ] workflow 是场景特化步骤，无空话
 - [ ] composition_rules 数值齐、angles 带英文短语

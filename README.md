@@ -95,7 +95,7 @@ IMG_API_KEY=your-api-key-here
 也可以不经过 Skill，直接调用生图脚本：
 
 ```bash
-python3 skills/dsimage/scripts/generate_image.py \
+python3 skills/dsimage/scripts/gen_image.py \
   --prompt "clean product hero image, white background, studio lighting" \
   --size 1:1 --resolution 2k --image data/product.jpg
 ```
@@ -109,6 +109,7 @@ python3 skills/dsimage/scripts/generate_image.py \
 | `--resolution` | 分辨率档位 `1k` / `2k` / `4k`（4K 仅 6 种宽幅） | `2k` |
 | `--image` | 产品参考图路径，提升产品一致性 | 无 |
 | `--output-dir` | 图片输出目录 | `generated-images` |
+| `--env-file` | 指定 `.env` 路径（默认自动向上查找，兜底 Skill 目录） | 自动 |
 | `--mode` | `sync` / `async`，按 URL 是否含 apimart 自动检测 | 自动 |
 | `--format` | `png` / `jpeg` / `webp` | `png` |
 
@@ -118,8 +119,13 @@ python3 skills/dsimage/scripts/generate_image.py \
 
 ```
 dsimage/
-├── skills/dsimage/          # Skill 本体：SKILL.md + SETUP.md + 25 个模板 + 生图脚本
-├── docs/                    # API 文档、教程笔记、演示截图
+├── skills/dsimage/          # Skill 本体
+│   ├── SKILL.md             # 技能定义与通用流程
+│   ├── SETUP.md             # 安装配置指南（Agent 读取）
+│   ├── CREATE_TEMPLATE.md   # 模板创建流程（Agent 读取）
+│   ├── scripts/             # gen_image.py 生图 + check_templates.py 模板校验
+│   └── references/templates/  # 25 个模板 + _TEMPLATE_SPEC.md 模板规范
+├── data/                    # 产品原图目录（自建，放入你的产品图）
 ├── generated-images/        # 生图输出目录（运行时自动创建，不入库）
 └── .env.example             # API 配置模板
 ```

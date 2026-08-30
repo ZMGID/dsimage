@@ -87,7 +87,7 @@
 **按顺序执行**：
 
 1. 组装完整 JSON，写入 `references/templates/NN-xxx.json`（UTF-8，中文不转义）。
-2. 运行 `python3 scripts/validate_templates.py`，**必须全部通过**；不通过就修，修完重跑。
+2. 运行 `python3 scripts/check_templates.py`，**必须全部通过**；不通过就修，修完重跑。
 3. 向用户展示完整模板内容 + `examples` 里 2 条成品 Prompt。
 4. 在 SKILL.md 匹配表登记一行（触发词 | 文件名）；README 中模板数量如有提及则同步。
 5. 询问用户是否用真实产品图试跑 1 张验证（会产生 API 费用须先征得同意；宿主自带生图则直接生成）。试跑图按模板 `pitfalls` 自查后一并展示。

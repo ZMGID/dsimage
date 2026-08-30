@@ -159,23 +159,6 @@ def size_to_ratio(size: str) -> str:
 
 # ── 图片编码 ──────────────────────────────────────────────
 
-def encode_image_object(image_path: str) -> dict[str, str]:
-    path = Path(image_path)
-    if not path.is_file():
-        fail(f"参考图片不存在：{image_path}")
-    suffix = path.suffix.lower().lstrip(".")
-    mime_map = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
-                "webp": "image/webp", "gif": "image/gif"}
-    mime = mime_map.get(suffix)
-    if not mime:
-        fail(f"不支持的图片格式：.{suffix}，仅支持 png/jpg/jpeg/webp/gif。")
-    try:
-        data = path.read_bytes()
-    except OSError as exc:
-        fail(f"无法读取参考图片：{exc}")
-    return {"type": mime, "data": base64.b64encode(data).decode("ascii")}
-
-
 def encode_image_data_uri(image_path: str) -> str:
     data, mime, _ = read_image_file(image_path)
     b64 = base64.b64encode(data).decode("ascii")

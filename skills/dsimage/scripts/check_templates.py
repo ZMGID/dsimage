@@ -10,8 +10,6 @@ TPL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 REQUIRED = ["id", "name", "keywords", "trigger_phrases", "prompt_template",
             "default_ratio", "composition_rules", "text_rules", "workflow",
             "pitfalls", "examples", "supports_image_reference"]
-VARIABLES_OK = {"{product_description}", "{material_description}", "{color}",
-                "{scene_description}", "{brand_name}"}
 
 
 def fail(fname: str, msg: str) -> None:

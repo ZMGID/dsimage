@@ -31,7 +31,7 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 4. 多图任务：先建立 **Campaign Style Lock**（见下文），原样放进每张 Prompt 开头。
 5. 商品/营销任务：先做**转化驱动力诊断**（见下文）。
 6. 逐张写 Prompt：Style Lock → 模板 `prompt_template` 骨架（替换 `{variables}`）→ 按需套用 `variants` / `category_tips` → 按通用规则收尾。
-7. Generate 模式：宿主自带生图工具（如 Codex 的 imagegen）优先直接使用；没有时调用 `scripts/generate_image.py`，用户提供了产品图必须带 `--image`。**命令参数从模板取**：`--size` 用模板 `default_ratio`；`--resolution` / `--format` / `--quality` 用模板 `generation` 字段（未写则用脚本默认）；用户显式指定的参数优先于模板值。
+7. Generate 模式：宿主自带生图工具（如 Codex 的 imagegen）优先直接使用；没有时调用 `scripts/gen_image.py`，用户提供了产品图必须带 `--image`。**命令参数从模板取**：`--size` 用模板 `default_ratio`；`--resolution` / `--format` / `--quality` 用模板 `generation` 字段（未写则用脚本默认）；用户显式指定的参数优先于模板值。
 8. 出图后按模板 `pitfalls` + 下方 QA 清单检查，返回文件路径和关键假设。
 
 ---
@@ -51,9 +51,9 @@ IMG_API_KEY=your-api-key
 **出图通道优先级**：宿主 Agent 自带生图能力（如 Codex 的原生 imagegen）时优先直接使用，Prompt 交给它即可，无需任何配置；否则调用脚本：
 
 ```bash
-python3 scripts/generate_image.py --prompt "..." --size 1:1 --resolution 2k
-python3 scripts/generate_image.py --prompt-file prompt.txt --output-dir generated-images
-python3 scripts/generate_image.py --env-file .env --prompt-file prompt.txt
+python3 scripts/gen_image.py --prompt "..." --size 1:1 --resolution 2k
+python3 scripts/gen_image.py --prompt-file prompt.txt --output-dir generated-images
+python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 ```
 
 脚本要点：
@@ -122,7 +122,7 @@ python3 scripts/generate_image.py --env-file .env --prompt-file prompt.txt
 - **用模板出图**（"基于 xx.jpg 生成主图"）→ 按上方核心流程走。
 - **制作一个模板**（用户丢来一堆甲方材料/风格参考/要求总结，说"制作一个模板 / 创建模板 / 建个模板"，可能带"使用 dsimage"）→ 这是模板创建任务，**读 `CREATE_TEMPLATE.md`**，按其 4 个固定检查点（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮。
 
-**新建或修改模板的规范**：字段规范看 `references/templates/_TEMPLATE_SPEC.md`；写完跑 `python3 scripts/validate_templates.py` 校验，并在上方匹配表登记。
+**新建或修改模板的规范**：字段规范看 `references/templates/_TEMPLATE_SPEC.md`；写完跑 `python3 scripts/check_templates.py` 校验，并在上方匹配表登记。
 
 ---
 
