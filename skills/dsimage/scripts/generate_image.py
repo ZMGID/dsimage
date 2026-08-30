@@ -26,6 +26,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -176,6 +177,12 @@ def encode_image_object(image_path: str) -> dict[str, str]:
 
 
 def encode_image_data_uri(image_path: str) -> str:
+    data, mime, _ = read_image_file(image_path)
+    b64 = base64.b64encode(data).decode("ascii")
+    return f"data:{mime};base64,{b64}"
+
+
+def read_image_file(image_path: str) -> tuple[bytes, str, str]:
     path = Path(image_path)
     if not path.is_file():
         fail(f"参考图片不存在：{image_path}")
@@ -189,11 +196,30 @@ def encode_image_data_uri(image_path: str) -> str:
         data = path.read_bytes()
     except OSError as exc:
         fail(f"无法读取参考图片：{exc}")
-    b64 = base64.b64encode(data).decode("ascii")
-    return f"data:{mime};base64,{b64}"
+    return data, mime, path.name
 
 
 # ── HTTP 工具 ──────────────────────────────────────────────
+
+def _post_json(request: urllib.request.Request, timeout: int, what: str) -> dict[str, Any]:
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            raw = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        fail(f"{what}返回 HTTP {exc.code}：{detail}")
+    except urllib.error.URLError as exc:
+        fail(f"无法连接接口：{exc.reason}")
+    except (http.client.RemoteDisconnected, TimeoutError):
+        fail("接口连接失败或超时，请稍后重试。")
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        fail(f"{what}返回的不是有效 JSON：{raw[:500]}")
+    if not isinstance(parsed, dict):
+        fail(f"{what}格式不正确：顶层结果不是对象。")
+    return parsed
+
 
 def http_post(url: str, api_key: str, payload: dict[str, Any], timeout: int = 120) -> dict[str, Any]:
     body = json.dumps(payload).encode("utf-8")
@@ -202,23 +228,31 @@ def http_post(url: str, api_key: str, payload: dict[str, Any], timeout: int = 12
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "User-Agent": UA},
         method="POST",
     )
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            raw = response.read().decode("utf-8")
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        fail(f"接口返回 HTTP {exc.code}：{detail}")
-    except urllib.error.URLError as exc:
-        fail(f"无法连接接口：{exc.reason}")
-    except (http.client.RemoteDisconnected, TimeoutError):
-        fail("接口连接失败或超时，请稍后重试。")
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
-        fail(f"接口返回的不是有效 JSON：{raw[:500]}")
-    if not isinstance(parsed, dict):
-        fail("接口返回格式不正确：顶层结果不是对象。")
-    return parsed
+    return _post_json(request, timeout, "接口")
+
+
+def http_post_multipart(url: str, api_key: str, fields: dict[str, str], file_field: str,
+                        filename: str, file_data: bytes, file_mime: str,
+                        timeout: int = 180) -> dict[str, Any]:
+    """以 multipart/form-data 提交（OpenAI /images/edits 图生图标准格式）。"""
+    boundary = "dsimage-" + uuid.uuid4().hex
+    chunks: list[bytes] = []
+    for name, value in fields.items():
+        chunks.append(
+            f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n".encode("utf-8")
+            + str(value).encode("utf-8") + b"\r\n"
+        )
+    chunks.append(
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"{file_field}\"; filename=\"{filename}\"\r\n"
+        f"Content-Type: {file_mime}\r\n\r\n".encode("utf-8") + file_data + b"\r\n"
+    )
+    chunks.append(f"--{boundary}--\r\n".encode("utf-8"))
+    request = urllib.request.Request(
+        url, data=b"".join(chunks),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": f"multipart/form-data; boundary={boundary}", "User-Agent": UA},
+        method="POST",
+    )
+    return _post_json(request, timeout, "图生图接口")
 
 
 def http_get(url: str, api_key: str, timeout: int = 30) -> dict[str, Any]:
@@ -242,17 +276,39 @@ def http_get(url: str, api_key: str, timeout: int = 30) -> dict[str, Any]:
 
 # ── 同步模式（OpenAI 兼容）──────────────────────────────────
 
+SYNC_SIZE_MAP: dict[str, str] = {
+    "1:1": "1024x1024",
+    "2:3": "1024x1536", "3:4": "1024x1536", "4:5": "1024x1536",
+    "9:16": "1024x1536", "1:2": "1024x1536", "9:21": "1024x1536",
+    "3:2": "1536x1024", "4:3": "1536x1024", "5:4": "1536x1024",
+    "16:9": "1536x1024", "2:1": "1536x1024", "21:9": "1536x1024",
+}
+
+
+def sync_size(size: str) -> str:
+    """同步端点只接受像素尺寸或 auto；把比例翻译成最接近的档位。"""
+    lowered = size.lower()
+    if "x" in lowered or lowered == "auto":
+        return lowered
+    return SYNC_SIZE_MAP.get(size_to_ratio(size), "auto")
+
+
 def build_sync_payload(args: argparse.Namespace, prompt: str, model: str) -> dict[str, Any]:
-    payload: dict[str, Any] = {"model": model, "prompt": prompt, "n": args.n, "size": args.size}
-    if args.quality:
-        payload["quality"] = args.quality
+    return {"model": model, "prompt": prompt, "n": args.n, "size": sync_size(args.size)}
+
+
+def run_sync(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
+             model: str, output_dir: Path, fmt: str) -> list[Path]:
     if args.image:
-        payload["image_urls"] = [encode_image_data_uri(args.image)]
-    return payload
-
-
-def run_sync(base_url: str, api_key: str, payload: dict[str, Any],
-             output_dir: Path, fmt: str) -> list[Path]:
+        endpoint = f"{base_url}/images/edits"
+        file_data, file_mime, filename = read_image_file(args.image)
+        fields = {"model": model, "prompt": prompt, "n": str(args.n), "size": sync_size(args.size)}
+        if args.quality:
+            fields["quality"] = args.quality
+        print(f"[sync] 图生图模式：参考图经 {endpoint} 提交...", file=sys.stderr)
+        result = http_post_multipart(endpoint, api_key, fields, "image", filename, file_data, file_mime)
+        return save_sync_images(result, output_dir, fmt)
+    payload = build_sync_payload(args, prompt, model)
     endpoint = f"{base_url}/images/generations"
     print(f"[sync] 提交生成请求到 {endpoint}...", file=sys.stderr)
     result = http_post(endpoint, api_key, payload, timeout=120)
@@ -434,8 +490,7 @@ def main() -> None:
         paths = run_async(base_url, api_key, payload, Path(args.output_dir),
                           args.format, args.poll_interval, args.timeout)
     else:
-        payload = build_sync_payload(args, prompt, model)
-        paths = run_sync(base_url, api_key, payload, Path(args.output_dir), args.format)
+        paths = run_sync(base_url, api_key, args, prompt, model, Path(args.output_dir), args.format)
 
     print("生成完成：")
     for path in paths:
