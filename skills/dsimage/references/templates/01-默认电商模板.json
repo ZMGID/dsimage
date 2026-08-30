@@ -10,39 +10,45 @@
       "font": "现代无衬线体（SF Pro Display 类），全套只用这一族",
       "tone": "专业、高级、简洁、有销售力"
     },
-    "style_source": "dsimage 内置默认 Style Lock（高级简洁、off-white 底 + 炭灰字 + 单强调色）"
+    "style_source": "dsimage 内置起步模板：无甲方规范时使用。有品牌材料 / 风格 PDF 时走 CREATE_TEMPLATE.md 建定制模板，不要把本 pack 扩成客户套图"
   },
   "keywords": [
     "默认模板",
     "default template",
     "通用电商主图",
-    "高级简洁",
-    "品牌模板",
-    "报价单风格"
+    "起步套图",
+    "starter listing",
+    "通用起步模板"
   ],
   "trigger_phrases": [
     "用默认模板",
     "默认风格出图",
-    "套默认模板生成"
+    "套默认模板生成",
+    "没有指定模板就用默认"
   ],
+  "style_lock": "Campaign Style Lock: consistent dsimage starter ecommerce visual system across the entire image set; fixed palette #F5F5F0 off-white background, #2D2D2D charcoal text, #C8452C single accent, #888888 secondary labels; modern geometric sans-serif (SF Pro Display family) only; neutral-cool studio lighting; rounded rectangular info labels; consistent thin-line icon style; clean product photography mixed with minimal infographic elements; stable product scale and exact identity from the supplied reference; generous whitespace; no palette drift, no mixed fonts, no random backgrounds, no inconsistent lighting.",
   "text_rules": {
-    "headline": "核心卖点 ≤10 字，28-36pt，#2D2D2D，左上角",
-    "price": "价格数字 36-48pt，强调色 #C8452C，左下角固定位置，醒目（价格必须由用户提供，不虚构）",
-    "labels": "卖点标签 ≤2 个，14-16pt，细线图标 + 短词",
-    "limit": "每张文字总量 ≤40 字，禁止大段说明",
-    "language": "图内文字中文，用「」包裹关键短语"
+    "headline": "核心卖点 ≤10 字，28-36pt，#2D2D2D，仅 H1 左上角；用户没给则按产品外观拟一句，出图时写入假设",
+    "price": "仅 H1：价格数字 36-48pt，#C8452C，左下角。缺价格先问；用户不补则用示意报价出图，不要省略整块、不要跳槽",
+    "labels": "卖点标签 ≤4 个，14-16pt，细线图标 + 短词，强调色 #C8452C；用户没给则从参考图可见材质/结构拟 3-4 条",
+    "spec": "仅 H5：尺寸数字 14-16pt #2D2D2D，细线 #888888。缺尺寸先问；用户不补则用示意尺寸/步骤出图，本槽必须生成",
+    "limit": "H1 ≤40 字；H4 ≤50 字；H2 单行 ≤8 字；H3 无文字",
+    "language": "图内文字中文，用「」包裹关键短语；海外主图按用户要求可改为无文字"
   },
   "pack": {
-    "default_count": "3 张（用户指定数量时以用户为准）",
+    "default_count": "5 张起步套图（用户指定数量时以用户为准）。本 pack 是无模板时的缺省，不是 Amazon 5+9 或甲方定制包",
     "images": [
       {
         "slot": "H1",
-        "purpose": "主图：产品突出 + 价格信息",
+        "purpose": "主图：产品主张 + 报价块",
         "scene": "01-hero-image.json",
         "ratio": "1:1",
         "overrides": {
-          "layout": "标题左上、产品居中偏上、价格左下，元素位置每张一致",
-          "price_block": "44pt 强调色 #C8452C，左下角，仅确认报价后渲染"
+          "background": "#F5F5F0，禁止写成白或 clean white",
+          "product_ratio": "38-42%",
+          "layout": "标题左上、产品居中偏上 3/4 角、价格左下；此版式不得套到其他槽",
+          "price_block": "44pt #C8452C 左下角。缺价格先问；不补则示意报价，不要留空整块",
+          "forbidden": "不把背景写成 #FFFFFF；不因缺文案而跳过本槽"
         }
       },
       {
@@ -51,7 +57,8 @@
         "scene": "04-detail-macro.json",
         "ratio": "1:1",
         "overrides": {
-          "layout": "微距特写居中，单行工艺标注",
+          "background": "#F5F5F0",
+          "layout": "微距特写居中，最多一行工艺标注，无价格块",
           "product_ratio": "55-60%"
         }
       },
@@ -61,33 +68,62 @@
         "scene": "02-lifestyle-scene.json",
         "ratio": "4:5",
         "overrides": {
-          "layout": "生活场景自然融入，产品不刻意居中",
-          "product_ratio": "25%"
+          "layout": "生活场景自然融入，产品不刻意居中，无图内文字、无价格块",
+          "product_ratio": "20-25%",
+          "lighting": "中性冷色，与 H1 同一色温，禁止黄金时段暖调把套图带偏"
+        }
+      },
+      {
+        "slot": "H4",
+        "purpose": "卖点信息图",
+        "scene": "11-infographic.json",
+        "ratio": "2:3",
+        "overrides": {
+          "background": "#F5F5F0",
+          "layout": "标题区 + 产品区 + 3-4 个利益点图标，双栏或网格；Prompt 以 E-commerce infographic 开头",
+          "product_ratio": "32-38%",
+          "accent": "#C8452C，覆盖情景默认金 #D4AF37",
+          "condition": "缺卖点先问；不补则按参考图可见材质/结构拟 3-4 条，本槽必须生成",
+          "forbidden": "不得退化成纯产品照片"
+        }
+      },
+      {
+        "slot": "H5",
+        "purpose": "尺寸规格",
+        "scene": "13-size-spec.json",
+        "ratio": "2:3",
+        "overrides": {
+          "background": "#F5F5F0",
+          "layout": "产品居中 + 尺寸线/步骤",
+          "condition": "缺尺寸或步骤先问；不补则用示意数字/三步用法出图，本槽必须生成，禁止跳过"
         }
       }
     ]
   },
   "workflow": [
-    "读取 pack，逐张确认槽位、用途、引用情景和比例；用户指定数量/比例时覆盖默认",
-    "建立 Campaign Style Lock：色板用 template_meta.brand 的 hex（#F5F5F0 底 / #2D2D2D 字 / #C8452C 强调），原样写进每张 Prompt 开头",
-    "每张图：读取引用的情景文件 → 用情景骨架 + 本模板品牌 hex + text_rules 拼 Prompt，版式固定（标题左上、产品居中偏上、价格左下）",
-    "调用 scripts/gen_image.py 出图，--image 带用户产品参考图，参数按所引情景的 generation",
-    "按各情景 pitfalls + 本模板 pitfalls 逐条检查，重点核对价格文字与跨张版式一致性",
-    "输出文件路径清单和假设说明"
+    "确认这是起步套图：用户若带来品牌材料或要求 Amazon 全套 / 报价表，改走 CREATE_TEMPLATE.md，不要把 H1–H5 硬扩成客户包",
+    "读取 pack；用户指定数量、比例或删槽时覆盖默认。价格、卖点、尺寸等缺了先问一轮；用户不补或说先出图，则按假设生成 H1–H5 全套，禁止因缺参数跳槽",
+    "原样复用 style_lock，写入每张 Prompt 开头，禁止改写或缩短",
+    "逐张完整读取引用情景，只应用该槽位 overrides（H1 的左上标题/左下价格不得套到 H2–H5），用情景骨架 + 品牌 hex + text_rules 拼独立 Prompt；产品外形跟参考图，文案和数字可以是假设",
+    "H1–H5 Prompt 写入单独文件后生成批量清单，一次调用 scripts/gen_image.py --batch 并发生成；--image 带同一产品参考图，size 用槽位 ratio，其余按 generation；失败槽位加 --skip-existing 重跑补齐",
+    "按所引情景 pitfalls + 本模板 pitfalls 检查 hex、信息图结构和跨张光线",
+    "输出 H1–H5 全部路径，并列出本次用到的文案/价格/尺寸假设"
   ],
   "pitfalls": [
-    "跨张版式漂移（元素位置每张必须逐条声明）",
-    "价格文字乱码或不醒目（放大 200% 核对）",
-    "配色偏离品牌 hex（禁止凭感觉写近似色）",
-    "价格信息虚构（必须来自用户提供）"
+    "把起步模板当成甲方套图（Amazon 5+9、报价表、品牌 PDF 版式应另建模板，不在本 pack 加槽硬凑）",
+    "H1 版式套到全套（H2 无价格块，H3 无文字，H4 必须是信息图结构）",
+    "因缺价格/尺寸/卖点而跳槽或空等（先问一轮，不补就按假设出齐 5 张）",
+    "背景写成纯白或 clean white（必须 #F5F5F0）",
+    "H4 利益点图标风格漂移或退化成一张产品照片"
   ],
   "generation": {
     "resolution": "2k",
-    "format": "png"
+    "format": "png",
+    "quality": "high"
   },
   "examples": [
-    "H1 示例：Premium e-commerce hero image. {product_description} centered in the upper 2/3 of a clean off-white studio background (#F5F5F0), soft diffused lighting with gentle directional shadow. Headline 「{核心卖点}」 at 32pt #2D2D2D top-left. Price block bottom-left in 44pt bold #C8452C. Product occupies 48%, whitespace 40%. Modern sans-serif only. No props, no hands, no watermark, no extra text.",
-    "H2 示例：Extreme close-up macro shot of the {product_description} material finish, shallow depth of field, off-white background (#F5F5F0), side lighting raking across the texture. Label 「{工艺卖点}」 at 16pt #888888 with thin-line icon. Whitespace 40%. No clutter."
+    "Campaign Style Lock: consistent dsimage starter ecommerce visual system across the entire image set; fixed palette #F5F5F0 off-white background, #2D2D2D charcoal text, #C8452C single accent, #888888 secondary labels; modern geometric sans-serif (SF Pro Display family) only; neutral-cool studio lighting; rounded rectangular info labels; consistent thin-line icon style; clean product photography mixed with minimal infographic elements; stable product scale and exact identity from the supplied reference; generous whitespace; no palette drift, no mixed fonts, no random backgrounds, no inconsistent lighting. Premium e-commerce hero, square 1:1. {product_description} at a slight 3/4 angle, centered in the upper two-thirds on #F5F5F0, occupying 40%, whitespace 45%. Headline 「{headline_text}」 32pt #2D2D2D top-left. Price block bottom-left in 44pt bold #C8452C using the user price or a clearly placeholder quote if none was given. No props, hands, watermark, fake logo, or #FFFFFF background.",
+    "Campaign Style Lock: consistent dsimage starter ecommerce visual system across the entire image set; fixed palette #F5F5F0 off-white background, #2D2D2D charcoal text, #C8452C single accent, #888888 secondary labels; modern geometric sans-serif (SF Pro Display family) only; neutral-cool studio lighting; rounded rectangular info labels; consistent thin-line icon style; clean product photography mixed with minimal infographic elements; stable product scale and exact identity from the supplied reference; generous whitespace; no palette drift, no mixed fonts, no random backgrounds, no inconsistent lighting. E-commerce infographic, 2:3. Title bar top, product occupying 35% on the left, four short benefit labels with thin-line #C8452C icons on the right from user copy or visible material/structure in the reference. #F5F5F0 background. No paragraph text, no photo-only composition, no gold #D4AF37."
   ],
   "supports_image_reference": true
 }

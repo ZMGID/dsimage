@@ -26,11 +26,11 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
    - `text_rules` — 图内文字规则（照做）
    - `pitfalls` — 出图后按这个清单检查
    - `anti_ai_tips` — 有则必须应用
-3. 只收集会实质影响结果的缺失信息；缺非关键信息时明确假设后继续，不要阻塞。
+3. 价格、尺寸、卖点、文案等缺了先问一轮；用户不补或说先出图，则按合理假设继续，槽位不跳过。产品外形以参考图为准。认证/评分/销量不要写成已核实事实，可用示意占位。
 4. 多图任务：先建立 **Campaign Style Lock**（见下文），原样放进每张 Prompt 开头。
 5. 商品/营销任务：先做**转化驱动力诊断**（见下文）。
 6. 逐张写 Prompt：Style Lock → 情景 `prompt_template` 骨架（替换 `{variables}`）→ 按需套用 `variants` / `category_tips` → 按通用规则收尾。
-7. Generate 模式：宿主自带生图工具（如 Codex 的 imagegen）优先直接使用；没有时调用 `scripts/gen_image.py`，用户提供了产品图必须带 `--image`。**命令参数从情景取**：`--size` 用情景 `default_ratio`；`--resolution` / `--format` / `--quality` 用情景 `generation` 字段（未写则用脚本默认）；用户显式指定的参数优先于情景值。
+7. Generate 模式：宿主自带生图工具（如 Codex 的 imagegen）优先直接使用；没有时调用 `scripts/gen_image.py`，用户提供了产品图必须带 `--image`；**多图任务用 `--batch` 批量清单一次并发生成**（见「多图执行规则」）。**命令参数从情景取**：`--size` 用情景 `default_ratio`；`--resolution` / `--format` / `--quality` 用情景 `generation` 字段（未写则用脚本默认）；用户显式指定的参数优先于情景值。
 8. 出图后按情景 `pitfalls` + 下方 QA 清单检查，返回文件路径和关键假设。
 
 ---
@@ -47,12 +47,28 @@ IMG_API_KEY=your-api-key
 
 脚本兼容别名：`OPENAI_BASE_URL`、`OPENAI_API_BASE`、`OPENAI_IMAGE_MODEL`、`OPENAI_MODEL`、`OPENAI_API_KEY`。
 
-**出图通道优先级**：宿主 Agent 自带生图能力（如 Codex 的原生 imagegen）时优先直接使用，Prompt 交给它即可，无需任何配置；否则调用脚本：
+**出图通道优先级**：宿主 Agent 自带生图能力（如 Codex 的原生 imagegen）时优先直接使用，Prompt 交给它即可，无需任何配置；否则调用脚本（Windows 用 `python`，macOS/Linux 用 `python3`，下同）：
 
 ```bash
-python3 scripts/gen_image.py --prompt "..." --size 1:1 --resolution 2k
-python3 scripts/gen_image.py --prompt-file prompt.txt --output-dir generated-images
-python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
+# 单张
+python scripts/gen_image.py --prompt "..." --size 1:1 --resolution 2k --image data/product.jpg
+python scripts/gen_image.py --prompt-file prompt.txt --output-dir generated-images
+
+# 多图套图：批量清单一次并发生成（多图任务必须用这个，不要逐张串行调用）
+python scripts/gen_image.py --batch jobs.json --concurrency 4
+```
+
+批量清单 `jobs.json` 格式（相对路径相对清单文件所在目录）：
+
+```json
+{
+  "output_dir": "generated-images/<slug>-pdp",
+  "defaults": {"size": "1:1", "resolution": "2k", "image": "data/product.jpg"},
+  "jobs": [
+    {"slot": "H1", "prompt_file": "prompt-H1.txt"},
+    {"slot": "H2", "prompt_file": "prompt-H2.txt", "size": "4:5"}
+  ]
+}
 ```
 
 脚本要点：
@@ -60,7 +76,8 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 - 自动适配两种 API：URL 含 `apimart` → 异步轮询（比例格式 `1:1` + `--resolution`）；其他 → OpenAI 同步（像素尺寸自动转换）
 - **带参考图时同步模式自动走 `/images/edits` 图生图端点**，原图真实上传给模型
 - `--image`：参考产品图路径，保证产品一致性，强烈建议总是使用
-- 其他参数：`--output-dir`、`--poll-interval`、`--timeout`、`--format`、`--quality`、`--n`
+- **批量模式**：输出按槽位命名（`h1.png`、`h2.png`…）；部分槽位失败时其余照常产出、退出码 1；加 `--skip-existing` 重跑同一命令即可只补失败的槽位
+- 其他参数：`--output-dir`、`--poll-interval`、`--timeout`（4k 默认放宽到 480s）、`--format`、`--quality`、`--n`、`--concurrency`
 
 如果缺少任何生图配置，先询问用户是否现在配置：确认后读取本 Skill 目录下的 `SETUP.md`，按其中流程引导完成（收集 `IMG_BASE_URL` / `IMG_API_KEY` → 拉取模型列表让用户选择 `IMG_MODEL` → 写入 Skill 目录 `.env`）；用户暂不配置则只输出 Prompt 包。
 
@@ -113,7 +130,11 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 | 运动, 健身, sports, fitness | `25-sports-campaign.json` |
 | 箱包功能图, 背包结构, 拉杆带, 防盗袋, bag feature proof | `26-bag-feature-proof.json` |
 
-| 默认模板, default template, 通用电商主图 | `templates/01-默认电商模板.json` |
+### 模板匹配表
+
+| 触发词 | 模板文件 |
+|---|---|
+| 默认模板, default template, 通用电商主图, 起步套图 | `templates/01-默认电商模板.json` |
 | 箱包单品报价, 箱包报价表, BEAUTY&U风格, bag quote sheet, 风格四 | `templates/02-箱包单品报价模板.json` |
 
 无匹配 → 默认 `01-hero-image.json`。**只读取匹配到的情景，不要一次性加载全部。**
@@ -125,7 +146,7 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 - **用情景出图**（"基于 xx.jpg 生成主图"）→ 按上方核心流程走。
 - **制作一个模板**（用户丢来一堆甲方材料/风格参考/要求总结，说"制作一个模板 / 创建模板 / 建个模板"，可能带"使用 dsimage"）→ 这是模板创建任务：以甲方材料生成一条带品牌风格的**定制情景**（业务上就是你说的"模板"），**读 `CREATE_TEMPLATE.md`**，按其 4 个固定检查点（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮。模板需要而情景库没有的拍法，按该流程**一并新建情景**。模板层现状：默认示例 `templates/01-默认电商模板.json`（内置，可当起点），已登记箱包报价定制模板 `templates/02-箱包单品报价模板.json`。
 
-**新建或修改情景的规范**：字段规范看 `references/scenes/_SCENE_SPEC.md`；写完跑 `python3 scripts/check_scenes.py` 校验，并在上方匹配表登记。
+**新建或修改情景的规范**：字段规范看 `references/scenes/_SCENE_SPEC.md`；写完跑 `python scripts/check_scenes.py` 校验，并在上方匹配表登记（校验器会检查登记，漏登记会报错）。
 
 ---
 
@@ -174,9 +195,10 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 3. 数量、比例、用途：**用户指定优先**；未指定时先用命中模板的 `pack`，再用命中情景实际存在的 `pack_structure`，两者都没有时按转化驱动力现场规划。
 4. 每张 Prompt 开头必须是同一段 Style Lock。
 5. 输出目录用产品英文 slug：`generated-images/<slug>-pdp/`。
-6. API 或模型不支持某尺寸时，改用最接近的支持尺寸并说明。
-7. 缺生图配置时只输出完整 Prompt 包，不调用脚本。
-8. 不虚构认证、实验数据、评分、销量、真实评价或品牌授权；证据缺失用 proof placeholder。
+6. 走脚本出图时**必须用批量模式**：写好全部 Prompt 文件后生成 `jobs.json`（每槽位 slot / prompt_file / size / image），一次 `python scripts/gen_image.py --batch jobs.json` 并发生成；有槽位失败时修正对应 Prompt 后加 `--skip-existing` 重跑同一命令只补失败的图，不要从头重出全套。
+7. API 或模型不支持某尺寸时，改用最接近的支持尺寸并说明。
+8. 缺生图配置时只输出完整 Prompt 包，不调用脚本。
+9. 缺参数先问再出图：用户不补则按假设生成并在结果里列出假设，禁止因缺价格/尺寸/卖点而跳槽。认证、评分、销量、评价用示意占位即可，不要写成已核实。
 
 ---
 
@@ -207,7 +229,7 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 | 品牌的坑（只跟这个甲方有关） | 影响这一个模板 | 该槽位的 `overrides`（画面特化）或模板 `pitfalls` / `text_rules` |
 | 模型本身的坑（跨情景跨品牌） | 影响所有出图 | SKILL.md「常见翻车点」表 |
 
-回流格式：`"症状（→修法）"`；情景 `pitfalls` 上限 3-5 条，满了合并同类。回流后跑 `python3 scripts/check_scenes.py` 并提交。
+回流格式：`"症状（→修法）"`；情景 `pitfalls` 上限 3-5 条，满了合并同类。回流后跑 `python scripts/check_scenes.py` 并提交。
 
 ---
 

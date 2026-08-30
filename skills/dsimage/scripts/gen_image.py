@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """统一图像生成脚本，同时兼容 OpenAI 同步 API 和 apimart.ai 异步 API。
 
-自动检测模式：
+单张模式：--prompt / --prompt-file
+批量模式：--batch jobs.json —— 多图套图推荐用法，一次并发生成全部槽位；
+失败槽位加 --skip-existing 重跑同一命令即可只补失败的图。
+
+自动检测 API 模式：
   - 基础 URL 包含 "apimart" → 异步轮询模式
   - 其他 → OpenAI 同步模式
-  - 也可通过 --mode sync|async 强制指定
+  - 可用 --mode sync|async 或环境变量 IMG_API_MODE 强制指定
 
 配置来自环境变量或 .env 文件：
 - IMG_BASE_URL: API 根地址
@@ -18,31 +22,39 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import concurrent.futures
 import http.client
 import json
 import os
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
+
+# Windows 控制台默认 GBK，重配为 UTF-8 避免中文输出崩溃
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
 
 
 ENV_BASE_URL = "IMG_BASE_URL"
 ENV_MODEL = "IMG_MODEL"
 ENV_API_KEY = "IMG_API_KEY"
 ENV_ALIASES = {
-    ENV_BASE_URL: ("OPENAI_BASE_URL", "OPENAI_API_BASE", "BASE_URL"),
+    ENV_BASE_URL: ("OPENAI_BASE_URL", "OPENAI_API_BASE"),
     ENV_MODEL: ("OPENAI_IMAGE_MODEL", "IMAGE_MODEL", "OPENAI_MODEL"),
-    ENV_API_KEY: ("OPENAI_API_KEY", "API_KEY"),
+    ENV_API_KEY: ("OPENAI_API_KEY",),
 }
 
 VALID_RATIOS = ("auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5",
                 "16:9", "9:16", "2:1", "1:2", "21:9", "9:21")
 VALID_RESOLUTIONS = ("1k", "2k", "4k")
+VALID_FORMATS = ("png", "jpeg", "webp")
 
 PIXEL_TO_RATIO: dict[str, str] = {
     "1024x1024": "1:1", "2048x2048": "1:1",
@@ -63,24 +75,41 @@ PIXEL_TO_RATIO: dict[str, str] = {
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 
 
-def fail(message: str, exit_code: int = 1) -> None:
-    print(f"错误：{message}", file=sys.stderr)
-    raise SystemExit(exit_code)
+class GenError(RuntimeError):
+    """生成失败。批量模式下单个槽位的 GenError 不终止其他槽位。"""
+
+
+def fail(message: str) -> NoReturn:
+    raise GenError(message)
+
+
+_print_lock = threading.Lock()
+
+
+def log(label: str, message: str) -> None:
+    with _print_lock:
+        print(f"[{label}] {message}", file=sys.stderr)
 
 
 # ── 配置与环境 ──────────────────────────────────────────────
 
+def read_prompt_text(path: Path) -> str:
+    try:
+        prompt = path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        fail(f"无法读取 prompt 文件：{exc}")
+    if not prompt:
+        fail(f"prompt 文件为空：{path}")
+    return prompt
+
+
 def read_prompt(args: argparse.Namespace) -> str:
     if args.prompt:
         prompt = args.prompt.strip()
-    else:
-        try:
-            prompt = Path(args.prompt_file).read_text(encoding="utf-8").strip()
-        except OSError as exc:
-            fail(f"无法读取 prompt 文件：{exc}")
-    if not prompt:
-        fail("prompt 不能为空。")
-    return prompt
+        if not prompt:
+            fail("prompt 不能为空。")
+        return prompt
+    return read_prompt_text(Path(args.prompt_file))
 
 
 def strip_env_value(value: str) -> str:
@@ -90,12 +119,27 @@ def strip_env_value(value: str) -> str:
     return value
 
 
+def env_defines_img_keys(env_file: Path) -> bool:
+    try:
+        text = env_file.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("export "):
+            line = line[len("export "):].strip()
+        if line.startswith("IMG_") and "=" in line:
+            return True
+    return False
+
+
 def find_default_env_file() -> Path | None:
+    # 向上查找时只认包含 IMG_ 配置的 .env，避免误用其他项目里给
+    # 文本模型准备的 OPENAI_API_KEY
     for directory in (Path.cwd(), *Path.cwd().parents):
         env_file = directory / ".env"
-        if env_file.is_file():
+        if env_file.is_file() and env_defines_img_keys(env_file):
             return env_file
-    # 回退到 Skill 自身目录的 .env，使配置随 Skill 全局生效，不依赖当前工作目录
     skill_env = Path(__file__).resolve().parent.parent / ".env"
     if skill_env.is_file():
         return skill_env
@@ -143,6 +187,9 @@ def require_config(name: str) -> str:
 def detect_mode(base_url: str, explicit_mode: str | None) -> str:
     if explicit_mode in ("sync", "async"):
         return explicit_mode
+    env_mode = os.environ.get("IMG_API_MODE", "").strip().lower()
+    if env_mode in ("sync", "async"):
+        return env_mode
     if "apimart" in base_url.lower():
         return "async"
     return "sync"
@@ -155,6 +202,12 @@ def size_to_ratio(size: str) -> str:
     if lower in PIXEL_TO_RATIO:
         return PIXEL_TO_RATIO[lower]
     fail(f"无法将像素尺寸 '{size}' 转换为比例。请直接使用比例格式，如 1:1、16:9、2:3。")
+
+
+def resolve_timeout(args: argparse.Namespace) -> int:
+    if args.timeout is not None:
+        return args.timeout
+    return 480 if args.resolution == "4k" else 180
 
 
 # ── 图片编码 ──────────────────────────────────────────────
@@ -257,6 +310,18 @@ def http_get(url: str, api_key: str, timeout: int = 30) -> dict[str, Any]:
     return parsed
 
 
+# ── 输出命名 ──────────────────────────────────────────────
+
+def output_name(name_prefix: str | None, index: int, suffix: str) -> str:
+    """批量模式按槽位命名（h1.png、h1-2.png）；单张模式带随机段防止同秒覆盖。"""
+    suffix = suffix.lstrip(".")
+    if name_prefix:
+        stem = name_prefix if index == 0 else f"{name_prefix}-{index + 1}"
+        return f"{stem}.{suffix}"
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    return f"image-{timestamp}-{uuid.uuid4().hex[:6]}-{index + 1:02d}.{suffix}"
+
+
 # ── 同步模式（OpenAI 兼容）──────────────────────────────────
 
 SYNC_SIZE_MAP: dict[str, str] = {
@@ -277,33 +342,33 @@ def sync_size(size: str) -> str:
 
 
 def build_sync_payload(args: argparse.Namespace, prompt: str, model: str) -> dict[str, Any]:
-    return {"model": model, "prompt": prompt, "n": args.n, "size": sync_size(args.size)}
+    payload: dict[str, Any] = {"model": model, "prompt": prompt, "n": args.n, "size": sync_size(args.size)}
+    if args.quality:
+        payload["quality"] = args.quality
+    return payload
 
 
 def run_sync(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
-             model: str, output_dir: Path, fmt: str) -> list[Path]:
+             model: str, output_dir: Path, fmt: str,
+             label: str = "sync", name_prefix: str | None = None) -> list[Path]:
     if args.image:
         endpoint = f"{base_url}/images/edits"
         file_data, file_mime, filename = read_image_file(args.image)
         fields = {"model": model, "prompt": prompt, "n": str(args.n), "size": sync_size(args.size)}
         if args.quality:
             fields["quality"] = args.quality
-        print(f"[sync] 图生图模式：参考图经 {endpoint} 提交...", file=sys.stderr)
+        log(label, f"图生图模式：参考图经 {endpoint} 提交...")
         result = http_post_multipart(endpoint, api_key, fields, "image", filename, file_data, file_mime)
-        return save_sync_images(result, output_dir, fmt)
+        return save_sync_images(result, output_dir, fmt, name_prefix)
     payload = build_sync_payload(args, prompt, model)
     endpoint = f"{base_url}/images/generations"
-    print(f"[sync] 提交生成请求到 {endpoint}...", file=sys.stderr)
-    result = http_post(endpoint, api_key, payload, timeout=120)
-    return save_sync_images(result, output_dir, fmt)
+    log(label, f"提交生成请求到 {endpoint}...")
+    result = http_post(endpoint, api_key, payload, timeout=180)
+    return save_sync_images(result, output_dir, fmt, name_prefix)
 
 
-def filename_for(suffix: str) -> str:
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    return f"image-{timestamp}-01.{suffix.lstrip('.')}"
-
-
-def save_sync_images(result: dict[str, Any], output_dir: Path, fmt: str) -> list[Path]:
+def save_sync_images(result: dict[str, Any], output_dir: Path, fmt: str,
+                     name_prefix: str | None = None) -> list[Path]:
     data = result.get("data")
     if not isinstance(data, list) or not data:
         fail(f"接口返回中没有 data 图片数组：{json.dumps(result)[:300]}")
@@ -313,20 +378,16 @@ def save_sync_images(result: dict[str, Any], output_dir: Path, fmt: str) -> list
         if not isinstance(item, dict):
             fail("接口返回格式不正确：data 中包含非对象项目。")
         if item.get("b64_json"):
-            encoded = item["b64_json"]
             try:
-                image_bytes = base64.b64decode(encoded)
+                image_bytes = base64.b64decode(item["b64_json"])
             except (binascii.Error, ValueError) as exc:
                 fail(f"无法解码 b64_json 图片：{exc}")
-            timestamp = time.strftime("%Y%m%d-%H%M%S")
-            p = output_dir / f"image-{timestamp}-{index + 1:02d}.{fmt.lstrip('.')}"
+            p = output_dir / output_name(name_prefix, index, fmt)
             p.write_bytes(image_bytes)
             paths.append(p)
         elif item.get("url"):
             image_url = item["url"]
-            suffix = _suffix_from_url(image_url, fmt)
-            timestamp = time.strftime("%Y%m%d-%H%M%S")
-            p = output_dir / f"image-{timestamp}-{index + 1:02d}.{suffix}"
+            p = output_dir / output_name(name_prefix, index, _suffix_from_url(image_url, fmt))
             dl_req = urllib.request.Request(image_url, headers={"User-Agent": UA})
             with urllib.request.urlopen(dl_req, timeout=120) as resp:
                 p.write_bytes(resp.read())
@@ -347,9 +408,10 @@ def build_async_payload(args: argparse.Namespace, prompt: str, model: str) -> di
 
 
 def run_async(base_url: str, api_key: str, payload: dict[str, Any],
-              output_dir: Path, fmt: str, poll_interval: int, timeout: int) -> list[Path]:
+              output_dir: Path, fmt: str, poll_interval: int, timeout: int,
+              label: str = "async", name_prefix: str | None = None) -> list[Path]:
     endpoint = f"{base_url}/images/generations"
-    print(f"[async] 提交异步任务到 {endpoint}...", file=sys.stderr)
+    log(label, f"提交异步任务到 {endpoint}...")
     result = http_post(endpoint, api_key, payload, timeout=30)
 
     code = result.get("code")
@@ -364,19 +426,21 @@ def run_async(base_url: str, api_key: str, payload: dict[str, Any],
     if not task_id:
         fail(f"提交响应缺少 task_id：{json.dumps(data[0])[:300]}")
 
-    print(f"[async] 任务已提交: {task_id}，等待 15s 后开始轮询...", file=sys.stderr)
+    log(label, f"任务已提交: {task_id}，等待 15s 后开始轮询...")
     time.sleep(15)
 
-    task_data = _poll_task(base_url, api_key, task_id, poll_interval, timeout)
-    actual_time = task_data.get("actual_time", 0)
-    cost = task_data.get("cost", 0)
-    print(f"[async] 任务完成，耗时 {actual_time}s，费用 ${cost:.4f}", file=sys.stderr)
+    task_data = _poll_task(base_url, api_key, task_id, poll_interval, timeout, label)
+    try:
+        cost = float(task_data.get("cost", 0) or 0)
+    except (TypeError, ValueError):
+        cost = 0.0
+    log(label, f"任务完成，耗时 {task_data.get('actual_time', 0)}s，费用 ${cost:.4f}")
 
-    return _save_async_images(task_data, output_dir, fmt)
+    return _save_async_images(task_data, output_dir, fmt, name_prefix, label)
 
 
 def _poll_task(base_url: str, api_key: str, task_id: str,
-               poll_interval: int, timeout: int) -> dict[str, Any]:
+               poll_interval: int, timeout: int, label: str = "async") -> dict[str, Any]:
     url = f"{base_url}/tasks/{task_id}"
     start = time.time()
     while True:
@@ -392,25 +456,25 @@ def _poll_task(base_url: str, api_key: str, task_id: str,
             error = task_data.get("error", {})
             fail(f"任务 {task_id} 失败：{error.get('message', json.dumps(task_data)[:300])}")
         progress = task_data.get("progress", 0)
-        print(f"  轮询中... 状态={status} 进度={progress}% 耗时={elapsed:.0f}s", file=sys.stderr)
+        log(label, f"轮询中... 状态={status} 进度={progress}% 耗时={elapsed:.0f}s")
         time.sleep(poll_interval)
 
 
-def _save_async_images(task_data: dict[str, Any], output_dir: Path, fmt: str) -> list[Path]:
+def _save_async_images(task_data: dict[str, Any], output_dir: Path, fmt: str,
+                       name_prefix: str | None = None, label: str = "async") -> list[Path]:
     result = task_data.get("result", {})
     images = result.get("images")
     if not isinstance(images, list) or not images:
         fail(f"任务结果中缺少 images 数组：{json.dumps(task_data)[:300]}")
     output_dir.mkdir(parents=True, exist_ok=True)
     paths: list[Path] = []
-    for img_item in images:
+    for index, img_item in enumerate(images):
         url_list = img_item.get("url")
         if not isinstance(url_list, list) or not url_list:
             fail(f"图片结果缺少 url 数组：{json.dumps(img_item)[:300]}")
         image_url = url_list[0]
-        suffix = _suffix_from_url(image_url, fmt)
-        output_path = output_dir / filename_for(suffix)
-        print(f"  下载图片: {image_url}", file=sys.stderr)
+        output_path = output_dir / output_name(name_prefix, index, _suffix_from_url(image_url, fmt))
+        log(label, f"下载图片: {image_url}")
         dl_req = urllib.request.Request(image_url, headers={"User-Agent": UA})
         try:
             with urllib.request.urlopen(dl_req, timeout=120) as resp:
@@ -423,61 +487,192 @@ def _save_async_images(task_data: dict[str, Any], output_dir: Path, fmt: str) ->
     return paths
 
 
-# ── 工具函数 ──────────────────────────────────────────────
+# ── 单张任务入口 ──────────────────────────────────────────
 
-def _suffix_from_url(url: str, fallback: str) -> str:
-    path = urllib.parse.urlparse(url).path
-    suffix = Path(path).suffix.lower().lstrip(".")
-    if suffix in {"png", "jpg", "jpeg", "webp"}:
-        return "jpg" if suffix == "jpeg" else suffix
-    return fallback
+def generate_one(base_url: str, api_key: str, model: str, mode: str,
+                 args: argparse.Namespace, prompt: str, output_dir: Path,
+                 label: str, name_prefix: str | None = None) -> list[Path]:
+    if mode == "async":
+        payload = build_async_payload(args, prompt, model)
+        return run_async(base_url, api_key, payload, output_dir, args.format,
+                         args.poll_interval, resolve_timeout(args), label, name_prefix)
+    return run_sync(base_url, api_key, args, prompt, model, output_dir, args.format, label, name_prefix)
+
+
+# ── 批量模式 ──────────────────────────────────────────────
+
+JOB_FIELDS = ("size", "resolution", "quality", "n", "image", "format")
+
+
+def _resolve_path(value: str, base_dir: Path) -> str:
+    path = Path(value)
+    return str(path if path.is_absolute() else base_dir / path)
+
+
+def load_batch(manifest_path: Path, args: argparse.Namespace) -> tuple[Path, list[dict[str, Any]]]:
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        fail(f"无法读取批量清单：{exc}")
+    except json.JSONDecodeError as exc:
+        fail(f"批量清单不是有效 JSON：{exc}")
+    raw_jobs = manifest.get("jobs") if isinstance(manifest, dict) else None
+    if not isinstance(raw_jobs, list) or not raw_jobs:
+        fail("批量清单必须是 JSON 对象且包含非空 jobs 数组。")
+    defaults = manifest.get("defaults") or {}
+    if not isinstance(defaults, dict):
+        fail("批量清单 defaults 应为对象。")
+
+    # 清单内的相对路径（prompt_file / image / output_dir）都相对清单文件所在目录
+    base_dir = manifest_path.resolve().parent
+    output_dir = Path(manifest.get("output_dir") or args.output_dir)
+    if not output_dir.is_absolute():
+        output_dir = base_dir / output_dir
+
+    jobs: list[dict[str, Any]] = []
+    seen_slots: set[str] = set()
+    for index, raw in enumerate(raw_jobs, start=1):
+        if not isinstance(raw, dict):
+            fail(f"jobs[{index}] 应为对象。")
+        slot = str(raw.get("slot") or f"job{index:02d}")
+        if slot.lower() in seen_slots:
+            fail(f"jobs 中槽位重复：{slot}")
+        seen_slots.add(slot.lower())
+
+        if raw.get("prompt"):
+            prompt = str(raw["prompt"]).strip()
+        elif raw.get("prompt_file"):
+            prompt = read_prompt_text(Path(_resolve_path(str(raw["prompt_file"]), base_dir)))
+        else:
+            fail(f"槽位 {slot} 缺少 prompt 或 prompt_file。")
+        if not prompt:
+            fail(f"槽位 {slot} 的 prompt 为空。")
+
+        job_args = argparse.Namespace(**vars(args))
+        for key in JOB_FIELDS:
+            for source in (defaults, raw):
+                if key in source and source[key] is not None:
+                    value = source[key]
+                    if key == "image":
+                        value = _resolve_path(str(value), base_dir)
+                    setattr(job_args, key, value)
+        if job_args.format not in VALID_FORMATS:
+            fail(f"槽位 {slot} 的 format 非法：{job_args.format}（允许 {'/'.join(VALID_FORMATS)}）")
+        if job_args.resolution not in VALID_RESOLUTIONS:
+            fail(f"槽位 {slot} 的 resolution 非法：{job_args.resolution}（允许 {'/'.join(VALID_RESOLUTIONS)}）")
+        try:
+            job_args.n = int(job_args.n)
+        except (TypeError, ValueError):
+            fail(f"槽位 {slot} 的 n 应为整数。")
+        jobs.append({"slot": slot, "prompt": prompt, "args": job_args})
+    return output_dir, jobs
+
+
+def run_batch(args: argparse.Namespace, base_url: str, api_key: str, model: str) -> None:
+    output_dir, jobs = load_batch(Path(args.batch), args)
+    mode = detect_mode(base_url, args.mode)
+    log("batch", f"API 模式: {mode} | base_url={base_url} | model={model}")
+    log("batch", f"共 {len(jobs)} 个槽位，并发 {max(1, args.concurrency)}，输出目录 {output_dir}")
+
+    def worker(job: dict[str, Any]) -> tuple[str, Any]:
+        slot: str = job["slot"]
+        job_args: argparse.Namespace = job["args"]
+        name_prefix = slot.lower()
+        primary = output_dir / f"{name_prefix}.{job_args.format}"
+        if args.skip_existing and primary.exists():
+            return "skip", [primary]
+        try:
+            return "ok", generate_one(base_url, api_key, model, mode, job_args,
+                                      job["prompt"], output_dir, slot, name_prefix)
+        except GenError as exc:
+            return "fail", str(exc)
+        except Exception as exc:  # 单个槽位的意外错误不拖垮整批
+            return "fail", f"{type(exc).__name__}: {exc}"
+
+    results: dict[str, tuple[str, Any]] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.concurrency)) as pool:
+        futures = {pool.submit(worker, job): job["slot"] for job in jobs}
+        for future in concurrent.futures.as_completed(futures):
+            slot = futures[future]
+            results[slot] = future.result()
+            status, payload = results[slot]
+            if status == "ok":
+                log("batch", f"{slot} 完成")
+            elif status == "fail":
+                log("batch", f"{slot} 失败：{payload}")
+
+    counts = {"ok": 0, "skip": 0, "fail": 0}
+    failed: list[str] = []
+    print("批量结果：")
+    for job in jobs:
+        slot = job["slot"]
+        status, payload = results[slot]
+        counts[status] += 1
+        if status == "ok":
+            print(f"  {slot}  OK    " + " ".join(str(p) for p in payload))
+        elif status == "skip":
+            print(f"  {slot}  SKIP  已存在 {payload[0]}")
+        else:
+            failed.append(slot)
+            print(f"  {slot}  FAIL  {payload}")
+    print(f"成功 {counts['ok']} / 跳过 {counts['skip']} / 失败 {counts['fail']}，输出目录：{output_dir}")
+    if failed:
+        print(f"失败槽位：{'、'.join(failed)}。加 --skip-existing 重跑同一命令即可只补失败的槽位。", file=sys.stderr)
+        raise SystemExit(1)
 
 
 # ── CLI ──────────────────────────────────────────────
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="统一图像生成脚本，自动兼容 OpenAI 同步 API 和 apimart.ai 异步 API。"
+        description="统一图像生成脚本，自动兼容 OpenAI 同步 API 和 apimart.ai 异步 API；--batch 批量并发生成整套图。"
     )
-    prompt_group = parser.add_mutually_exclusive_group(required=True)
+    prompt_group = parser.add_mutually_exclusive_group()
     prompt_group.add_argument("--prompt", help="直接传入图片生成 Prompt。")
     prompt_group.add_argument("--prompt-file", help="从文本文件读取图片生成 Prompt。")
+    prompt_group.add_argument("--batch", help="批量清单 JSON 路径（含 output_dir / defaults / jobs 数组），并发生成整套图，输出按槽位命名。")
+    parser.add_argument("--concurrency", type=int, default=4, help="批量模式并发任务数，默认 4。")
+    parser.add_argument("--skip-existing", action="store_true", help="批量模式跳过输出文件已存在的槽位，用于失败后重跑补齐。")
     parser.add_argument("--output-dir", default="generated-images", help="图片输出目录，默认 generated-images。")
-    parser.add_argument("--env-file", help="指定 .env 配置文件；不指定时从当前目录向上查找。")
+    parser.add_argument("--env-file", help="指定 .env 配置文件；不指定时从当前目录向上查找（只认含 IMG_ 配置的），兜底 Skill 目录。")
     parser.add_argument("--mode", choices=("sync", "async"), help="API 模式。不指定时根据 base URL 自动检测（含 apimart → async，其他 → sync）。")
     parser.add_argument("--size", default="1:1", help="图片尺寸。异步模式用比例格式（1:1、16:9 等），同步模式用像素格式（1024x1024 等）。默认 1:1。")
     parser.add_argument("--resolution", default="2k", choices=VALID_RESOLUTIONS, help="异步模式分辨率档位，默认 2k。")
-    parser.add_argument("--quality", help="同步模式图片质量参数，例如 low、medium、high。")
+    parser.add_argument("--quality", choices=("low", "medium", "high"), help="同步模式图片质量参数。")
     parser.add_argument("--n", type=int, default=1, help="同步模式生成图片数量，默认 1。")
     parser.add_argument("--image", help="参考产品图片路径，传入以提升产品一致性。")
     parser.add_argument("--poll-interval", type=int, default=5, help="异步模式轮询间隔秒数，默认 5。")
-    parser.add_argument("--timeout", type=int, default=180, help="异步模式轮询超时秒数，默认 180。")
-    parser.add_argument("--format", choices=("png", "jpeg", "webp"), default="png", help="图片保存格式，默认 png。")
-    return parser.parse_args()
+    parser.add_argument("--timeout", type=int, help="异步模式轮询超时秒数；默认 1k/2k 为 180，4k 为 480。")
+    parser.add_argument("--format", choices=VALID_FORMATS, default="png", help="图片保存格式，默认 png。")
+    args = parser.parse_args()
+    if not (args.prompt or args.prompt_file or args.batch):
+        parser.error("必须提供 --prompt、--prompt-file 或 --batch 之一。")
+    return args
 
 
 def main() -> None:
     args = parse_args()
-    env_file = Path(args.env_file) if args.env_file else find_default_env_file()
-    load_env_file(env_file)
-    prompt = read_prompt(args)
-    base_url = require_config(ENV_BASE_URL).rstrip("/")
-    model = require_config(ENV_MODEL)
-    api_key = require_config(ENV_API_KEY)
+    try:
+        env_file = Path(args.env_file) if args.env_file else find_default_env_file()
+        load_env_file(env_file)
+        base_url = require_config(ENV_BASE_URL).rstrip("/")
+        model = require_config(ENV_MODEL)
+        api_key = require_config(ENV_API_KEY)
 
-    mode = detect_mode(base_url, args.mode)
-    print(f"API 模式: {mode} | base_url={base_url} | model={model}", file=sys.stderr)
+        if args.batch:
+            run_batch(args, base_url, api_key, model)
+            return
 
-    if mode == "async":
-        payload = build_async_payload(args, prompt, model)
-        paths = run_async(base_url, api_key, payload, Path(args.output_dir),
-                          args.format, args.poll_interval, args.timeout)
-    else:
-        paths = run_sync(base_url, api_key, args, prompt, model, Path(args.output_dir), args.format)
-
-    print("生成完成：")
-    for path in paths:
-        print(path)
+        prompt = read_prompt(args)
+        mode = detect_mode(base_url, args.mode)
+        log(mode, f"API 模式: {mode} | base_url={base_url} | model={model}")
+        paths = generate_one(base_url, api_key, model, mode, args, prompt, Path(args.output_dir), mode)
+        print("生成完成：")
+        for path in paths:
+            print(path)
+    except GenError as exc:
+        print(f"错误：{exc}", file=sys.stderr)
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

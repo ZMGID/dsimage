@@ -1,7 +1,7 @@
 # 情景规范（新建情景前必读）
 
 > 新建或修改任何情景**之前必读本文件**。每个情景 JSON 是**一类画面的拍摄方法规范**（怎么拍），不含执行流程——流程归模板层：模板（references/templates/）= 品牌风格 + 语言 + 图片包 + workflow，通过 pack 引用情景，规范见 references/templates/_TEMPLATE_SPEC.md。
-> 写完必须：① 跑 `python3 scripts/check_scenes.py` 通过 → ② 在 SKILL.md 匹配表登记 → ③ 提交。
+> 写完必须：① 跑 `python scripts/check_scenes.py` 通过（macOS/Linux 用 `python3`）→ ② 在 SKILL.md 匹配表登记（校验器会检查漏登记）→ ③ 提交。
 
 ## 一、文件约定
 
@@ -117,7 +117,7 @@
 
 ## 六、完整性校验清单
 
-- [ ] `python3 scripts/check_scenes.py` 全部通过
+- [ ] `python scripts/check_scenes.py` 全部通过
 - [ ] keywords 与现有情景无重复
 - [ ] composition_rules 数值齐、angles 带英文短语
 - [ ] 已在 SKILL.md 匹配表登记

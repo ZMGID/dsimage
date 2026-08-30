@@ -2,7 +2,7 @@
 
 > 模板 = 某个甲方/品牌**可复用的完整出图方案**：品牌风格 + 图内语言 + 图片包结构 + 执行流程。
 > 情景（`references/scenes/`）只管"一类图怎么拍"；模板决定"这个品牌出哪些图、按什么流程出"。
-> 创建模板走 `CREATE_TEMPLATE.md` 的 4 检查点；字段必须符合本规范；写完跑 `python3 scripts/check_scenes.py`（会同时校验情景库和模板库）。
+> 创建模板走 `CREATE_TEMPLATE.md` 的 4 检查点；字段必须符合本规范；写完跑 `python scripts/check_scenes.py`（macOS/Linux 用 `python3`；会同时校验情景库和模板库）。
 
 ## 与情景的关系
 
@@ -114,7 +114,7 @@
 
 ## 完整性校验清单
 
-- [ ] `python3 scripts/check_scenes.py` 全部通过（含 pack 引用的情景文件存在性检查）
+- [ ] `python scripts/check_scenes.py` 全部通过（含 pack 引用的情景文件存在性检查）
 - [ ] brand 颜色全部 hex，语言明确
 - [ ] pack 每个槽位都有真实存在的情景引用
 - [ ] workflow 是完整执行流程（5-8 步）

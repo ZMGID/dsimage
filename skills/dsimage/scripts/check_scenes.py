@@ -10,7 +10,13 @@ import os
 import re
 import sys
 
+# Windows 控制台默认 GBK，重配为 UTF-8 避免中文输出崩溃
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SKILL_MD = os.path.join(BASE_DIR, "SKILL.md")
 SCENES_DIR = os.path.join(BASE_DIR, "references", "scenes")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "references", "templates")
 
@@ -147,6 +153,19 @@ for path in template_files:
             continue
         if img["scene"] not in scene_names:
             fail(fname, f"pack 引用的情景不存在：{img['scene']}")
+
+# ── SKILL.md 登记检查：每个情景/模板必须出现在匹配表里 ──
+print("== SKILL.md 登记 ==")
+try:
+    skill_text = open(SKILL_MD, encoding="utf-8").read()
+except OSError as exc:
+    fail("SKILL.md", f"无法读取：{exc}")
+    skill_text = ""
+if skill_text:
+    for path in (*scene_files, *template_files):
+        fname = os.path.basename(path)
+        if fname not in skill_text:
+            fail(fname, "未在 SKILL.md 匹配表登记")
 
 print(f"\n共校验 {len(scene_files)} 个情景 + {len(template_files)} 个模板")
 if errors:

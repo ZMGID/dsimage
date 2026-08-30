@@ -73,7 +73,8 @@ IMG_API_KEY=<第 3 步收集的 key>
 2. 询问用户是否生成一张测试图验证配置（会真实调用 API，产生少量费用，须先征得同意）：
 
 ```bash
-python3 <技能目录>/dsimage/scripts/gen_image.py \
+# Windows 用 python，macOS/Linux 用 python3
+python <技能目录>/dsimage/scripts/gen_image.py \
   --prompt "a single red apple on pure white background, studio lighting" \
   --size 1:1
 ```
