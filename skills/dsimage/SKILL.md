@@ -117,7 +117,10 @@ python3 scripts/generate_image.py --env-file .env --prompt-file prompt.txt
 
 多图任务通常一次命中多个模板（如详情页 = 信息图 + 细节 + 场景的组合），每张图按其对应模板执行。
 
-**新建或修改模板**：先读 `references/templates/_TEMPLATE_SPEC.md`（模板的模板，字段规范 + 最小骨架），写完跑 `python3 scripts/validate_templates.py` 校验，并在上方匹配表登记。
+**新建或修改模板**：
+
+- 用户拿来材料（甲方风格参考、要求文档）要从零创建模板 → 读 `CREATE_TEMPLATE.md`，按其 **4 个固定检查点**（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮
+- 字段规范看 `references/templates/_TEMPLATE_SPEC.md`；写完跑 `python3 scripts/validate_templates.py` 校验，并在上方匹配表登记
 
 ---
 
