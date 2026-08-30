@@ -1,7 +1,6 @@
 # 情景规范（新建情景前必读）
 
-> 新建或修改任何情景**之前必读本文件**。每个情景 JSON 是一个场景的完整执行规范：Agent 按 SKILL.md 匹配表命中后，以情景字段为准执行，SKILL.md 不含场景细节。
-> 模板层说明：`references/templates/`（甲方定制模板）沿用本规范的字段结构，额外增加 `template_meta`（品牌色板/语言/风格来源）；模板创建流程见 CREATE_TEMPLATE.md。
+> 新建或修改任何情景**之前必读本文件**。每个情景 JSON 是**一类画面的拍摄方法规范**（怎么拍），不含执行流程——流程归模板层：模板（references/templates/）= 品牌风格 + 语言 + 图片包 + workflow，通过 pack 引用情景，规范见 references/templates/_TEMPLATE_SPEC.md。
 > 写完必须：① 跑 `python3 scripts/check_scenes.py` 通过 → ② 在 SKILL.md 匹配表登记 → ③ 提交。
 
 ## 一、文件约定
@@ -9,7 +8,7 @@
 - 位置：`references/scenes/`，命名 `NN-kebab-case.json`，NN 用下一个可用序号（00 和本文件保留）
 - 编码 UTF-8，标准 JSON，缩进 2 空格，中文直接写（禁止 `\uXXXX` 转义）
 - `id` 与文件名一致（`09-before-after.json` → `"id": "before-after"`）
-- prompt 骨架和角度短语用**英文**，规则说明、workflow、pitfalls 用**中文**
+- prompt 骨架和角度短语用**英文**，规则说明、pitfalls 用**中文**
 
 ## 二、字段清单（★必填 ◐按场景 ○可选）
 
@@ -26,7 +25,6 @@
 | ★ `default_ratio` | 必填 | 该场景默认画幅，如 `1:1`、`2:3`、`16:9`、`4:5` |
 | ★ `composition_rules` | 必填 | 见下方"结构化字段细则" |
 | ★ `text_rules` | 必填 | 见下方"结构化字段细则" |
-| ★ `workflow` | 4-6 步 | 该场景的执行步骤，中文，必须场景特化 |
 | ★ `pitfalls` | 3-5 条 | 场景特化翻车点，写"症状（→修法）" |
 | ★ `examples` | ≥2 条 | 完整可直接执行的英文 Prompt |
 | ★ `supports_image_reference` | 必填 | bool，是否支持 `--image` 参考图 |
@@ -71,13 +69,6 @@
 - 每个键是一个文字角色（`headline` / `labels` / `default` / `note`…），值写清**长度上限 + 字号 + 颜色 hex + 字体**
 - 无文字场景也必须写：`{"default": "无文字"}`，不能省略字段
 
-### workflow
-
-- 4-6 步，编号列表，中文
-- 必须是**本场景特有**的步骤（背景写 hex、声明浅景深、UI 元素逐个描述……）
-- 禁止空话："按需调整""注意效果"这类句子不许出现
-- 最后一步通常是出图后的核对动作
-
 ### pitfalls
 
 - 3-5 条，每条 = 症状（→ 修法），如 `"白底发灰（必须写 #FFFFFF）"`
@@ -117,7 +108,6 @@
     "angles": [{"angle": "角度名", "prompt": "english prompt phrase"}]
   },
   "text_rules": {"default": "无文字"},
-  "workflow": ["步骤1", "步骤2", "步骤3", "步骤4"],
   "pitfalls": ["症状（→修法）"],
   "examples": ["full english prompt here"],
   "supports_image_reference": true
@@ -128,7 +118,6 @@
 
 - [ ] `python3 scripts/check_scenes.py` 全部通过
 - [ ] keywords 与现有情景无重复
-- [ ] workflow 是场景特化步骤，无空话
 - [ ] composition_rules 数值齐、angles 带英文短语
 - [ ] 已在 SKILL.md 匹配表登记
 - [ ] README 中情景数量描述已同步（如涉及）

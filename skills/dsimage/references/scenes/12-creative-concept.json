@@ -83,12 +83,6 @@
   "text_rules": {
     "default": "通常无文字；可加一句 slogan，serif 字体"
   },
-  "workflow": [
-    "先用一句话说清创意概念（产品 × 什么超现实/隐喻元素）",
-    "超现实元素必须与产品卖点相关，不是随便堆视觉",
-    "声明渲染质感等级（photorealistic CGI / hyper-detailed render）",
-    "结尾否定清单：概念杂乱、与产品无关的视觉噪音、拼贴感"
-  ],
   "pitfalls": [
     "创意与产品卖点无关",
     "画面元素过杂",

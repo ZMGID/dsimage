@@ -2,8 +2,8 @@
 
 > 用途：用户提供甲方材料（风格参考 PDF/图片、文字要求、文案）加一句"制作一个模板 / 创建模板"（可能带"使用 dsimage"），Agent 分析并创建一个新模板。
 > 用户不需要知道本文件存在——SKILL.md 已经规定：识别到"制作模板"类任务就读本文件。
-> 术语：产出在工程上是一个「定制情景实例」，存入**模板库 `references/templates/`**（与通用情景库 `references/scenes/` 分开），业务上就是你说的「模板」。
-> 前置必读：`references/scenes/_SCENE_SPEC.md`（字段规范）；写作风格参照现有 25 个情景。
+> 术语：产出是一个「模板」JSON，存入模板库 `references/templates/`。模板 = 品牌风格 + 图内语言 + 图片包（pack）+ 执行流程（workflow），通过 pack 引用情景库 `references/scenes/` 的拍法。
+> 前置必读：`references/templates/_TEMPLATE_SPEC.md`（模板字段规范）；拍摄方法参照 `references/scenes/` 情景库（25 个）。
 
 ## 流程总览：4 个固定检查点
 
@@ -12,8 +12,8 @@
 | 检查点 | 产出 | 通过条件 |
 |---|---|---|
 | 1. 素材分析 | 《风格分析报告》+ 口号翻译对照表 | 用户确认"提取准确" |
-| 2. 模板骨架 | name/id/keywords/trigger_phrases/prompt_template/variants 草稿 + 示例 Prompt | 用户确认骨架方向 |
-| 3. 执行规则 | default_ratio/composition_rules/text_rules/workflow/pitfalls 草稿 | 用户确认数值 |
+| 2. 模板骨架 | template_meta（品牌色板/字体/调性/语言）+ name/id/keywords/trigger_phrases + pack 草稿（槽位→情景→比例） | 用户确认品牌与图片包 |
+| 3. 执行流程 | workflow（5-8 步）+ text_rules + generation + 模板级 pitfalls 草稿 | 用户确认流程与数值 |
 | 4. 成稿登记 | 完整 JSON + 校验通过 + 匹配表登记 + （可选）试跑图 | 校验通过且用户验收 |
 
 ---
@@ -57,29 +57,28 @@
 
 ## 检查点 2：模板骨架
 
-**做什么**：
+**做什么**（结构见 `_TEMPLATE_SPEC.md`）：
 
-1. `name`（≤12 字中文名）、`id`（kebab-case，与文件名一致，序号取现有最大 +1）。
-2. `keywords` ≥5 个、`trigger_phrases` ≥3 个——对照 SKILL.md 匹配表查重，说明"为什么不会误命中现有模板"。
-3. `prompt_template`：以检查点 1 的分析填充骨架（background/lighting 用取到的 hex 和光线调性）。
-4. `variants` 2-4 个（只写 overrides），贴合甲方可能的使用场景。
-5. 拼一条完整示例 Prompt 给用户看实际效果。
+1. `name`（≤12 字中文名）、`id`（kebab-case，与文件名一致，模板层独立编号从 01 起）。
+2. `keywords` ≥5 个、`trigger_phrases` ≥3 个——对照 SKILL.md 匹配表查重，说明"为什么不会误命中现有情景"。
+3. `template_meta`：品牌色板 hex（来自检查点 1 的取色）、字体族、调性短语、图内文字语言。
+4. `pack` 草稿：槽位列表，每个槽位 = slot 编号 + 用途 + **引用的情景文件**（必须真实存在于 references/scenes/）+ 比例；用户要求几张就几个槽位。
+5. 按槽位 H1 的情景骨架 + 品牌 hex，拼一条完整示例 Prompt 给用户看实际效果。
 
-**等用户确认骨架方向和触发边界。**
+**等用户确认品牌方向、语言和图片包结构。**
 
 ---
 
-## 检查点 3：执行规则
+## 检查点 3：执行流程
 
 **做什么**（数值全部来自检查点 1 的分析，不凭空写）：
 
-1. `default_ratio`：按甲方材料的画幅。
-2. `composition_rules`：product_ratio / whitespace / angles（带英文短语）/ platform_reserved 或 layout（如适用）。
-3. `text_rules`：每个文字角色的字号、hex、长度上限（价格、标题、标注…逐个来）。
-4. `workflow`：4-6 步，场景特化，第一步通常是"按甲方固定版式排版"。
-5. `pitfalls`：3-5 条，来自甲方强调过的点 + 该场景固有风险。
+1. `workflow`：5-8 步执行流程——读 pack 规划 → 建 Campaign Style Lock（用品牌 hex）→ 逐张"读引用情景 → 情景骨架 + 品牌 hex + text_rules 拼 Prompt" → 调 gen_image.py（--image）→ 检查 → 汇报；可按甲方要求特化（如报价表模板规定"价格必须人工确认后才渲染"）。
+2. `text_rules`：每个文字角色的字号、hex、位置、长度上限（价格、标题、标注…逐个来）。
+3. `generation`：resolution / format。
+4. 模板级 `pitfalls`：3-5 条，来自甲方强调过的点（如"跨张版式漂移""价格乱码"）。
 
-**等用户确认数值。**
+**等用户确认流程与数值。**
 
 ---
 

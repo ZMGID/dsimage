@@ -92,15 +92,9 @@
     "labels": "利益点标签 16-20pt，图标 + 短文案",
     "notes": "标注 10-14pt，#888888",
     "accent": "强调色 #D4AF37（或品牌色 hex）",
-    "limit": "每屏文字总量 ≤50 字，禁止大段小字"
+    "limit": "每屏文字总量 ≤50 字，禁止大段小字",
+    "prefix": "每屏 Prompt 必须以 E-commerce infographic 开头，禁止以摄影视角开头"
   },
-  "workflow": [
-    "每屏 Prompt 必须以 E-commerce infographic 开头（不是摄影视角开头）",
-    "声明布局关键词：two-column layout / feature grid / timeline",
-    "图标风格统一：thin-line icons，同一颜色体系",
-    "每屏开头复制 Campaign Style Lock（多图任务）",
-    "出图后放大 200% 逐字核对文字"
-  ],
   "pitfalls": [
     "退化成纯产品照片没有信息图结构",
     "大段小字密密麻麻",

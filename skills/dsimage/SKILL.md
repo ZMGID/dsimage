@@ -22,8 +22,7 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 
 1. 判断任务类型，按下方**情景匹配表**找到情景文件。
 2. **完整读取命中的情景文件**，之后一切按情景内容执行：
-   - `workflow` — 该场景的执行步骤（照做）
-   - `composition_rules` — 产品占比、留白、角度（照做）
+      - `composition_rules` — 产品占比、留白、角度（照做）
    - `text_rules` — 图内文字规则（照做）
    - `pitfalls` — 出图后按这个清单检查
    - `anti_ai_tips` — 有则必须应用
@@ -69,7 +68,7 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 
 ## 情景系统
 
-`references/scenes/` 下 25 个内置情景（01-25，通用拍法）；`references/templates/` 下是**模板层**——带甲方风格/语言/参数的定制实例（目前含默认示例 `templates/01-default-ecom.json`）。两者字段结构一致，模板额外有 `template_meta`（品牌色板、语言、风格来源）。**每个情景是该类画面的完整执行规范**，包含：
+`references/scenes/` 下 25 个内置情景（01-25，通用拍法）；`references/templates/` 下是**模板层**——带甲方风格/语言/参数的定制实例（目前含默认示例 `templates/01-default-ecom.json`）。两者结构不同：情景 = 拍摄方法（骨架/构图/文字渲染规则）；模板 = 品牌风格 + 语言 + 图片包 + 执行流程，通过 pack 引用情景，模板字段规范见 `references/templates/_TEMPLATE_SPEC.md`。**每个情景是该类画面的完整执行规范**，包含：
 
 | 字段 | 含义 |
 |---|---|
@@ -78,7 +77,7 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 | `default_ratio` | 该场景默认画幅（用户指定优先） |
 | `composition_rules` | 产品占比、留白、平台预留区、推荐角度及英文短语 |
 | `text_rules` | 图内文字的字号、颜色、长度规则 |
-| `workflow` | 该场景的执行步骤 |
+
 | `pitfalls` | 该场景常见翻车点（出图后检查用） |
 | `anti_ai_tips` | 防 AI 味技巧（UGC/社媒/直播类必读） |
 | `examples` | 成品 Prompt 示例 |

@@ -98,13 +98,6 @@
   "text_rules": {
     "default": "通常无文字；可选手写体短标签"
   },
-  "workflow": [
-    "指定具体手机型号（如 iPhone 15 Pro）拍摄",
-    "声明真实瑕疵：轻微噪点、暖色偏移、不完美构图",
-    "使用真实感语言：NOT professional photography, NOT retouched",
-    "环境略微凌乱、有生活痕迹（水渍、用过的毛巾）",
-    "结尾否定清单：棚拍打光、完美皮肤、AI 味词汇（perfect/flawless/stunning）"
-  ],
   "pitfalls": [
     "过度磨皮塑料感",
     "打光太完美",

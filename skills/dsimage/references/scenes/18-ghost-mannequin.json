@@ -93,12 +93,6 @@
   "text_rules": {
     "default": "无文字"
   },
-  "workflow": [
-    "声明 ghost mannequin / invisible mannequin 效果",
-    "服装有自然体积和立体感，领口袖口结构可见",
-    "纯色背景写死 hex，底部自然投影",
-    "结尾否定清单：任何人體部位、模特、衣架、扁平服装"
-  ],
   "pitfalls": [
     "画面出现人体部位",
     "服装扁平没有立体感",

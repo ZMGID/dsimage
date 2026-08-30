@@ -100,19 +100,12 @@
     "default": "纯白底主图通常无文字；国内平台主图可加一句核心卖点 ≤10 字，颜色 #2D2D2D",
     "note": "海外平台（Amazon 主图）禁止任何文字和图形叠加"
   },
-  "workflow": [
-    "确认平台与比例（默认 1:1，用户指定优先；Amazon 主图必须纯白底无文字）",
-    "以 prompt_template 为骨架替换 {variables}，按需套用 variants / category_tips",
-    "按 composition_rules 写明产品占比、留白、平台预留区",
-    "背景必须写死 #FFFFFF，禁止只写 white background",
-    "结尾否定清单：道具、手、水印、假 logo、额外文字、渐变背景、杂乱阴影",
-    "出图后检查背景是否纯白、产品是否居中"
-  ],
   "pitfalls": [
     "白底发灰（必须写 #FFFFFF）",
     "产品占比过大显拥挤",
     "反光过曝有 AI 感",
-    "底部阴影杂乱"
+    "底部阴影杂乱",
+    "海外平台主图出现文字或图形（Amazon 主图必须纯白底无文字）"
   ],
   "generation": {
     "resolution": "2k",
