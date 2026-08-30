@@ -1,6 +1,6 @@
 ---
 name: dsimage
-description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets — marketplace hero images, Amazon/Shopify PDP detail pages, social/ad creatives, livestream scenes — using 25 scene templates, with Campaign Style Lock keeping multi-image sets visually consistent. Uses the user's reference photos to preserve product identity. Generates images directly via the host agent's built-in image generation (e.g. Codex) when available, or via the user's configured OpenAI-compatible image API. Use when the user asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or visual strategy and image-generation prompts for selling scenarios.
+description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets — marketplace hero images, Amazon/Shopify PDP detail pages, social/ad creatives, livestream scenes — using 25 scene templates, with Campaign Style Lock keeping multi-image sets visually consistent. Uses the user's reference photos to preserve product identity. Generates images directly via the host agent's built-in image generation (e.g. Codex) when available, or via the user's configured OpenAI-compatible image API. Also creates new scene templates from client materials (style reference PDFs, brand requirements). Use when the user asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or visual strategy and image-generation prompts for selling scenarios, or asks to 制作模板 / 创建模板 / 建一个模板 / create a template from their materials.
 ---
 
 # dsimage Skill
@@ -117,10 +117,12 @@ python3 scripts/generate_image.py --env-file .env --prompt-file prompt.txt
 
 多图任务通常一次命中多个模板（如详情页 = 信息图 + 细节 + 场景的组合），每张图按其对应模板执行。
 
-**新建或修改模板**：
+**区分两种"模板"任务**：
 
-- 用户拿来材料（甲方风格参考、要求文档）要从零创建模板 → 读 `CREATE_TEMPLATE.md`，按其 **4 个固定检查点**（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮
-- 字段规范看 `references/templates/_TEMPLATE_SPEC.md`；写完跑 `python3 scripts/validate_templates.py` 校验，并在上方匹配表登记
+- **用模板出图**（"基于 xx.jpg 生成主图"）→ 按上方核心流程走。
+- **制作一个模板**（用户丢来一堆甲方材料/风格参考/要求总结，说"制作一个模板 / 创建模板 / 建个模板"，可能带"使用 dsimage"）→ 这是模板创建任务，**读 `CREATE_TEMPLATE.md`**，按其 4 个固定检查点（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮。
+
+**新建或修改模板的规范**：字段规范看 `references/templates/_TEMPLATE_SPEC.md`；写完跑 `python3 scripts/validate_templates.py` 校验，并在上方匹配表登记。
 
 ---
 
