@@ -14,7 +14,7 @@ Dsimage 是一个电商视觉创作 Skill，装进 Claude Code / Codex / OpenCla
 
 1. **做整套，不做单张** — 内置 25 个模板（主图、生活方式、平铺、模特、直播间、爆炸图、杂志大片……）。多图任务自动生成 Campaign Style Lock，把色板、冷暖调、字体、背景、光线全部锁死，整套图一个风格，不会一张一个样。
 2. **为转化出图，不为好看出图** — 动手前先诊断产品靠什么打动买家：视觉驱动、痛点驱动还是情感价值驱动，再按对应的转化逻辑规划图片顺序，而不是堆一堆好看但不出单的图。
-3. **从 Prompt 到成图一条龙** — 未配置 API 时，输出结构完整、可直接执行的专业生图 Prompt，拿到任何平台都能用；配置任意 OpenAI 兼容图片 API（默认对接 apimart.ai 的 GPT-Image-2）后一句话直接出图，生图脚本纯 Python 标准库，零第三方依赖。
+3. **从 Prompt 到成图一条龙** — 未配置 API 时，输出结构完整、可直接执行的专业生图 Prompt，拿到任何平台都能用；配置任意 OpenAI 兼容图片 API 后一句话直接出图，生图脚本纯 Python 标准库，零第三方依赖。
 
 ## 安装
 
@@ -63,14 +63,14 @@ Agent 会按指南执行：安装 Skill → 询问你是否配置生图 API → 
 在 **Skill 目录内**创建 `.env`（仓库里是 `skills/dsimage/.env`；复制安装后则是 `~/.codex/skills/dsimage/.env` 这类路径）。配置随 Skill 全局生效——换会话、换项目都可用；也可以在某个项目根目录另放 `.env`，仅对该项目覆盖：
 
 ```dotenv
-IMG_BASE_URL=https://api.apimart.ai/v1
+IMG_BASE_URL=https://api.openai.com/v1
 IMG_MODEL=gpt-image-2
 IMG_API_KEY=your-api-key-here
 ```
 
 | 变量 | 说明 |
 |------|------|
-| `IMG_BASE_URL` | OpenAI 兼容 API 根地址 |
+| `IMG_BASE_URL` | OpenAI 兼容 API 根地址（官方 `https://api.openai.com/v1` 或任意第三方兼容服务） |
 | `IMG_MODEL` | 图片模型名（如 `gpt-image-2`） |
 | `IMG_API_KEY` | 你的 API 密钥 |
 
@@ -128,7 +128,7 @@ dsimage/
 
 - 本项目不内置任何 API 密钥；`.env` 已被 gitignore，请勿把 key 提交进仓库或在对话中回显
 - 营销图中的效果承诺必须有真实证据支持，Skill 不虚构认证、数据或评价
-- 直接生图依赖 apimart.ai（异步轮询模式）或任意 OpenAI 兼容 Images API，不同服务商对尺寸/分辨率/参考图的支持范围不同
+- 直接生图依赖任意 OpenAI 兼容 Images API（官方或第三方服务均可），不同服务商对尺寸/分辨率/参考图的支持范围不同
 
 ## 许可
 
