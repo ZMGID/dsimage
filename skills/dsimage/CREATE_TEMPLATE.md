@@ -3,7 +3,7 @@
 > 用途：用户提供甲方材料（风格参考 PDF/图片、文字要求、文案）加一句"制作一个模板 / 创建模板"（可能带"使用 dsimage"），Agent 分析并创建一个新模板。
 > 用户不需要知道本文件存在——SKILL.md 已经规定：识别到"制作模板"类任务就读本文件。
 > 术语：产出是一个「模板」JSON，存入模板库 `references/templates/`。模板 = 品牌风格 + 图内语言 + 图片包（pack）+ 执行流程（workflow），通过 pack 引用情景库 `references/scenes/` 的拍法。
-> 前置必读：`references/templates/_TEMPLATE_SPEC.md`（模板字段规范）；拍摄方法参照 `references/scenes/` 情景库（25 个）。
+> 前置必读：`references/templates/_TEMPLATE_SPEC.md`（模板字段规范）；拍摄方法参照 `references/scenes/` 情景库（26 个）。
 
 ## 流程总览：4 个固定检查点
 

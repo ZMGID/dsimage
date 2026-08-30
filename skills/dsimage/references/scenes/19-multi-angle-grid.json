@@ -25,8 +25,10 @@
   "prompt_template": {
     "type": "product photography grid layout",
     "subject": "{product_description}",
-    "grid": "2x2 or 3x3 equal squares",
+    "grid": "2x2 or 3x3 equal squares, or one main hero with a smaller confirmed-variation grid",
     "variation": "different angles or colorways",
+    "labels": "{variation_labels}",
+    "evidence": "use only user-confirmed angles, colors, names, SKUs and product structures",
     "background": "clean white in each cell",
     "separators": "thin white borders between cells",
     "quality": "8K, catalog photography, uniform lighting across all cells"
@@ -48,8 +50,8 @@
     "colorway": {
       "description": "多配色展示",
       "overrides": {
-        "variation": "same product in different colors, consistent 3/4 angle",
-        "grid": "3x3 for 9 colors or 2x3 for 6 colors"
+        "variation": "same product only in user-confirmed colors, identical 3/4 angle, scale, structure and lighting",
+        "grid": "2x2 or 2x3 equal grid, or main confirmed color as a large hero left with up to four confirmed colors in a 2x2 grid right"
       }
     },
     "feature-grid": {
@@ -72,18 +74,20 @@
     "fashion": "show front view, back view, detail close-up, and fabric texture",
     "food": "show packaging front, back nutrition, open product, and serving suggestion",
     "home": "show full product, detail angle, material texture, and in-context shot",
-    "sports": "show product front, side profile, sole/bottom, and action usage shot"
+    "sports": "show product front, side profile, sole/bottom, and action usage shot",
+    "accessories": "for bags and accessories, preserve exact pocket, strap, closure and hardware structure across confirmed colorways; render exact confirmed color names and SKU labels"
   },
   "examples": [
     "2x2 product grid. {product} shown from 4 angles: front, side, back, top-down. Clean white background per cell. Thin borders. Uniform studio lighting, 8K, 2000x2000px",
-    "3x3 color variation grid. Same {product} in 9 different colors, identical 3/4 angle. Clean white cells, subtle drop shadow. Professional catalog, 8K, 2000x2000px"
+    "3x3 color variation grid. Same {product} in 9 user-confirmed colors, identical 3/4 angle. Exact confirmed color labels and SKU values. Clean white cells, subtle drop shadow. Professional catalog, 8K, 2000x2000px",
+    "Catalog colorway page, square 1:1. Main confirmed color product as a large hero on the left occupying 46%, with four smaller user-confirmed colorways in a 2x2 grid on the right. Identical 3/4 angle, structure, scale and lighting. Exact confirmed color names and SKU labels below each item. No invented colors, identifiers, materials or structural changes."
   ],
   "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "1:1",
   "composition_rules": {
-    "layout": "网格布局 2×2 / 3×3，每格一个角度或配色",
-    "product_ratio": "每格 40%",
+    "layout": "网格布局 2×2 / 3×3，或主色产品左侧大图 + 右侧 2×2 已确认配色网格",
+    "product_ratio": "等分网格每格 40%；主次配色布局主产品 42-48%、小产品每格 24-30%",
     "angles": [
       {
         "angle": "正面",
@@ -105,12 +109,16 @@
     "whitespace": "每格 ≥20%"
   },
   "text_rules": {
-    "labels": "每格可加角度/配色短标签，风格统一"
+    "labels": "每格可加角度或配色短标签，11-16pt 现代无衬线半粗体，#111111，风格统一",
+    "sku": "配色页可在色名下加 10-13pt 现代无衬线常规体 #3A3A3A 的 SKU；色名与 SKU 必须由用户确认",
+    "limit": "单格最多两行文字；不得生成未确认颜色、型号、货号或价格"
   },
   "pitfalls": [
-    "各格光线色温不一致",
-    "产品在各格大小不一",
-    "角度重复没有信息增量"
+    "各格光线色温不一致（所有格子固定同一灯位、曝光和白平衡）",
+    "产品在各格大小不一（等分网格固定产品占比；主次布局只允许主产品更大）",
+    "角度重复没有信息增量（多角度模式按正面、侧面、背面、俯视分配）",
+    "生成未确认颜色或 SKU（配色模式只读取用户确认的颜色名单、色名和货号）",
+    "不同配色的口袋、肩带或五金结构漂移（所有配色复用同一产品结构参考）"
   ],
   "generation": {
     "resolution": "2k",

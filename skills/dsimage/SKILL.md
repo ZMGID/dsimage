@@ -1,6 +1,6 @@
 ---
 name: dsimage
-description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets — marketplace hero images, Amazon/Shopify PDP detail pages, social/ad creatives, livestream scenes — using 25 built-in shooting scenes, with Campaign Style Lock keeping multi-image sets visually consistent. Uses the user's reference photos to preserve product identity. Generates images directly via the host agent's built-in image generation (e.g. Codex) when available, or via the user's configured OpenAI-compatible image API. Also builds reusable client-specific scenes from client materials (style reference PDFs, brand requirements). Use when the user asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or visual strategy and image-generation prompts for selling scenarios, or asks to 制作模板 / 创建模板 / 建一个模板 / create a template from their materials.
+description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets — marketplace hero images, Amazon/Shopify PDP detail pages, social/ad creatives, livestream scenes — using 26 built-in shooting scenes, with Campaign Style Lock keeping multi-image sets visually consistent. Uses the user's reference photos to preserve product identity. Generates images directly via the host agent's built-in image generation (e.g. Codex) when available, or via the user's configured OpenAI-compatible image API. Also builds reusable client-specific scenes from client materials (style reference PDFs, brand requirements). Use when the user asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or visual strategy and image-generation prompts for selling scenarios, or asks to 制作模板 / 创建模板 / 建一个模板 / create a template from their materials.
 ---
 
 # dsimage Skill
@@ -68,7 +68,7 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 
 ## 情景系统
 
-`references/scenes/` 下 25 个内置情景（01-25，通用拍法）；`references/templates/` 下是**模板层**——带甲方风格/语言/参数的定制实例（目前含默认示例 `templates/01-default-ecom.json`）。两者结构不同：情景 = 拍摄方法（骨架/构图/文字渲染规则）；模板 = 品牌风格 + 语言 + 图片包 + 执行流程，通过 pack 引用情景，模板字段规范见 `references/templates/_TEMPLATE_SPEC.md`。**每个情景是该类画面的完整执行规范**，包含：
+`references/scenes/` 下 26 个内置情景（01-26，通用拍法）；`references/templates/` 下是**模板层**——带甲方风格/语言/参数的定制实例（目前含默认示例 `templates/01-default-ecom.json` 和箱包报价模板 `templates/02-bag-single-item-quote.json`）。两者结构不同：情景 = 拍摄方法（骨架/构图/文字渲染规则）；模板 = 品牌风格 + 语言 + 图片包 + 执行流程，通过 pack 引用情景，模板字段规范见 `references/templates/_TEMPLATE_SPEC.md`。**每个情景是该类画面的完整执行规范**，包含：
 
 | 字段 | 含义 |
 |---|---|
@@ -111,8 +111,10 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 | 设备模型, 界面, mockup, SaaS, APP | `23-device-mockup.json` |
 | 店铺, 门面, 空间, storefront, 实体店 | `24-storefront.json` |
 | 运动, 健身, sports, fitness | `25-sports-campaign.json` |
+| 箱包功能图, 背包结构, 拉杆带, 防盗袋, bag feature proof | `26-bag-feature-proof.json` |
 
 | 默认模板, default template, 通用电商主图 | `templates/01-default-ecom.json` |
+| 箱包单品报价, 箱包报价表, BEAUTY&U风格, bag quote sheet, 风格四 | `templates/02-bag-single-item-quote.json` |
 
 无匹配 → 默认 `01-hero-image.json`。**只读取匹配到的情景，不要一次性加载全部。**
 
@@ -121,7 +123,7 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 **区分两种任务**：
 
 - **用情景出图**（"基于 xx.jpg 生成主图"）→ 按上方核心流程走。
-- **制作一个模板**（用户丢来一堆甲方材料/风格参考/要求总结，说"制作一个模板 / 创建模板 / 建个模板"，可能带"使用 dsimage"）→ 这是模板创建任务：以甲方材料生成一条带品牌风格的**定制情景**（业务上就是你说的"模板"），**读 `CREATE_TEMPLATE.md`**，按其 4 个固定检查点（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮。模板需要而情景库没有的拍法，按该流程**一并新建情景**。模板层现状：默认示例 `templates/01-default-ecom.json`（内置，可当起点），甲方定制模板尚待创建。
+- **制作一个模板**（用户丢来一堆甲方材料/风格参考/要求总结，说"制作一个模板 / 创建模板 / 建个模板"，可能带"使用 dsimage"）→ 这是模板创建任务：以甲方材料生成一条带品牌风格的**定制情景**（业务上就是你说的"模板"），**读 `CREATE_TEMPLATE.md`**，按其 4 个固定检查点（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮。模板需要而情景库没有的拍法，按该流程**一并新建情景**。模板层现状：默认示例 `templates/01-default-ecom.json`（内置，可当起点），已登记箱包报价定制模板 `templates/02-bag-single-item-quote.json`。
 
 **新建或修改情景的规范**：字段规范看 `references/scenes/_SCENE_SPEC.md`；写完跑 `python3 scripts/check_scenes.py` 校验，并在上方匹配表登记。
 
@@ -161,7 +163,7 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 - **B 痛点驱动型**：解决明确摩擦/风险/烦恼 → 严格按"问题 → 解决机制 → 利益证明 → 信任 → CTA"推进。
 - **C 情感价值驱动型**：身份、归属、冲动消费 → 情绪钩子、身份表达、社交信号。
 
-**完整的图片包结构**（5 主图 + 9 详情页的逐屏定义、每屏的信息图元素、角度分配、字体搭配、背景节奏）在 `11-infographic.json` 的 `pack_structure` 字段中——详情页/PDP 任务必须读取它。用户明确指定数量和比例时，以用户为准。
+**图片包结构优先级**：用户指定 > 命中模板的 `pack` > 命中情景的 `pack_structure`（仅文件实际提供时）> 按转化驱动力现场规划。不要假设 `11-infographic.json` 一定包含 `pack_structure`。
 
 ---
 
@@ -169,7 +171,7 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 
 1. 先建 Campaign Style Lock 并写入图片包计划。
 2. 每张图独立编号、独立用途、独立 Prompt，写入单独文件（如 `prompt-H1.txt`），禁止一张 Prompt 生成多屏拼图。
-3. 数量、比例、用途：**用户指定优先**，未指定时按 `11-infographic.json` 的 `pack_structure` 默认。
+3. 数量、比例、用途：**用户指定优先**；未指定时先用命中模板的 `pack`，再用命中情景实际存在的 `pack_structure`，两者都没有时按转化驱动力现场规划。
 4. 每张 Prompt 开头必须是同一段 Style Lock。
 5. 输出目录用产品英文 slug：`generated-images/<slug>-pdp/`。
 6. API 或模型不支持某尺寸时，改用最接近的支持尺寸并说明。
