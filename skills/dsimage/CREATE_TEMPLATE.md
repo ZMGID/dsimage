@@ -2,7 +2,8 @@
 
 > 用途：用户提供甲方材料（风格参考 PDF/图片、文字要求、文案）加一句"制作一个模板 / 创建模板"（可能带"使用 dsimage"），Agent 分析并创建一个新模板。
 > 用户不需要知道本文件存在——SKILL.md 已经规定：识别到"制作模板"类任务就读本文件。
-> 前置必读：`references/templates/_TEMPLATE_SPEC.md`（字段规范）；写作风格参照现有 25 个模板。
+> 术语：产出在工程上是一条「定制情景」（存入情景库 references/scenes/），业务上就是你说的「模板」。
+> 前置必读：`references/scenes/_SCENE_SPEC.md`（字段规范）；写作风格参照现有 25 个情景。
 
 ## 流程总览：4 个固定检查点
 
@@ -86,10 +87,10 @@
 
 **按顺序执行**：
 
-1. 组装完整 JSON，写入 `references/templates/NN-xxx.json`（UTF-8，中文不转义）。
-2. 运行 `python3 scripts/check_templates.py`，**必须全部通过**；不通过就修，修完重跑。
+1. 组装完整 JSON，写入 `references/scenes/NN-xxx.json`（UTF-8，中文不转义）。
+2. 运行 `python3 scripts/check_scenes.py`，**必须全部通过**；不通过就修，修完重跑。
 3. 向用户展示完整模板内容 + `examples` 里 2 条成品 Prompt。
-4. 在 SKILL.md 匹配表登记一行（触发词 | 文件名）；README 中模板数量如有提及则同步。
-5. 询问用户是否用真实产品图试跑 1 张验证（会产生 API 费用须先征得同意；宿主自带生图则直接生成）。试跑图按模板 `pitfalls` 自查后一并展示。
+4. 在 SKILL.md 匹配表登记一行（触发词 | 文件名）；README 中情景数量如有提及则同步。
+5. 询问用户是否用真实产品图试跑 1 张验证（会产生 API 费用须先征得同意；宿主自带生图则直接生成）。试跑图按情景 `pitfalls` 自查后一并展示。
 
 **收尾汇报**：模板文件路径、匹配表登记情况、校验结果、试跑结论、修改模板的方法（直接改 JSON 再跑校验器）。

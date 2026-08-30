@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""校验 references/templates/ 下所有模板的完整性（依据 _TEMPLATE_SPEC.md）。"""
+"""校验 references/scenes/ 下所有情景的完整性（依据 _SCENE_SPEC.md）。"""
 import glob
 import json
 import os
 import sys
 
-TPL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "references", "templates")
+TPL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "references", "scenes")
 
 REQUIRED = ["id", "name", "keywords", "trigger_phrases", "prompt_template",
             "default_ratio", "composition_rules", "text_rules", "workflow",
@@ -63,7 +63,7 @@ for path in files:
         if isinstance(step, str) and any(w in step for w in ("按需调整", "注意效果", "合理搭配")):
             fail(fname, f"workflow 含空话：{step}")
 
-    # keywords 跨模板查重
+    # keywords 跨情景查重
     for kw in d.get("keywords", []):
         k = kw.lower()
         if k in all_keywords and all_keywords[k] != fname:
@@ -84,7 +84,7 @@ for path in files:
                     fail(fname, f"generation.{key} 非法值：{value}（允许 {'/'.join(sorted(allowed))}）")
             unknown = set(gen) - {"resolution", "format", "quality"}
             if unknown:
-                fail(fname, f"generation 含未知键：{sorted(unknown)}（--image/--output-dir/--mode 禁止写入模板）")
+                fail(fname, f"generation 含未知键：{sorted(unknown)}（--image/--output-dir/--mode 禁止写入情景）")
 
     # 非法 variables 命名检查（snake_case；见 SPEC 第四章）
     import re
@@ -93,7 +93,7 @@ for path in files:
         if not re.fullmatch(r"\{[a-z_]+\}", var):
             fail(fname, f"占位符 {var} 不符合 snake_case 命名")
 
-print(f"\n共校验 {len(files)} 个模板")
+print(f"\n共校验 {len(files)} 个情景")
 if errors:
     print(f"发现 {errors} 个问题，请修复后重跑")
     sys.exit(1)

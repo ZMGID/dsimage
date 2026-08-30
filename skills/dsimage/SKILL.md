@@ -1,6 +1,6 @@
 ---
 name: dsimage
-description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets — marketplace hero images, Amazon/Shopify PDP detail pages, social/ad creatives, livestream scenes — using 25 scene templates, with Campaign Style Lock keeping multi-image sets visually consistent. Uses the user's reference photos to preserve product identity. Generates images directly via the host agent's built-in image generation (e.g. Codex) when available, or via the user's configured OpenAI-compatible image API. Also creates new scene templates from client materials (style reference PDFs, brand requirements). Use when the user asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or visual strategy and image-generation prompts for selling scenarios, or asks to 制作模板 / 创建模板 / 建一个模板 / create a template from their materials.
+description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets — marketplace hero images, Amazon/Shopify PDP detail pages, social/ad creatives, livestream scenes — using 25 built-in shooting scenes, with Campaign Style Lock keeping multi-image sets visually consistent. Uses the user's reference photos to preserve product identity. Generates images directly via the host agent's built-in image generation (e.g. Codex) when available, or via the user's configured OpenAI-compatible image API. Also builds reusable client-specific scenes from client materials (style reference PDFs, brand requirements). Use when the user asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or visual strategy and image-generation prompts for selling scenarios, or asks to 制作模板 / 创建模板 / 建一个模板 / create a template from their materials.
 ---
 
 # dsimage Skill
@@ -18,10 +18,10 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 
 ## 核心流程
 
-**本 Skill 只规定通用流程。每个场景具体怎么拍、占多少、写什么字、注意什么，全部以命中的模板文件为准。**
+**本 Skill 只规定通用流程。每个场景具体怎么拍、占多少、写什么字、注意什么，全部以命中的情景文件为准。**
 
-1. 判断任务类型，按下方**模板匹配表**找到模板文件。
-2. **完整读取命中的模板文件**，之后一切按模板内容执行：
+1. 判断任务类型，按下方**情景匹配表**找到情景文件。
+2. **完整读取命中的情景文件**，之后一切按情景内容执行：
    - `workflow` — 该场景的执行步骤（照做）
    - `composition_rules` — 产品占比、留白、角度（照做）
    - `text_rules` — 图内文字规则（照做）
@@ -30,9 +30,9 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 3. 只收集会实质影响结果的缺失信息；缺非关键信息时明确假设后继续，不要阻塞。
 4. 多图任务：先建立 **Campaign Style Lock**（见下文），原样放进每张 Prompt 开头。
 5. 商品/营销任务：先做**转化驱动力诊断**（见下文）。
-6. 逐张写 Prompt：Style Lock → 模板 `prompt_template` 骨架（替换 `{variables}`）→ 按需套用 `variants` / `category_tips` → 按通用规则收尾。
-7. Generate 模式：宿主自带生图工具（如 Codex 的 imagegen）优先直接使用；没有时调用 `scripts/gen_image.py`，用户提供了产品图必须带 `--image`。**命令参数从模板取**：`--size` 用模板 `default_ratio`；`--resolution` / `--format` / `--quality` 用模板 `generation` 字段（未写则用脚本默认）；用户显式指定的参数优先于模板值。
-8. 出图后按模板 `pitfalls` + 下方 QA 清单检查，返回文件路径和关键假设。
+6. 逐张写 Prompt：Style Lock → 情景 `prompt_template` 骨架（替换 `{variables}`）→ 按需套用 `variants` / `category_tips` → 按通用规则收尾。
+7. Generate 模式：宿主自带生图工具（如 Codex 的 imagegen）优先直接使用；没有时调用 `scripts/gen_image.py`，用户提供了产品图必须带 `--image`。**命令参数从情景取**：`--size` 用情景 `default_ratio`；`--resolution` / `--format` / `--quality` 用情景 `generation` 字段（未写则用脚本默认）；用户显式指定的参数优先于情景值。
+8. 出图后按情景 `pitfalls` + 下方 QA 清单检查，返回文件路径和关键假设。
 
 ---
 
@@ -67,9 +67,9 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 
 ---
 
-## 模板系统
+## 情景系统
 
-`references/templates/` 下 25 个模板，**每个模板是该场景的完整执行规范**，包含：
+`references/scenes/` 下 25 个情景，**每个情景是该类画面的完整执行规范**，包含：
 
 | 字段 | 含义 |
 |---|---|
@@ -83,9 +83,9 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 | `anti_ai_tips` | 防 AI 味技巧（UGC/社媒/直播类必读） |
 | `examples` | 成品 Prompt 示例 |
 
-### 模板匹配表
+### 情景匹配表
 
-| 触发词 | 模板文件 |
+| 触发词 | 情景文件 |
 |---|---|
 | 白底图, 主图, hero image, packshot | `01-hero-image.json` |
 | 场景图, 生活图, lifestyle | `02-lifestyle-scene.json` |
@@ -113,22 +113,22 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 | 店铺, 门面, 空间, storefront, 实体店 | `24-storefront.json` |
 | 运动, 健身, sports, fitness | `25-sports-campaign.json` |
 
-无匹配 → 默认 `01-hero-image.json`。**只读取匹配到的模板，不要一次性加载全部。**
+无匹配 → 默认 `01-hero-image.json`。**只读取匹配到的情景，不要一次性加载全部。**
 
-多图任务通常一次命中多个模板（如详情页 = 信息图 + 细节 + 场景的组合），每张图按其对应模板执行。
+多图任务通常一次命中多个情景（如详情页 = 信息图 + 细节 + 场景的组合），每张图按其对应情景执行。
 
-**区分两种"模板"任务**：
+**区分两种任务**：
 
-- **用模板出图**（"基于 xx.jpg 生成主图"）→ 按上方核心流程走。
-- **制作一个模板**（用户丢来一堆甲方材料/风格参考/要求总结，说"制作一个模板 / 创建模板 / 建个模板"，可能带"使用 dsimage"）→ 这是模板创建任务，**读 `CREATE_TEMPLATE.md`**，按其 4 个固定检查点（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮。
+- **用情景出图**（"基于 xx.jpg 生成主图"）→ 按上方核心流程走。
+- **制作一个模板**（用户丢来一堆甲方材料/风格参考/要求总结，说"制作一个模板 / 创建模板 / 建个模板"，可能带"使用 dsimage"）→ 这是模板创建任务：以甲方材料生成一条带品牌风格的**定制情景**（业务上就是你说的"模板"），**读 `CREATE_TEMPLATE.md`**，按其 4 个固定检查点（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮。
 
-**新建或修改模板的规范**：字段规范看 `references/templates/_TEMPLATE_SPEC.md`；写完跑 `python3 scripts/check_templates.py` 校验，并在上方匹配表登记。
+**新建或修改情景的规范**：字段规范看 `references/scenes/_SCENE_SPEC.md`；写完跑 `python3 scripts/check_scenes.py` 校验，并在上方匹配表登记。
 
 ---
 
 ## 通用 Prompt 规则
 
-以下铁律适用于所有场景（具体数值以模板 `composition_rules` / `text_rules` 为准）：
+以下铁律适用于所有场景（具体数值以情景 `composition_rules` / `text_rules` 为准）：
 
 1. **颜色用 hex 码**，不用形容词："白底"是淡灰，`#FFFFFF` 才是白。
 2. **产品占比和留白必须显式写出数字**，不写模型一定把画面填满。
@@ -181,13 +181,13 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 
 最终输出前确认：
 
-- [ ] 已读取命中的模板，Prompt 基于模板的 `prompt_template` 和 `composition_rules` 组装
+- [ ] 已读取命中的情景，Prompt 基于情景的 `prompt_template` 和 `composition_rules` 组装
 - [ ] 多图任务已建 Style Lock 且每张开头一致
 - [ ] 商品/营销任务已做转化驱动力诊断
 - [ ] 颜色全部 hex、占比和留白有数字、否定清单具体
-- [ ] 图内文字短且必要，符合模板 `text_rules`
+- [ ] 图内文字短且必要，符合情景 `text_rules`
 - [ ] 参考图已通过 `--image` 或宿主生图传入
-- [ ] 出图后按模板 `pitfalls` 逐条检查通过
+- [ ] 出图后按情景 `pitfalls` 逐条检查通过
 - [ ] UGC / 社媒 / 直播场景已应用 `anti_ai_tips`
 - [ ] 文件和输出中没有 API key 或私密凭据
 
@@ -199,8 +199,8 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 |---|---|
 | 中文字笔画错 | 放大 200% 逐字核对；复杂字换简单同义字 |
 | 品牌色漂移 | 全部用 hex 码 |
-| 画面填满无留白 | 按模板 `composition_rules` 显式声明 |
-| 全套图角度雷同 | 按模板 `composition_rules.angles` 分配，不连续 3 张同角度 |
+| 画面填满无留白 | 按情景 `composition_rules` 显式声明 |
+| 全套图角度雷同 | 按情景 `composition_rules.angles` 分配，不连续 3 张同角度 |
 | 图内文字乱码 | 放大检查，乱码整张重出 |
 
-场景特化的翻车点见各模板 `pitfalls` 字段，出图后必须对照检查。
+场景特化的翻车点见各情景 `pitfalls` 字段，出图后必须对照检查。

@@ -12,7 +12,7 @@ Dsimage 是一个电商视觉创作 Skill，装进 Claude Code / Codex / OpenCla
 
 它和"再要一个 Prompt"的生图玩法有三个区别：
 
-1. **做整套，不做单张** — 内置 25 个模板（主图、生活方式、平铺、模特、直播间、爆炸图、杂志大片……）。多图任务自动生成 Campaign Style Lock，把色板、冷暖调、字体、背景、光线全部锁死，整套图一个风格，不会一张一个样。
+1. **做整套，不做单张** — 内置 25 种情景（主图、生活方式、平铺、模特、直播间、爆炸图、杂志大片……）。多图任务自动生成 Campaign Style Lock，把色板、冷暖调、字体、背景、光线全部锁死，整套图一个风格，不会一张一个样。
 2. **为转化出图，不为好看出图** — 动手前先诊断产品靠什么打动买家：视觉驱动、痛点驱动还是情感价值驱动，再按对应的转化逻辑规划图片顺序，而不是堆一堆好看但不出单的图。
 3. **从 Prompt 到成图一条龙** — 未配置 API 时，输出结构完整、可直接执行的专业生图 Prompt，拿到任何平台都能用；配置任意 OpenAI 兼容图片 API 后一句话直接出图，生图脚本纯 Python 标准库，零第三方依赖。
 
@@ -123,8 +123,8 @@ dsimage/
 │   ├── SKILL.md             # 技能定义与通用流程
 │   ├── SETUP.md             # 安装配置指南（Agent 读取）
 │   ├── CREATE_TEMPLATE.md   # 模板创建流程（Agent 读取）
-│   ├── scripts/             # gen_image.py 生图 + check_templates.py 模板校验
-│   └── references/templates/  # 25 个模板 + _TEMPLATE_SPEC.md 模板规范
+│   ├── scripts/             # gen_image.py 生图 + check_scenes.py 情景校验
+│   └── references/scenes/  # 25 个情景 + _SCENE_SPEC.md 情景规范
 ├── data/                    # 产品原图目录（自建，放入你的产品图）
 ├── generated-images/        # 生图输出目录（运行时自动创建，不入库）
 └── .env.example             # API 配置模板
