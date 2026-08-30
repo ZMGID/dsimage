@@ -1,6 +1,6 @@
 ---
 name: dsimage
-description: Create visual concepts, image-generation prompts, and optional AI-generated images for product hero images, marketing creatives, social posts, ads, ecommerce PDP visuals, and general visual design tasks. Use when the user asks for visual strategy, image prompt writing, product/marketing image direction, or direct text-to-image generation with their own OpenAI-compatible API.
+description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets — marketplace hero images, Amazon/Shopify PDP detail pages, social/ad creatives, livestream scenes — using 25 scene templates, with Campaign Style Lock keeping multi-image sets visually consistent. Uses the user's reference photos to preserve product identity. Generates images directly via the host agent's built-in image generation (e.g. Codex) when available, or via the user's configured OpenAI-compatible image API. Use when the user asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or visual strategy and image-generation prompts for selling scenarios.
 ---
 
 # dsimage Skill
