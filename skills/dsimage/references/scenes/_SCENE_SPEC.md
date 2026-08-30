@@ -1,6 +1,7 @@
 # 情景规范（新建情景前必读）
 
 > 新建或修改任何情景**之前必读本文件**。每个情景 JSON 是一个场景的完整执行规范：Agent 按 SKILL.md 匹配表命中后，以情景字段为准执行，SKILL.md 不含场景细节。
+> 模板层说明：`references/templates/`（甲方定制模板）沿用本规范的字段结构，额外增加 `template_meta`（品牌色板/语言/风格来源）；模板创建流程见 CREATE_TEMPLATE.md。
 > 写完必须：① 跑 `python3 scripts/check_scenes.py` 通过 → ② 在 SKILL.md 匹配表登记 → ③ 提交。
 
 ## 一、文件约定

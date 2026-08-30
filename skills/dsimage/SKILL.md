@@ -69,7 +69,7 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 
 ## 情景系统
 
-`references/scenes/` 下有 25 个内置情景（01-25，通用拍法）和模板层文件（26 起，带甲方风格/语言/参数的定制情景，目前含默认示例 `26-default-ecom.json`）。**每个情景是该类画面的完整执行规范**，包含：
+`references/scenes/` 下 25 个内置情景（01-25，通用拍法）；`references/templates/` 下是**模板层**——带甲方风格/语言/参数的定制实例（目前含默认示例 `templates/01-default-ecom.json`）。两者字段结构一致，模板额外有 `template_meta`（品牌色板、语言、风格来源）。**每个情景是该类画面的完整执行规范**，包含：
 
 | 字段 | 含义 |
 |---|---|
@@ -113,7 +113,7 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 | 店铺, 门面, 空间, storefront, 实体店 | `24-storefront.json` |
 | 运动, 健身, sports, fitness | `25-sports-campaign.json` |
 
-| 默认模板, default template, 通用电商主图 | `26-default-ecom.json` |
+| 默认模板, default template, 通用电商主图 | `templates/01-default-ecom.json` |
 
 无匹配 → 默认 `01-hero-image.json`。**只读取匹配到的情景，不要一次性加载全部。**
 
@@ -122,7 +122,7 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 **区分两种任务**：
 
 - **用情景出图**（"基于 xx.jpg 生成主图"）→ 按上方核心流程走。
-- **制作一个模板**（用户丢来一堆甲方材料/风格参考/要求总结，说"制作一个模板 / 创建模板 / 建个模板"，可能带"使用 dsimage"）→ 这是模板创建任务：以甲方材料生成一条带品牌风格的**定制情景**（业务上就是你说的"模板"），**读 `CREATE_TEMPLATE.md`**，按其 4 个固定检查点（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮。模板层现状：默认示例 `26-default-ecom.json`（内置，可当起点），甲方定制模板尚待创建。
+- **制作一个模板**（用户丢来一堆甲方材料/风格参考/要求总结，说"制作一个模板 / 创建模板 / 建个模板"，可能带"使用 dsimage"）→ 这是模板创建任务：以甲方材料生成一条带品牌风格的**定制情景**（业务上就是你说的"模板"），**读 `CREATE_TEMPLATE.md`**，按其 4 个固定检查点（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮。模板层现状：默认示例 `templates/01-default-ecom.json`（内置，可当起点），甲方定制模板尚待创建。
 
 **新建或修改情景的规范**：字段规范看 `references/scenes/_SCENE_SPEC.md`；写完跑 `python3 scripts/check_scenes.py` 校验，并在上方匹配表登记。
 

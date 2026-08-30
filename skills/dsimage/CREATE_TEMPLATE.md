@@ -2,7 +2,7 @@
 
 > 用途：用户提供甲方材料（风格参考 PDF/图片、文字要求、文案）加一句"制作一个模板 / 创建模板"（可能带"使用 dsimage"），Agent 分析并创建一个新模板。
 > 用户不需要知道本文件存在——SKILL.md 已经规定：识别到"制作模板"类任务就读本文件。
-> 术语：产出在工程上是一条「定制情景」（存入情景库 references/scenes/），业务上就是你说的「模板」。
+> 术语：产出在工程上是一个「定制情景实例」，存入**模板库 `references/templates/`**（与通用情景库 `references/scenes/` 分开），业务上就是你说的「模板」。
 > 前置必读：`references/scenes/_SCENE_SPEC.md`（字段规范）；写作风格参照现有 25 个情景。
 
 ## 流程总览：4 个固定检查点
@@ -87,7 +87,7 @@
 
 **按顺序执行**：
 
-1. 组装完整 JSON，写入 `references/scenes/NN-xxx.json`（UTF-8，中文不转义）。
+1. 组装完整 JSON，写入 `references/templates/NN-xxx.json`（模板层独立编号，从 01 起；UTF-8，中文不转义）。
 2. 运行 `python3 scripts/check_scenes.py`，**必须全部通过**；不通过就修，修完重跑。
 3. 向用户展示完整模板内容 + `examples` 里 2 条成品 Prompt。
 4. 在 SKILL.md 匹配表登记一行（触发词 | 文件名）；README 中情景数量如有提及则同步。

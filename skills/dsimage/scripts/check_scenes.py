@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""校验 references/scenes/ 下所有情景的完整性（依据 _SCENE_SPEC.md）。"""
+"""校验 references/scenes/（情景库）与 references/templates/（模板库）的完整性。"""
 import glob
 import json
 import os
 import sys
 
-TPL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "references", "scenes")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CHECK_DIRS = [
+    ("情景库", os.path.join(BASE_DIR, "references", "scenes")),
+    ("模板库", os.path.join(BASE_DIR, "references", "templates")),
+]
 
 REQUIRED = ["id", "name", "keywords", "trigger_phrases", "prompt_template",
             "default_ratio", "composition_rules", "text_rules", "workflow",
@@ -19,11 +23,11 @@ def fail(fname: str, msg: str) -> None:
 
 
 errors = 0
-files = sorted(glob.glob(os.path.join(TPL_DIR, "*.json")))
+files = [(label, f) for label, d in CHECK_DIRS for f in sorted(glob.glob(os.path.join(d, "*.json")))]
 all_keywords: dict[str, str] = {}
 
-for path in files:
-    fname = os.path.basename(path)
+for label, path in files:
+    fname = label + "/" + os.path.basename(path)
     try:
         d = json.load(open(path, encoding="utf-8"))
     except json.JSONDecodeError as exc:
@@ -93,7 +97,7 @@ for path in files:
         if not re.fullmatch(r"\{[a-z_]+\}", var):
             fail(fname, f"占位符 {var} 不符合 snake_case 命名")
 
-print(f"\n共校验 {len(files)} 个情景")
+print(f"\n共校验 {len(files)} 个文件（情景 + 模板）")
 if errors:
     print(f"发现 {errors} 个问题，请修复后重跑")
     sys.exit(1)
