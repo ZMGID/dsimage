@@ -32,7 +32,7 @@
 | ★ `examples` | ≥1 条 | 示例 Prompt 或执行记录 |
 | ★ `supports_image_reference` | 必填 | bool |
 | ○ `style_lock` | 可选 | 固定的 Style Lock 文本；不写则按 SKILL.md 规则从 template_meta.brand 现场生成 |
-| ○ `pitfalls` | 可选 | 品牌/行业特有翻车点（出图后连同所引情景的 pitfalls 一起检查） |
+| ○ `pitfalls` | 可选 | 品牌坑的沉淀容器（法务红线、配色偏差、版式雷点）；出图后连同所引情景的 pitfalls 一起检查。拍法坑回情景，模型通用坑回 SKILL.md |
 
 ## 结构化字段细则
 

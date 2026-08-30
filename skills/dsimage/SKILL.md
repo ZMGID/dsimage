@@ -191,6 +191,21 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 - [ ] 出图后按情景 `pitfalls` 逐条检查通过
 - [ ] UGC / 社媒 / 直播场景已应用 `anti_ai_tips`
 - [ ] 文件和输出中没有 API key 或私密凭据
+- [ ] 出图发现问题已按「坑跟谁走」询问用户是否回流沉淀
+
+---
+
+## 翻车回流（沉淀机制）
+
+出图发现问题后，按"坑跟谁走"分层沉淀，并**主动询问用户是否回流**：
+
+| 坑的类型 | 判断 | 沉淀到 |
+|---|---|---|
+| 拍法的坑（换个客户也会踩） | 影响这一类图 | 所引情景的 `pitfalls` |
+| 品牌的坑（只跟这个甲方有关） | 影响这一个模板 | 模板的 `pitfalls` 或 `text_rules` |
+| 模型本身的坑（跨情景跨品牌） | 影响所有出图 | SKILL.md「常见翻车点」表 |
+
+回流格式：`"症状（→修法）"`；情景 `pitfalls` 上限 3-5 条，满了合并同类。回流后跑 `python3 scripts/check_scenes.py` 并提交。
 
 ---
 
