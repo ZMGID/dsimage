@@ -185,11 +185,7 @@ dsimage/
 │   ├── ecommerce-detailpage-notes.md  # 电商主图详情页搭建教程笔记
 │   ├── demo-claude-code.png           # Claude Code 使用演示截图
 │   └── demo-amazon-pdp.png            # Amazon PDP 图片包生成演示截图
-├── generated-images/                  # AI 生成图片输出（已 gitignore）
-│   ├── new001-pdp/                    # 示例：促销图 (2 张)
-│   ├── new002-pdp/                    # 示例：Amazon PDP 全套 (14 张)
-│   ├── new003-twitter/                # 示例：Twitter 社媒图 (3 张)
-│   └── new004-livestream/             # 示例：直播间场景图 (3 张)
+├── generated-images/                  # 生图输出目录（运行时自动创建，已 gitignore）
 └── .env                               # API 配置（不入库）
 ```
 
@@ -257,19 +253,6 @@ dsimage/
 - 禁止漂移项（色板变化、字体混用、光线不一致等）
 
 同一段 Lock 文本会原样复制到每张图的 Prompt 开头，保证整套图视觉一致。
-
-## 生成示例
-
-`generated-images/` 中保留了以下历史生成示例（对应的示例产品原图已移除，使用时把你的产品图放进 `data/` 即可）：
-
-| 产品 | 场景 | 生成数量 |
-|------|------|---------|
-| NEW001.jpg — 男士桑蚕丝短袖衬衫 | 促销推广图 | 2 张 |
-| NEW002.jpg — 男士白色商务衬衫 | Amazon PDP 详情页全套 | 14 张 (5 主图 + 9 详情页) |
-| NEW003.jpg — 男士白色长袖正装衬衫 | Twitter/X 社媒推广帖 | 3 张 |
-| NEW004.jpg — 男士浅蓝色牛津纺衬衫 | 电商直播间场景 | 3 张 |
-
-> `generated-images/` 已在 `.gitignore` 中忽略，不会提交到仓库。示例图片需自行运行 Skill 生成。
 
 ## 安全说明
 
