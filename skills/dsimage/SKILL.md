@@ -38,7 +38,7 @@ python3 scripts/generate_image.py --env-file .env --prompt-file prompt.txt
 
 **参考图片**：如果用户提供了产品照片路径，使用 `--image` 参数传入以提升产品一致性。参考图对保证产品外观准确非常有效。
 
-如果缺少任何生图配置，说明需要在 `.env` 里配置什么，并把最终 Prompt 交给用户，方便用户稍后自行运行。
+如果缺少任何生图配置，先询问用户是否现在配置：确认后读取本 Skill 目录下的 `SETUP.md`，按其中流程引导完成（收集 `IMG_BASE_URL` / `IMG_API_KEY` → 拉取模型列表让用户选择 `IMG_MODEL` → 写入项目根目录 `.env`）；用户暂不配置则说明需要什么，并把最终 Prompt 交给用户。
 
 ---
 

@@ -45,16 +45,18 @@ OpenClaw 也可以在克隆出的仓库目录内用命令安装：`openclaw skil
 
 ### 方式二：让 AI 自动安装
 
-把下面这段提示词发给项目里的 AI（Claude Code / Codex 等），它会自己读 README 完成安装：
+把下面这段发给项目里的 AI（Claude Code / Codex 等），它会读取指南，自动完成安装和 API 配置：
 
 ```text
-请为我安装 dsimage 电商图片生成 Skill：
-
-1. 获取仓库 https://github.com/ZMGID/dsimage（已克隆到本地则直接用本地路径）。
-2. 阅读仓库根目录 README.md 的「安装」一节，按说明把 skills/dsimage 安装到你正在使用的 Agent 技能目录（Claude Code / Codex / OpenClaw 任一）；如目标位置已有同名 Skill，先备份再覆盖。
-3. 生图配置见 README 的「API 配置」一节：IMG_BASE_URL、IMG_MODEL、IMG_API_KEY。不要向我要 API key，也不要把 key 写进任何文件或对话，留占位符即可，我自己填。
-4. 安装完成后告诉我：这个 Skill 怎么触发、支持哪些场景、还缺什么配置。
+Install and configure dsimage by following the instructions at:
+https://raw.githubusercontent.com/ZMGID/dsimage/main/skills/dsimage/SETUP.md
 ```
+
+已克隆仓库的，直接让 AI 读本地文件 `skills/dsimage/SETUP.md` 即可。
+
+Agent 会按指南执行：安装 Skill → 询问你是否配置生图 API → 确认后收集 `IMG_BASE_URL` 和 `IMG_API_KEY` → 自动拉取该服务的模型列表供你选择 `IMG_MODEL` → 写入 `.env` 并可选生成测试图验证。
+
+也可以让 AI 交互式引导配置：让它读 `skills/dsimage/SETUP.md` 执行即可（会询问地址和 key、拉取模型列表让你选模型、写入 `.env`）。
 
 ### API 配置
 
@@ -116,7 +118,7 @@ python3 skills/dsimage/scripts/generate_image.py \
 
 ```
 dsimage/
-├── skills/dsimage/          # Skill 本体：SKILL.md + 25 个场景模板 + 生图脚本
+├── skills/dsimage/          # Skill 本体：SKILL.md + SETUP.md + 25 个场景模板 + 生图脚本
 ├── docs/                    # API 文档、教程笔记、演示截图
 ├── generated-images/        # 生图输出目录（运行时自动创建，不入库）
 └── .env.example             # API 配置模板
