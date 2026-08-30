@@ -58,7 +58,7 @@ OpenClaw 也可以在克隆出的仓库目录内用命令安装：`openclaw skil
 
 ### API 配置
 
-在项目根目录或 `skills/dsimage/` 下创建 `.env`：
+在项目根目录创建 `.env`：
 
 ```dotenv
 IMG_BASE_URL=https://api.apimart.ai/v1
@@ -98,7 +98,19 @@ python3 skills/dsimage/scripts/generate_image.py \
   --size 1:1 --resolution 2k --image data/product.jpg
 ```
 
-全部脚本参数（比例、分辨率、参考图、轮询、超时等）见 [skills/dsimage/README.md](skills/dsimage/README.md)。
+脚本参数：
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--prompt` / `--prompt-file` | Prompt 来源，二选一必填 | — |
+| `--size` | 画幅比例：`1:1`、`2:3`、`16:9` 等 14 种 | `1:1` |
+| `--resolution` | 分辨率档位 `1k` / `2k` / `4k`（4K 仅 6 种宽幅） | `2k` |
+| `--image` | 产品参考图路径，提升产品一致性 | 无 |
+| `--output-dir` | 图片输出目录 | `generated-images` |
+| `--mode` | `sync` / `async`，按 URL 是否含 apimart 自动检测 | 自动 |
+| `--format` | `png` / `jpeg` / `webp` | `png` |
+
+异步模式另有 `--poll-interval`（默认 5 秒）、`--timeout`（默认 180 秒）；同步模式支持 `--quality`（low/medium/high）和 `--n`（生成数量）。
 
 ## 项目结构
 
