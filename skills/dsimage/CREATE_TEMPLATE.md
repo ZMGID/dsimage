@@ -59,7 +59,7 @@
 
 **做什么**（结构见 `_TEMPLATE_SPEC.md`）：
 
-1. `name`（≤12 字中文名）、`id`（kebab-case，与文件名一致，模板层独立编号从 01 起）。
+1. `name`（≤12 字中文名）、`id`（与文件名中文名一致，模板层独立编号从 01 起）。
 2. `keywords` ≥5 个、`trigger_phrases` ≥3 个——对照 SKILL.md 匹配表查重，说明"为什么不会误命中现有情景"。
 3. `template_meta`：品牌色板 hex（来自检查点 1 的取色）、字体族、调性短语、图内文字语言。
 4. `pack` 草稿：槽位列表，每个槽位 = slot 编号 + 用途 + 比例；用户要求几张就几个槽位。
@@ -87,7 +87,7 @@
 
 **按顺序执行**：
 
-1. 组装完整 JSON，写入 `references/templates/NN-xxx.json`（模板层独立编号，从 01 起；UTF-8，中文不转义）。
+1. 组装完整 JSON，写入 `references/templates/NN-中文名.json`（模板层独立编号，从 01 起；中文名与 name/id 一致；UTF-8，中文不转义）。
 2. 运行 `python3 scripts/check_scenes.py`，**必须全部通过**；不通过就修，修完重跑。
 3. 向用户展示完整模板内容 + `examples` 里 2 条成品 Prompt。
 4. 在 SKILL.md 匹配表登记一行（触发词 | 文件名）；README 中情景数量如有提及则同步。

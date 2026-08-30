@@ -1,5 +1,5 @@
 {
-  "id": "default-ecom",
+  "id": "默认电商模板",
   "name": "默认电商模板",
   "template_meta": {
     "language": "图内文字默认中文，可按用户要求切换",
@@ -12,8 +12,19 @@
     },
     "style_source": "dsimage 内置默认 Style Lock（高级简洁、off-white 底 + 炭灰字 + 单强调色）"
   },
-  "keywords": ["默认模板", "default template", "通用电商主图", "高级简洁", "品牌模板", "报价单风格"],
-  "trigger_phrases": ["用默认模板", "默认风格出图", "套默认模板生成"],
+  "keywords": [
+    "默认模板",
+    "default template",
+    "通用电商主图",
+    "高级简洁",
+    "品牌模板",
+    "报价单风格"
+  ],
+  "trigger_phrases": [
+    "用默认模板",
+    "默认风格出图",
+    "套默认模板生成"
+  ],
   "text_rules": {
     "headline": "核心卖点 ≤10 字，28-36pt，#2D2D2D，左上角",
     "price": "价格数字 36-48pt，强调色 #C8452C，左下角固定位置，醒目（价格必须由用户提供，不虚构）",
@@ -24,9 +35,24 @@
   "pack": {
     "default_count": "3 张（用户指定数量时以用户为准）",
     "images": [
-      {"slot": "H1", "purpose": "主图：产品突出 + 价格信息", "scene": "01-hero-image.json", "ratio": "1:1"},
-      {"slot": "H2", "purpose": "质感细节", "scene": "04-detail-macro.json", "ratio": "1:1"},
-      {"slot": "H3", "purpose": "使用场景", "scene": "02-lifestyle-scene.json", "ratio": "4:5"}
+      {
+        "slot": "H1",
+        "purpose": "主图：产品突出 + 价格信息",
+        "scene": "01-hero-image.json",
+        "ratio": "1:1"
+      },
+      {
+        "slot": "H2",
+        "purpose": "质感细节",
+        "scene": "04-detail-macro.json",
+        "ratio": "1:1"
+      },
+      {
+        "slot": "H3",
+        "purpose": "使用场景",
+        "scene": "02-lifestyle-scene.json",
+        "ratio": "4:5"
+      }
     ]
   },
   "workflow": [
@@ -43,7 +69,10 @@
     "配色偏离品牌 hex（禁止凭感觉写近似色）",
     "价格信息虚构（必须来自用户提供）"
   ],
-  "generation": {"resolution": "2k", "format": "png"},
+  "generation": {
+    "resolution": "2k",
+    "format": "png"
+  },
   "examples": [
     "H1 示例：Premium e-commerce hero image. {product_description} centered in the upper 2/3 of a clean off-white studio background (#F5F5F0), soft diffused lighting with gentle directional shadow. Headline 「{核心卖点}」 at 32pt #2D2D2D top-left. Price block bottom-left in 44pt bold #C8452C. Product occupies 48%, whitespace 40%. Modern sans-serif only. No props, no hands, no watermark, no extra text.",
     "H2 示例：Extreme close-up macro shot of the {product_description} material finish, shallow depth of field, off-white background (#F5F5F0), side lighting raking across the texture. Label 「{工艺卖点}」 at 16pt #888888 with thin-line icon. Whitespace 40%. No clutter."

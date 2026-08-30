@@ -13,8 +13,8 @@
 
 ## 文件约定
 
-- 位置：`references/templates/`，命名 `NN-kebab-case.json`，编号**独立于情景**，从 01 起
-- `id` 与文件名一致（`01-default-ecom.json` → `"id": "default-ecom"`）
+- 位置：`references/templates/`，命名 `NN-中文名.json`（中文名与 `name`/`id` 字段一致），编号**独立于情景**，从 01 起
+- `id` 与文件名中文名一致（`01-默认电商模板.json` → `"id": "默认电商模板"`），校验器自动核对
 - UTF-8，标准 JSON，中文不转义
 
 ## 字段清单（★必填 ○可选）
@@ -79,7 +79,7 @@
 
 ```json
 {
-  "id": "your-client",
+  "id": "客户模板中文名",
   "name": "客户模板中文名",
   "template_meta": {
     "language": "图内文字语言",
