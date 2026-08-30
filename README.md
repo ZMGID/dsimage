@@ -48,7 +48,7 @@ OpenClaw 也可以在克隆出的仓库目录内用命令安装：`openclaw skil
 把下面这段发给项目里的 AI（Claude Code / Codex 等），它会读取指南，自动完成安装和 API 配置：
 
 ```text
-Install and configure dsimage by following the instructions at:
+请安装并配置 dsimage，严格按照以下指南执行：
 https://raw.githubusercontent.com/ZMGID/dsimage/main/skills/dsimage/SETUP.md
 ```
 
