@@ -10,6 +10,8 @@
 
 ## 安装
 
+dsimage 遵循 Agent Skills 开放标准（一个含 `SKILL.md` 的文件夹），Claude Code / Codex / OpenClaw 都直接支持。
+
 ### 方式一：手动安装
 
 ```bash
@@ -17,24 +19,33 @@
 git clone https://github.com/ZMGID/dsimage.git
 cd dsimage
 
-# 2. 把 Skill 复制到 Claude Code 的技能目录（二选一）
-mkdir -p .claude/skills && cp -r skills/dsimage .claude/skills/   # 仅当前项目可用
-cp -r skills/dsimage ~/.claude/skills/                            # 全局可用
+# 2. 把 skills/dsimage 复制到你所用工具的技能目录（目录见下表）
+mkdir -p .claude/skills && cp -r skills/dsimage .claude/skills/
 
-# 3. 配置 API（见下节），重启 Claude Code 即可使用
+# 3. 配置 API（见下节），重启工具即可使用
 ```
+
+各工具的技能目录（`<项目>` 指你的项目根目录 / OpenClaw 工作区）：
+
+| 工具 | 项目级（仅当前项目可用） | 全局（所有项目可用） |
+|------|--------------------------|----------------------|
+| Claude Code | `<项目>/.claude/skills/` | `~/.claude/skills/` |
+| Codex CLI | `<项目>/.codex/skills/` | `~/.codex/skills/` |
+| OpenClaw | `<工作区>/skills/` | `~/.openclaw/skills/` |
+
+OpenClaw 也可以在克隆出的仓库目录内用命令安装：`openclaw skills install ./skills/dsimage --as dsimage`。
 
 ### 方式二：让 AI 自动安装
 
-把下面这段提示词发给项目里的 AI（Claude Code / Codex 等），它会自己完成安装：
+把下面这段提示词发给项目里的 AI（Claude Code / Codex 等），它会自己读 README 完成安装：
 
 ```text
-请为我安装 dsimage 电商图片生成 Skill，步骤：
+请为我安装 dsimage 电商图片生成 Skill：
 
-1. 获取仓库 https://github.com/ZMGID/dsimage（已克隆到本地则直接用本地路径），只需要其中的 skills/dsimage 目录。
-2. 把 skills/dsimage 完整复制到当前项目的 .claude/skills/dsimage（如已存在同名目录，先重命名备份再覆盖）。
-3. 参照 skills/dsimage/.env.example 确认生图配置：IMG_BASE_URL、IMG_MODEL、IMG_API_KEY。API key 不要向我要，也不要写入任何文件，留占位符即可，稍后我自己填。
-4. 安装完成后告诉我：这个 Skill 怎么触发、支持哪些场景、我还缺什么配置。
+1. 获取仓库 https://github.com/ZMGID/dsimage（已克隆到本地则直接用本地路径）。
+2. 阅读仓库根目录 README.md 的「安装」一节，按说明把 skills/dsimage 安装到你正在使用的 Agent 技能目录（Claude Code / Codex / OpenClaw 任一）；如目标位置已有同名 Skill，先备份再覆盖。
+3. 生图配置见 README 的「API 配置」一节：IMG_BASE_URL、IMG_MODEL、IMG_API_KEY。不要向我要 API key，也不要把 key 写进任何文件或对话，留占位符即可，我自己填。
+4. 安装完成后告诉我：这个 Skill 怎么触发、支持哪些场景、还缺什么配置。
 ```
 
 ### API 配置
