@@ -113,5 +113,9 @@
     "产品占比过大显拥挤",
     "反光过曝有 AI 感",
     "底部阴影杂乱"
-  ]
+  ],
+  "generation": {
+    "resolution": "2k",
+    "format": "png"
+  }
 }

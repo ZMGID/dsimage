@@ -96,5 +96,9 @@
     "UI 文字乱码",
     "人手畸形",
     "出现假平台 logo"
-  ]
+  ],
+  "generation": {
+    "resolution": "2k",
+    "format": "png"
+  }
 }

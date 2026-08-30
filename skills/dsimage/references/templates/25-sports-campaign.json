@@ -107,5 +107,9 @@
     "人物动作僵硬不自然",
     "产品被动态元素盖住",
     " dynamic 感不足像摆拍"
-  ]
+  ],
+  "generation": {
+    "resolution": "2k",
+    "format": "png"
+  }
 }

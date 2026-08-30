@@ -31,7 +31,7 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 4. 多图任务：先建立 **Campaign Style Lock**（见下文），原样放进每张 Prompt 开头。
 5. 商品/营销任务：先做**转化驱动力诊断**（见下文）。
 6. 逐张写 Prompt：Style Lock → 模板 `prompt_template` 骨架（替换 `{variables}`）→ 按需套用 `variants` / `category_tips` → 按通用规则收尾。
-7. Generate 模式：宿主自带生图工具（如 Codex 的 imagegen）优先直接使用；没有时调用 `scripts/generate_image.py`，用户提供了产品图必须带 `--image`。
+7. Generate 模式：宿主自带生图工具（如 Codex 的 imagegen）优先直接使用；没有时调用 `scripts/generate_image.py`，用户提供了产品图必须带 `--image`。**命令参数从模板取**：`--size` 用模板 `default_ratio`；`--resolution` / `--format` / `--quality` 用模板 `generation` 字段（未写则用脚本默认）；用户显式指定的参数优先于模板值。
 8. 出图后按模板 `pitfalls` + 下方 QA 清单检查，返回文件路径和关键假设。
 
 ---

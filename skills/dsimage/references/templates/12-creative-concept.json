@@ -93,5 +93,9 @@
     "创意与产品卖点无关",
     "画面元素过杂",
     "AI 拼贴感明显"
-  ]
+  ],
+  "generation": {
+    "resolution": "2k",
+    "format": "png"
+  }
 }

@@ -72,6 +72,22 @@ for path in files:
             fail(fname, f"keywords 与 {all_keywords[k]} 重复：{kw}")
         all_keywords[k] = fname
 
+    # generation 参数预设（可选字段）
+    gen = d.get("generation")
+    if gen is not None:
+        if not isinstance(gen, dict):
+            fail(fname, "generation 应为对象")
+        else:
+            for key, allowed in (("resolution", {"1k", "2k", "4k"}),
+                                 ("format", {"png", "jpeg", "webp"}),
+                                 ("quality", {"low", "medium", "high"})):
+                value = gen.get(key)
+                if value is not None and value not in allowed:
+                    fail(fname, f"generation.{key} 非法值：{value}（允许 {'/'.join(sorted(allowed))}）")
+            unknown = set(gen) - {"resolution", "format", "quality"}
+            if unknown:
+                fail(fname, f"generation 含未知键：{sorted(unknown)}（--image/--output-dir/--mode 禁止写入模板）")
+
     # 非法 variables 命名检查（snake_case；见 SPEC 第四章）
     import re
     raw = json.dumps(d, ensure_ascii=False)

@@ -102,5 +102,9 @@
     "太完美像硬广，没有种草感",
     "出现平台 logo 或水印",
     "文案过长"
-  ]
+  ],
+  "generation": {
+    "resolution": "1k",
+    "format": "png"
+  }
 }

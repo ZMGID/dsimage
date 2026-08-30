@@ -29,6 +29,7 @@
 | ★ `pitfalls` | 3-5 条 | 场景特化翻车点，写"症状（→修法）" |
 | ★ `examples` | ≥2 条 | 完整可直接执行的英文 Prompt |
 | ★ `supports_image_reference` | 必填 | bool，是否支持 `--image` 参考图 |
+| ○ `generation` | 可选 | 脚本参数预设：`{"resolution": "2k", "format": "png", "quality": "high"}`；不写则用脚本默认（2k/png） |
 | ◐ `anti_ai_tips` | UGC/社媒/直播/买家秀类**必填**，其余可选 | 防 AI 味技巧 |
 | ◐ `pack_structure` | 仅多图编排型模板（如 11-infographic） | 图片包的逐屏结构定义 |
 
@@ -51,6 +52,18 @@
 - `product_ratio` / `whitespace` 必须是**数字或范围**，禁止写"适当""合理"
 - `angles` 列 2-4 个该场景真正会用到的角度，每个必须带可拼进 Prompt 的**英文短语**
 - 数值参照现有模板校准（如 01 主图 35-40%、02 场景图 20-25%）
+
+### generation（脚本参数预设）
+
+```json
+{"resolution": "2k", "format": "png", "quality": "high"}
+```
+
+- 可写键：`resolution`（`1k`/`2k`/`4k`，异步模式生效）、`format`（`png`/`jpeg`/`webp`）、`quality`（`low`/`medium`/`high`，仅同步模式生效）
+- 不写该字段 = 用脚本默认（2k / png）；写了一个键就表示该模板有意覆盖默认
+- 画幅 `--size` 不在本字段里，由 `default_ratio` 承担
+- 优先级：用户命令行显式指定 > 模板 `generation` > 脚本默认
+- 参考图 `--image`、输出目录 `--output-dir`、模式 `--mode` 是运行时信息，**禁止**写入模板
 
 ### text_rules
 
