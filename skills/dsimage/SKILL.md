@@ -38,10 +38,10 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 
 ## 生图配置
 
-图像生成接口默认使用 apimart.ai（GPT-Image-2，异步轮询）。`.env` 放在 Skill 目录内（与 SKILL.md 同级）即全局生效，换会话、换项目都可用；脚本查找顺序：`--env-file` > 从当前目录向上查找 > Skill 自身目录。不要把真实 API key 写进仓库：
+图像生成使用任意 OpenAI 兼容 API（示例用官方地址）。`.env` 放在 Skill 目录内（与 SKILL.md 同级）即全局生效，换会话、换项目都可用；脚本查找顺序：`--env-file` > 从当前目录向上查找 > Skill 自身目录。不要把真实 API key 写进仓库：
 
 ```dotenv
-IMG_BASE_URL=https://api.apimart.ai/v1
+IMG_BASE_URL=https://api.openai.com/v1
 IMG_MODEL=gpt-image-2
 IMG_API_KEY=your-api-key
 ```

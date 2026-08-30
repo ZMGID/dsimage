@@ -34,7 +34,7 @@
 
 | 变量 | 说明 |
 |---|---|
-| `IMG_BASE_URL` | OpenAI 兼容 API 根地址，例如 `https://api.apimart.ai/v1`、`https://api.openai.com/v1` |
+| `IMG_BASE_URL` | OpenAI 兼容 API 根地址，例如 `https://api.openai.com/v1` 或第三方兼容服务 |
 | `IMG_API_KEY` | 用户在该服务商的 API 密钥 |
 
 安全规则（必须遵守）：
