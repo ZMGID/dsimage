@@ -124,7 +124,7 @@ dsimage/
 │   ├── SETUP.md             # 安装配置指南（Agent 读取）
 │   ├── CREATE_TEMPLATE.md   # 模板创建流程（Agent 读取）
 │   ├── scripts/             # gen_image.py 生图 + check_scenes.py 情景校验
-│   └── references/scenes/  # 25 个情景 + _SCENE_SPEC.md 情景规范
+│   └── references/scenes/  # 25 个内置情景 + 模板层（26-default-ecom）+ _SCENE_SPEC.md 情景规范
 ├── data/                    # 产品原图目录（自建，放入你的产品图）
 ├── generated-images/        # 生图输出目录（运行时自动创建，不入库）
 └── .env.example             # API 配置模板
