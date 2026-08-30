@@ -12,7 +12,7 @@ Dsimage 是一个电商视觉创作 Skill，装进 Claude Code / Codex / OpenCla
 
 它和"再要一个 Prompt"的生图玩法有三个区别：
 
-1. **做整套，不做单张** — 内置 25 个场景模板（主图、生活方式、平铺、模特、直播间、爆炸图、杂志大片……）。多图任务自动生成 Campaign Style Lock，把色板、冷暖调、字体、背景、光线全部锁死，整套图一个风格，不会一张一个样。
+1. **做整套，不做单张** — 内置 25 个模板（主图、生活方式、平铺、模特、直播间、爆炸图、杂志大片……）。多图任务自动生成 Campaign Style Lock，把色板、冷暖调、字体、背景、光线全部锁死，整套图一个风格，不会一张一个样。
 2. **为转化出图，不为好看出图** — 动手前先诊断产品靠什么打动买家：视觉驱动、痛点驱动还是情感价值驱动，再按对应的转化逻辑规划图片顺序，而不是堆一堆好看但不出单的图。
 3. **从 Prompt 到成图一条龙** — 未配置 API 时，输出结构完整、可直接执行的专业生图 Prompt，拿到任何平台都能用；配置任意 OpenAI 兼容图片 API（默认对接 apimart.ai 的 GPT-Image-2）后一句话直接出图，生图脚本纯 Python 标准库，零第三方依赖。
 
@@ -118,7 +118,7 @@ python3 skills/dsimage/scripts/generate_image.py \
 
 ```
 dsimage/
-├── skills/dsimage/          # Skill 本体：SKILL.md + SETUP.md + 25 个场景模板 + 生图脚本
+├── skills/dsimage/          # Skill 本体：SKILL.md + SETUP.md + 25 个模板 + 生图脚本
 ├── docs/                    # API 文档、教程笔记、演示截图
 ├── generated-images/        # 生图输出目录（运行时自动创建，不入库）
 └── .env.example             # API 配置模板

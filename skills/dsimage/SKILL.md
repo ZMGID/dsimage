@@ -44,7 +44,7 @@ python3 scripts/generate_image.py --env-file .env --prompt-file prompt.txt
 
 ## 核心流程
 
-1. 判断视觉任务类型和场景（见下方**场景模板系统**）。
+1. 判断视觉任务类型和场景（见下方**模板系统**）。
 2. 从 `references/templates/` 匹配对应模板，读取 `prompt_template`、`variants`、`category_tips` 作为 Prompt 基础结构。
 3. 只收集会实质影响图片结果的缺失信息。
 4. 构建视觉简报。
@@ -173,9 +173,9 @@ Prompt 要足够具体，可以直接执行；也不要过度规定无关细节�
 
 ---
 
-## 场景模板系统
+## 模板系统
 
-`references/templates/` 目录包含 25 个场景模板，每个模板提供 `prompt_template`、`variants`（风格变体）、`category_tips`（品类建议）、`examples` 和 `anti_ai_tips`。
+`references/templates/` 目录包含 25 个模板，每个模板提供 `prompt_template`、`variants`（风格变体）、`category_tips`（品类建议）、`examples` 和 `anti_ai_tips`。
 
 ### 模板匹配表
 
@@ -554,7 +554,7 @@ python3 scripts/generate_image.py --prompt "..." --size 1:1 --resolution 2k
 最终输出前确认：
 
 - Prompt 符合用户真实目标。
-- 已匹配正确的场景模板，Prompt 基于模板的 `prompt_template` 组装。
+- 已匹配正确的模板，Prompt 基于模板的 `prompt_template` 组装。
 - Prompt 保持简洁，只包含核心信息，没有冗余约束。
 - 主体、构图、风格和用途明确。
 - 商品 / 营销任务包含转化驱动力诊断。
