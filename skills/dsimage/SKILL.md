@@ -18,7 +18,7 @@ description: Create visual concepts, image-generation prompts, and optional AI-g
 
 ## 生图配置
 
-直接生图使用 apimart.ai 图像生成接口（GPT-Image-2，异步轮询模式）。在项目根目录放 `.env`（脚本从当前目录向上查找），不要把真实 API key 写进仓库：
+直接生图使用 apimart.ai 图像生成接口（GPT-Image-2，异步轮询模式）。`.env` 放在 Skill 目录内（与 SKILL.md 同级）即全局生效，换会话、换项目都可用；脚本查找顺序：`--env-file` > 从当前目录向上查找 > Skill 自身目录。不要把真实 API key 写进仓库：
 
 ```dotenv
 IMG_BASE_URL=https://api.apimart.ai/v1

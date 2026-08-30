@@ -60,7 +60,7 @@ Agent 会按指南执行：安装 Skill → 询问你是否配置生图 API → 
 
 ### API 配置
 
-在项目根目录创建 `.env`：
+在 **Skill 目录内**创建 `.env`（仓库里是 `skills/dsimage/.env`；复制安装后则是 `~/.codex/skills/dsimage/.env` 这类路径）。配置随 Skill 全局生效——换会话、换项目都可用；也可以在某个项目根目录另放 `.env`，仅对该项目覆盖：
 
 ```dotenv
 IMG_BASE_URL=https://api.apimart.ai/v1

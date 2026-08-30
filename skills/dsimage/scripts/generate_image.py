@@ -94,6 +94,10 @@ def find_default_env_file() -> Path | None:
         env_file = directory / ".env"
         if env_file.is_file():
             return env_file
+    # 回退到 Skill 自身目录的 .env，使配置随 Skill 全局生效，不依赖当前工作目录
+    skill_env = Path(__file__).resolve().parent.parent / ".env"
+    if skill_env.is_file():
+        return skill_env
     return None
 
 
