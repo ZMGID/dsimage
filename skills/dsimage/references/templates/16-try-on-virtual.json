@@ -1,8 +1,23 @@
 {
   "id": "try-on-virtual",
   "name": "虚拟试穿/产品融入场景",
-  "keywords": ["试穿", "融入", "虚拟试穿", "try on", "场景融合", "产品融入", "product placement"],
-  "trigger_phrases": ["虚拟试穿", "产品融入场景", "try on", "场景融合", "产品植入", "场景化融入"],
+  "keywords": [
+    "试穿",
+    "融入",
+    "虚拟试穿",
+    "try on",
+    "场景融合",
+    "产品融入",
+    "product placement"
+  ],
+  "trigger_phrases": [
+    "虚拟试穿",
+    "产品融入场景",
+    "try on",
+    "场景融合",
+    "产品植入",
+    "场景化融入"
+  ],
   "prompt_template": {
     "type": "product integration / virtual try-on",
     "subject": "{product_description} naturally integrated into {scene_type}",
@@ -19,15 +34,24 @@
   "variants": {
     "interior-luxury": {
       "description": "奢华室内场景",
-      "overrides": { "setting": "high-end spa/hotel/luxury home, marble, gold fixtures", "atmosphere": "cinematic depth, warm grading, premium" }
+      "overrides": {
+        "setting": "high-end spa/hotel/luxury home, marble, gold fixtures",
+        "atmosphere": "cinematic depth, warm grading, premium"
+      }
     },
     "outdoor-natural": {
       "description": "户外自然场景",
-      "overrides": { "setting": "natural outdoor, organic elements", "atmosphere": "golden hour sunlight, natural and free" }
+      "overrides": {
+        "setting": "natural outdoor, organic elements",
+        "atmosphere": "golden hour sunlight, natural and free"
+      }
     },
     "studio-editorial": {
       "description": "棚拍编辑风格",
-      "overrides": { "setting": "professional studio with styled backdrop", "atmosphere": "controlled studio lighting, editorial quality" }
+      "overrides": {
+        "setting": "professional studio with styled backdrop",
+        "atmosphere": "controlled studio lighting, editorial quality"
+      }
     }
   },
   "category_tips": {
@@ -42,5 +66,30 @@
     "{product} integrated into complete {category} lifestyle scene. {person} at {location}, products arranged naturally, natural light, warm atmosphere. Professional lifestyle, 1080x1350px"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "2:3",
+  "composition_rules": {
+    "product_ratio": "30-40%",
+    "whitespace": "≥35%",
+    "angles": [
+      {
+        "angle": "融入环境视角",
+        "prompt": "product naturally integrated into the scene with matching perspective"
+      }
+    ]
+  },
+  "text_rules": {
+    "default": "无文字"
+  },
+  "workflow": [
+    "使用 --image 传入产品原图，要求保持产品细节与原图完全一致",
+    "融合三要素：接触阴影、透视一致、比例合理",
+    "场景调性与产品调性匹配",
+    "结尾否定清单：产品悬浮无阴影、透视不匹配、产品变形走样"
+  ],
+  "pitfalls": [
+    "产品悬浮没有接触阴影",
+    "透视与场景不匹配",
+    "产品细节变形走样"
+  ]
 }

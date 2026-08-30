@@ -1,8 +1,26 @@
 {
   "id": "exploded-view",
   "name": "技术拆解/爆炸图",
-  "keywords": ["拆解图", "爆炸图", "exploded view", "技术图", "结构图", "内部结构", "拆机", "teardown", "cross-section"],
-  "trigger_phrases": ["产品拆解", "爆炸图", "内部结构", "技术拆解", "exploded view", "产品组件", "零件展示"],
+  "keywords": [
+    "拆解图",
+    "爆炸图",
+    "exploded view",
+    "技术图",
+    "结构图",
+    "内部结构",
+    "拆机",
+    "teardown",
+    "cross-section"
+  ],
+  "trigger_phrases": [
+    "产品拆解",
+    "爆炸图",
+    "内部结构",
+    "技术拆解",
+    "exploded view",
+    "产品组件",
+    "零件展示"
+  ],
   "prompt_template": {
     "type": "technical product exploded view",
     "subject": "{product_description}",
@@ -18,10 +36,35 @@
     "labels": "component name + material + core spec"
   },
   "variants": {
-    "blueprint": { "description": "蓝图风格", "overrides": { "background": "dark charcoal with cyan grid lines", "labels": "white and gold typography, blueprint aesthetic" } },
-    "minimal": { "description": "极简白底", "overrides": { "background": "pure white, no grid", "labels": "minimal black text, thin gray leader lines" } },
-    "apple-style": { "description": "Apple产品拆解风格", "overrides": { "arrangement": "isometric floating with precise spacing", "background": "deep gradient from charcoal to black", "labels": "elegant sans-serif, golden accent lines" } },
-    "editorial": { "description": "杂志编辑风格", "overrides": { "background": "warm off-white with subtle texture", "labels": "serif font callouts, hand-drawn arrow style" } }
+    "blueprint": {
+      "description": "蓝图风格",
+      "overrides": {
+        "background": "dark charcoal with cyan grid lines",
+        "labels": "white and gold typography, blueprint aesthetic"
+      }
+    },
+    "minimal": {
+      "description": "极简白底",
+      "overrides": {
+        "background": "pure white, no grid",
+        "labels": "minimal black text, thin gray leader lines"
+      }
+    },
+    "apple-style": {
+      "description": "Apple产品拆解风格",
+      "overrides": {
+        "arrangement": "isometric floating with precise spacing",
+        "background": "deep gradient from charcoal to black",
+        "labels": "elegant sans-serif, golden accent lines"
+      }
+    },
+    "editorial": {
+      "description": "杂志编辑风格",
+      "overrides": {
+        "background": "warm off-white with subtle texture",
+        "labels": "serif font callouts, hand-drawn arrow style"
+      }
+    }
   },
   "category_tips": {
     "electronics": "highlight circuit boards, chips, battery modules with spec labels",
@@ -36,5 +79,30 @@
     "{product} technical exploded view infographic. Components floating in isometric arrangement with thin connecting lines. Each component labeled with name and key spec. Clean white background, blueprint-inspired accent lines, 8K"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "16:9",
+  "composition_rules": {
+    "layout": "部件沿展开轴线排列，等距视角",
+    "product_ratio": "60-70%",
+    "angles": [
+      {
+        "angle": "等距拆解",
+        "prompt": "isometric exploded view, components separated along axis lines"
+      }
+    ]
+  },
+  "text_rules": {
+    "labels": "部件标注（可选）：细线引出 + 短词，风格统一"
+  },
+  "workflow": [
+    "列出部件清单（用户提供或合理推断），数量与产品复杂度匹配",
+    "声明等距/轴测视角",
+    "部件间用细轴线或虚线连接，表示装配关系",
+    "结尾否定清单：部件数量错误、透视混乱、标注乱码"
+  ],
+  "pitfalls": [
+    "部件数量与真实不符",
+    "透视关系混乱",
+    "标注文字乱码"
+  ]
 }

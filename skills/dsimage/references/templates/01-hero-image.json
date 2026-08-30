@@ -1,8 +1,24 @@
 {
   "id": "hero-image",
   "name": "白底/纯色底产品主图",
-  "keywords": ["白底图", "主图", "hero image", "白背景", "product shot", "packshot", "产品照", "商品主图"],
-  "trigger_phrases": ["产品主图", "白底图", "白背景产品", "hero image", "电商主图", "纯色背景"],
+  "keywords": [
+    "白底图",
+    "主图",
+    "hero image",
+    "白背景",
+    "product shot",
+    "packshot",
+    "产品照",
+    "商品主图"
+  ],
+  "trigger_phrases": [
+    "产品主图",
+    "白底图",
+    "白背景产品",
+    "hero image",
+    "电商主图",
+    "纯色背景"
+  ],
   "prompt_template": {
     "type": "product photography",
     "subject": "{product_description}",
@@ -19,19 +35,30 @@
   "variants": {
     "luxury": {
       "description": "高端奢侈品风格",
-      "overrides": { "lighting": "Rembrandt lighting, subtle rim light", "background": "gradient from dark to light, premium feel" }
+      "overrides": {
+        "lighting": "Rembrandt lighting, subtle rim light",
+        "background": "gradient from dark to light, premium feel"
+      }
     },
     "fresh": {
       "description": "清新自然风格",
-      "overrides": { "lighting": "bright natural light", "background": "light pastel tones" }
+      "overrides": {
+        "lighting": "bright natural light",
+        "background": "light pastel tones"
+      }
     },
     "tech": {
       "description": "科技感风格",
-      "overrides": { "lighting": "dramatic side lighting", "background": "dark minimalist" }
+      "overrides": {
+        "lighting": "dramatic side lighting",
+        "background": "dark minimalist"
+      }
     },
     "color": {
       "description": "彩色背景风格",
-      "overrides": { "background": "{color} gradient background" }
+      "overrides": {
+        "background": "{color} gradient background"
+      }
     }
   },
   "category_tips": {
@@ -48,5 +75,43 @@
     "{product} floating slightly above white surface, softbox overhead, sharp rim light on edges, professional packshot, 8K, ultra-detailed textures"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "1:1",
+  "composition_rules": {
+    "product_ratio": "35-40%（太小显廉价，太大显拥挤）",
+    "whitespace": "≥45%",
+    "platform_reserved": "国内电商主图：顶部中央 200×100 区域留空（价格叠加区）；左上角 200×100 完全留白（logo 区）",
+    "angles": [
+      {
+        "angle": "正面 3/4",
+        "prompt": "at a slight 3/4 angle, front-facing"
+      },
+      {
+        "angle": "正上方俯视",
+        "prompt": "photographed directly from above at a 90-degree overhead angle"
+      },
+      {
+        "angle": "微距特写",
+        "prompt": "tight zoom on surface texture, extreme close-up"
+      }
+    ]
+  },
+  "text_rules": {
+    "default": "纯白底主图通常无文字；国内平台主图可加一句核心卖点 ≤10 字，颜色 #2D2D2D",
+    "note": "海外平台（Amazon 主图）禁止任何文字和图形叠加"
+  },
+  "workflow": [
+    "确认平台与比例（默认 1:1，用户指定优先；Amazon 主图必须纯白底无文字）",
+    "以 prompt_template 为骨架替换 {variables}，按需套用 variants / category_tips",
+    "按 composition_rules 写明产品占比、留白、平台预留区",
+    "背景必须写死 #FFFFFF，禁止只写 white background",
+    "结尾否定清单：道具、手、水印、假 logo、额外文字、渐变背景、杂乱阴影",
+    "出图后检查背景是否纯白、产品是否居中"
+  ],
+  "pitfalls": [
+    "白底发灰（必须写 #FFFFFF）",
+    "产品占比过大显拥挤",
+    "反光过曝有 AI 感",
+    "底部阴影杂乱"
+  ]
 }

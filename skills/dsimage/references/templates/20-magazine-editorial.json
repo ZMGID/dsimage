@@ -1,8 +1,27 @@
 {
   "id": "magazine-editorial",
   "name": "杂志大片/封面",
-  "keywords": ["杂志", "封面", "杂志大片", "editorial", "magazine cover", "时尚大片", "Vogue", "时尚摄影", "fashion editorial"],
-  "trigger_phrases": ["杂志封面", "杂志大片", "时尚大片", "editorial", "magazine cover", "品牌大片", "时尚杂志", "封面图"],
+  "keywords": [
+    "杂志",
+    "封面",
+    "杂志大片",
+    "editorial",
+    "magazine cover",
+    "时尚大片",
+    "Vogue",
+    "时尚摄影",
+    "fashion editorial"
+  ],
+  "trigger_phrases": [
+    "杂志封面",
+    "杂志大片",
+    "时尚大片",
+    "editorial",
+    "magazine cover",
+    "品牌大片",
+    "时尚杂志",
+    "封面图"
+  ],
   "prompt_template": {
     "type": "fashion/beauty magazine cover editorial",
     "subject": "{product_description}",
@@ -19,10 +38,34 @@
     "layout": "masthead area top, issue text bottom-left, barcode bottom-right"
   },
   "variants": {
-    "beauty-cover": { "description": "美妆封面", "overrides": { "model": "close-up portrait with glowing skin, holding skincare near face", "makeup_hair": "dewy natural, glossy lips, subtle smoky eye" } },
-    "fashion-cover": { "description": "时尚封面", "overrides": { "model": "full or 3/4 body shot wearing fashion product, confident pose", "makeup_hair": "bold editorial makeup, high-fashion styling" } },
-    "fragrance-editorial": { "description": "香水大片", "overrides": { "model": "person in contemplative pose with fragrance bottle, atmospheric", "background": "dark moody backdrop with atmospheric haze" } },
-    "minimal-editorial": { "description": "极简杂志内页", "overrides": { "background": "clean white studio, no backdrop color", "layout": "no masthead, clean full-bleed editorial image" } }
+    "beauty-cover": {
+      "description": "美妆封面",
+      "overrides": {
+        "model": "close-up portrait with glowing skin, holding skincare near face",
+        "makeup_hair": "dewy natural, glossy lips, subtle smoky eye"
+      }
+    },
+    "fashion-cover": {
+      "description": "时尚封面",
+      "overrides": {
+        "model": "full or 3/4 body shot wearing fashion product, confident pose",
+        "makeup_hair": "bold editorial makeup, high-fashion styling"
+      }
+    },
+    "fragrance-editorial": {
+      "description": "香水大片",
+      "overrides": {
+        "model": "person in contemplative pose with fragrance bottle, atmospheric",
+        "background": "dark moody backdrop with atmospheric haze"
+      }
+    },
+    "minimal-editorial": {
+      "description": "极简杂志内页",
+      "overrides": {
+        "background": "clean white studio, no backdrop color",
+        "layout": "no masthead, clean full-bleed editorial image"
+      }
+    }
   },
   "category_tips": {
     "skincare": "dewy skin, product held at chin level, beauty lighting",
@@ -37,5 +80,35 @@
     "Fashion editorial magazine cover. Striking woman wearing {product} in contemplative pose. Bold makeup, sleek hair. High-contrast editorial lighting. Magazine layout overlay with border frame. 8K, 1080x1350px"
   ],
   "anti_ai_tips": "For authentic editorial feel: specify actual camera (Phase One IQ4, Canon EOS R5 85mm f/1.2), add visible skin texture, use real beauty lighting terminology",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "2:3",
+  "composition_rules": {
+    "product_ratio": "30-40%",
+    "whitespace": "≥35%（编辑风排版留白）",
+    "angles": [
+      {
+        "angle": "编辑部人像",
+        "prompt": "editorial fashion pose, dramatic lighting"
+      },
+      {
+        "angle": "场景大片",
+        "prompt": "cinematic wide editorial scene"
+      }
+    ]
+  },
+  "text_rules": {
+    "masthead": "刊名（占位符）+ 封面标题，衬线体（Didot 类）",
+    "note": "文字内容用占位描述或用户提供的确切文字"
+  },
+  "workflow": [
+    "声明 editorial 风格与参考调性（Vogue 级质感 / 极简独立杂志）",
+    "戏剧性打光（硬光、轮廓光、色片）",
+    "排版留出文字区，构图有张力",
+    "结尾否定清单：普通写真感、文字乱码、构图平庸"
+  ],
+  "pitfalls": [
+    "像普通电商图没有大片感",
+    "封面文字乱码",
+    "构图平淡"
+  ]
 }

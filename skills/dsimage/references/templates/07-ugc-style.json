@@ -1,8 +1,24 @@
 {
   "id": "ugc-style",
   "name": "UGC风格/买家秀",
-  "keywords": ["UGC", "买家秀", "用户生成", "真实用户", "user generated", "GRWM", "真实感"],
-  "trigger_phrases": ["UGC图", "买家秀", "用户图", "真实买家", "GRWM", "user-generated", "真实分享"],
+  "keywords": [
+    "UGC",
+    "买家秀",
+    "用户生成",
+    "真实用户",
+    "user generated",
+    "GRWM",
+    "真实感"
+  ],
+  "trigger_phrases": [
+    "UGC图",
+    "买家秀",
+    "用户图",
+    "真实买家",
+    "GRWM",
+    "user-generated",
+    "真实分享"
+  ],
   "prompt_template": {
     "type": "authentic UGC snapshot",
     "subject": "{product_description}",
@@ -21,19 +37,33 @@
   "variants": {
     "mirror-selfie": {
       "description": "浴室镜自拍",
-      "overrides": { "style": "iPhone front camera mirror selfie", "environment": "bathroom mirror, slight condensation and fog marks", "imperfection": "phone case at edge, finger smudge on mirror" }
+      "overrides": {
+        "style": "iPhone front camera mirror selfie",
+        "environment": "bathroom mirror, slight condensation and fog marks",
+        "imperfection": "phone case at edge, finger smudge on mirror"
+      }
     },
     "ccd-retro": {
       "description": "CCD复古胶片感",
-      "overrides": { "style": "vintage 2005 CCD digicam photo, direct flash, cheap camera aesthetic", "lighting": "harsh direct on-camera flash, strong warm yellow-green color shift, blown-out highlights", "imperfection": "heavy film grain, overexposed skin on forehead and nose, flash hotspot, chromatic aberration at edges, red date stamp bottom-right corner" }
+      "overrides": {
+        "style": "vintage 2005 CCD digicam photo, direct flash, cheap camera aesthetic",
+        "lighting": "harsh direct on-camera flash, strong warm yellow-green color shift, blown-out highlights",
+        "imperfection": "heavy film grain, overexposed skin on forehead and nose, flash hotspot, chromatic aberration at edges, red date stamp bottom-right corner"
+      }
     },
     "grwm": {
       "description": "GRWM跟我一起准备",
-      "overrides": { "style": "Get Ready With Me video thumbnail, morning routine", "environment": "vanity mirror, slightly messy counter" }
+      "overrides": {
+        "style": "Get Ready With Me video thumbnail, morning routine",
+        "environment": "vanity mirror, slightly messy counter"
+      }
     },
     "unboxing": {
       "description": "开箱分享",
-      "overrides": { "style": "casual unboxing photo on bed or desk", "environment": "bed with wrinkled sheets or cluttered desk" }
+      "overrides": {
+        "style": "casual unboxing photo on bed or desk",
+        "environment": "bed with wrinkled sheets or cluttered desk"
+      }
     }
   },
   "category_tips": {
@@ -49,5 +79,35 @@
     "Authentic GRWM photo. Person in casual setting showing {product}. Natural imperfect lighting, slightly messy background. Phone selfie angle. Genuine expression. Warm tones, candid smartphone photography, NOT AI-generated look, 1080x1620px"
   ],
   "anti_ai_tips": "CRITICAL: (1) Specify phone model (iPhone 14 Pro/15), (2) Add imperfection (pores, noise, warm cast, off-center), (3) Candid language (NOT professional), (4) Real environment (slightly messy), (5) Avoid AI words (no perfect, flawless, stunning), (6) State 'NOT AI-generated look', (7) Reference Kodak Portra 400 tone",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "9:16",
+  "composition_rules": {
+    "product_ratio": "25-35%",
+    "whitespace": "不要求（生活化满构图）",
+    "angles": [
+      {
+        "angle": "镜面自拍",
+        "prompt": "mirror selfie angle with slight tilt"
+      },
+      {
+        "angle": "手持第一视角",
+        "prompt": "first-person handheld POV"
+      }
+    ]
+  },
+  "text_rules": {
+    "default": "通常无文字；可选手写体短标签"
+  },
+  "workflow": [
+    "指定具体手机型号（如 iPhone 15 Pro）拍摄",
+    "声明真实瑕疵：轻微噪点、暖色偏移、不完美构图",
+    "使用真实感语言：NOT professional photography, NOT retouched",
+    "环境略微凌乱、有生活痕迹（水渍、用过的毛巾）",
+    "结尾否定清单：棚拍打光、完美皮肤、AI 味词汇（perfect/flawless/stunning）"
+  ],
+  "pitfalls": [
+    "过度磨皮塑料感",
+    "打光太完美",
+    "环境太干净不像真人拍的"
+  ]
 }

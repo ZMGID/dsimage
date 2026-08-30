@@ -1,8 +1,23 @@
 {
   "id": "detail-macro",
   "name": "细节微距图",
-  "keywords": ["细节图", "微距", "macro", "特写", "close-up", "detail shot", "细节展示"],
-  "trigger_phrases": ["细节图", "微距图", "产品特写", "材质特写", "detail shot", "macro photography"],
+  "keywords": [
+    "细节图",
+    "微距",
+    "macro",
+    "特写",
+    "close-up",
+    "detail shot",
+    "细节展示"
+  ],
+  "trigger_phrases": [
+    "细节图",
+    "微距图",
+    "产品特写",
+    "材质特写",
+    "detail shot",
+    "macro photography"
+  ],
   "prompt_template": {
     "type": "macro product photography",
     "subject": "{product_description}, extreme close-up on {focus_area}",
@@ -20,15 +35,22 @@
   "variants": {
     "texture": {
       "description": "材质纹理展示",
-      "overrides": { "focus_area": "material surface showing grain and quality" }
+      "overrides": {
+        "focus_area": "material surface showing grain and quality"
+      }
     },
     "formula": {
       "description": "产品配方展示",
-      "overrides": { "focus_area": "product formula showing cream/liquid texture", "detail": "formula consistency, light reflection" }
+      "overrides": {
+        "focus_area": "product formula showing cream/liquid texture",
+        "detail": "formula consistency, light reflection"
+      }
     },
     "craftsmanship": {
       "description": "工艺细节展示",
-      "overrides": { "focus_area": "stitching, joints, edges, manufacturing precision" }
+      "overrides": {
+        "focus_area": "stitching, joints, edges, manufacturing precision"
+      }
     }
   },
   "category_tips": {
@@ -44,5 +66,34 @@
     "Macro detail of {product}, Sony A7R V 90mm macro, focus stacking. Extreme detail showing {focus_area}. Professional product photography, 8K"
   ],
   "anti_ai_tips": "For hand shots: specify real skin (visible knuckle lines, slight dryness on cuticles, natural warm tone). NOT retouched or smoothed.",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "1:1",
+  "composition_rules": {
+    "product_ratio": "特写区域占 55-60%",
+    "whitespace": "≥30%",
+    "angles": [
+      {
+        "angle": "微距特写",
+        "prompt": "extreme close-up macro shot, shallow depth of field"
+      },
+      {
+        "angle": "侧面侧光",
+        "prompt": "strong side lighting raking across the surface to reveal texture"
+      }
+    ]
+  },
+  "text_rules": {
+    "default": "可加一行材质/工艺标注，≤8 字，#888888"
+  },
+  "workflow": [
+    "明确要突出的材质关键词（编织纹理 / 拉丝金属 / 哑光饰面 / 丝绸光泽）",
+    "必须声明浅景深：前景清晰、背景虚化",
+    "用侧光或掠射光突出表面纹理",
+    "结尾否定清单：整体虚焦、过曝高光、杂色"
+  ],
+  "pitfalls": [
+    "纹理含糊看不出材质",
+    "全景深没有呼吸感",
+    "高光过曝一片白"
+  ]
 }

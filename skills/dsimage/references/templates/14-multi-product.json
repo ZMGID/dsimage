@@ -1,8 +1,24 @@
 {
   "id": "multi-product",
   "name": "多产品套装/组合展示",
-  "keywords": ["套装", "组合", "多产品", "bundle", "gift set", "礼盒", "系列展示"],
-  "trigger_phrases": ["套装图", "多产品展示", "产品组合", "bundle image", "礼盒展示", "系列图", "gift set"],
+  "keywords": [
+    "套装",
+    "组合",
+    "多产品",
+    "bundle",
+    "gift set",
+    "礼盒",
+    "系列展示"
+  ],
+  "trigger_phrases": [
+    "套装图",
+    "多产品展示",
+    "产品组合",
+    "bundle image",
+    "礼盒展示",
+    "系列图",
+    "gift set"
+  ],
   "prompt_template": {
     "type": "multi-product bundle photography",
     "subject": "{product_set_description}",
@@ -19,15 +35,24 @@
   "variants": {
     "gift-set": {
       "description": "礼盒套装",
-      "overrides": { "arrangement": "products in gift box with cards", "decorative": "satin ribbon, gold foil, dried flowers, pearls" }
+      "overrides": {
+        "arrangement": "products in gift box with cards",
+        "decorative": "satin ribbon, gold foil, dried flowers, pearls"
+      }
     },
     "routine-set": {
       "description": "使用程序套装",
-      "overrides": { "arrangement": "products in order of use, step indicators" }
+      "overrides": {
+        "arrangement": "products in order of use, step indicators"
+      }
     },
     "lineup": {
       "description": "产品线排列",
-      "overrides": { "arrangement": "neat row, hero centered and larger", "decorative": "minimal, clean", "background": "white seamless" }
+      "overrides": {
+        "arrangement": "neat row, hero centered and larger",
+        "decorative": "minimal, clean",
+        "background": "white seamless"
+      }
     }
   },
   "category_tips": {
@@ -42,5 +67,31 @@
     "{category} gift set display. {n} products neat row, consistent spacing. Clean photography, soft shadows, professional bundle image, no text, 2000x2000px"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "1:1",
+  "composition_rules": {
+    "product_ratio": "整体 60-70%",
+    "whitespace": "≥25%",
+    "angles": [
+      {
+        "angle": "组合群像",
+        "prompt": "group arrangement, slight high angle looking down"
+      }
+    ]
+  },
+  "text_rules": {
+    "default": "无文字或一个套装名"
+  },
+  "workflow": [
+    "确认产品清单与数量，逐个描述，不能多也不能少",
+    "产品间大小关系符合真实比例",
+    "排列有节奏（高低错落 / 前后层次），不机械排排站",
+    "统一光线和影子方向",
+    "结尾否定清单：数量不符、多余产品、光影矛盾"
+  ],
+  "pitfalls": [
+    "产品数量与要求不符",
+    "大小比例失真",
+    "每个产品光影方向不一致"
+  ]
 }

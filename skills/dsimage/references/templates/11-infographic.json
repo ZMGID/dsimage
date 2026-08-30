@@ -1,8 +1,23 @@
 {
   "id": "infographic",
   "name": "信息图/A+Content",
-  "keywords": ["信息图", "infographic", "A+", "详情页", "卖点图", "产品信息图", "产品详情"],
-  "trigger_phrases": ["信息图", "产品信息图", "详情页图", "A+Content", "卖点图", "infographic"],
+  "keywords": [
+    "信息图",
+    "infographic",
+    "A+",
+    "详情页",
+    "卖点图",
+    "产品信息图",
+    "产品详情"
+  ],
+  "trigger_phrases": [
+    "信息图",
+    "产品信息图",
+    "详情页图",
+    "A+Content",
+    "卖点图",
+    "infographic"
+  ],
   "prompt_template": {
     "type": "e-commerce product infographic",
     "subject": "{product_description}",
@@ -21,15 +36,22 @@
   "variants": {
     "amazon-a-plus": {
       "description": "亚马逊A+风格",
-      "overrides": { "layout": "4-quadrant module with banner, feature blocks, comparison, badges", "data_vis": "comparison table, ingredient chart, certification badges" }
+      "overrides": {
+        "layout": "4-quadrant module with banner, feature blocks, comparison, badges",
+        "data_vis": "comparison table, ingredient chart, certification badges"
+      }
     },
     "feature-grid": {
       "description": "卖点网格",
-      "overrides": { "layout": "product centered with callout lines to feature blocks" }
+      "overrides": {
+        "layout": "product centered with callout lines to feature blocks"
+      }
     },
     "story-flow": {
       "description": "故事线信息流",
-      "overrides": { "layout": "vertical story: problem → solution → features → results" }
+      "overrides": {
+        "layout": "vertical story: problem → solution → features → results"
+      }
     }
   },
   "category_tips": {
@@ -44,5 +66,44 @@
     "{category} specification guide. Product centered with dimension callouts. Feature highlights with icons. Data visualization. Clean typography, mobile-friendly, 2000x2000px"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "2:3",
+  "composition_rules": {
+    "layout": "电商信息图结构：标题区 + 产品区 + 利益点/图标区，双栏或网格",
+    "product_ratio": "30-40%",
+    "whitespace": "≥45%",
+    "angles": [
+      {
+        "angle": "正面 3/4",
+        "prompt": "front 3/4 product view"
+      },
+      {
+        "angle": "俯视",
+        "prompt": "elevated overhead angle"
+      },
+      {
+        "angle": "微距",
+        "prompt": "macro detail shot"
+      }
+    ]
+  },
+  "text_rules": {
+    "headline": "主标题 28-48pt，#2D2D2D",
+    "labels": "利益点标签 16-20pt，图标 + 短文案",
+    "notes": "标注 10-14pt，#888888",
+    "accent": "强调色 #D4AF37（或品牌色 hex）",
+    "limit": "每屏文字总量 ≤50 字，禁止大段小字"
+  },
+  "workflow": [
+    "每屏 Prompt 必须以 E-commerce infographic 开头（不是摄影视角开头）",
+    "声明布局关键词：two-column layout / feature grid / timeline",
+    "图标风格统一：thin-line icons，同一颜色体系",
+    "每屏开头复制 Campaign Style Lock（多图任务）",
+    "出图后放大 200% 逐字核对文字"
+  ],
+  "pitfalls": [
+    "退化成纯产品照片没有信息图结构",
+    "大段小字密密麻麻",
+    "图标风格每屏漂移"
+  ]
 }

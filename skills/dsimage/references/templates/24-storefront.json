@@ -1,8 +1,28 @@
 {
   "id": "storefront",
   "name": "店铺门面/空间摄影",
-  "keywords": ["店铺", "门面", "店面", "storefront", "空间摄影", "室内设计", "零售空间", "咖啡店", "实体店"],
-  "trigger_phrases": ["店铺门面", "店面摄影", "空间摄影", "零售空间", "咖啡店外观", "实体店", "storefront", "室内摄影", "店铺设计"],
+  "keywords": [
+    "店铺",
+    "门面",
+    "店面",
+    "storefront",
+    "空间摄影",
+    "室内设计",
+    "零售空间",
+    "咖啡店",
+    "实体店"
+  ],
+  "trigger_phrases": [
+    "店铺门面",
+    "店面摄影",
+    "空间摄影",
+    "零售空间",
+    "咖啡店外观",
+    "实体店",
+    "storefront",
+    "室内摄影",
+    "店铺设计"
+  ],
   "prompt_template": {
     "type": "retail/storefront architectural photography",
     "subject": "{business_description}",
@@ -17,10 +37,32 @@
     "camera": "wide-angle lens, f/8-f/11 for full sharpness"
   },
   "variants": {
-    "exterior": { "description": "门面外观", "overrides": { "exterior": "full storefront view with window display, entrance, street context", "interior": "visible through glass windows only" } },
-    "interior": { "description": "室内空间", "overrides": { "interior": "wide-angle interior showing product displays, furniture, lighting design", "exterior": "not visible" } },
-    "corner-detail": { "description": "角落细节", "overrides": { "interior": "close-up vignette of a curated corner: consultation table, product samples, single flower" } },
-    "aerial-plan": { "description": "俯视平面", "overrides": { "camera": "top-down bird's eye view showing full floor plan layout" } }
+    "exterior": {
+      "description": "门面外观",
+      "overrides": {
+        "exterior": "full storefront view with window display, entrance, street context",
+        "interior": "visible through glass windows only"
+      }
+    },
+    "interior": {
+      "description": "室内空间",
+      "overrides": {
+        "interior": "wide-angle interior showing product displays, furniture, lighting design",
+        "exterior": "not visible"
+      }
+    },
+    "corner-detail": {
+      "description": "角落细节",
+      "overrides": {
+        "interior": "close-up vignette of a curated corner: consultation table, product samples, single flower"
+      }
+    },
+    "aerial-plan": {
+      "description": "俯视平面",
+      "overrides": {
+        "camera": "top-down bird's eye view showing full floor plan layout"
+      }
+    }
   },
   "category_tips": {
     "coffee_shop": "espresso machine visible, warm wood tones, latte art, pastry display",
@@ -35,5 +77,38 @@
     "Premium interior photography of {business}. Wide-angle shot showing product displays, consultation area, herringbone floor. Warm ambient lighting throughout. Architectural Digest quality, 8K, 1536x1024px"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "16:9",
+  "composition_rules": {
+    "product_ratio": "建筑主体占 60-70%",
+    "whitespace": "天空/街道留 30%",
+    "angles": [
+      {
+        "angle": "正面 3/4 街面",
+        "prompt": "slight 3/4 angle showing full front facade"
+      },
+      {
+        "angle": "低角度仰视",
+        "prompt": "low angle looking up at the building"
+      },
+      {
+        "angle": "航拍",
+        "prompt": "aerial drone view of the storefront and street"
+      }
+    ]
+  },
+  "text_rules": {
+    "signage": "招牌文字用占位符或用户提供的确切文字，其余 no readable text"
+  },
+  "workflow": [
+    "定义建筑风格与街区调性（现代极简 / 复古骑楼 / 商业街）",
+    "指定时段光线（黄昏暖光 / 白天晴光）",
+    "可选行人（模糊处理，不抢主体）",
+    "结尾否定清单：招牌乱码、透视倾斜、空间比例失真"
+  ],
+  "pitfalls": [
+    "招牌文字乱码",
+    "建筑透视倾斜",
+    "街道空间比例失真"
+  ]
 }

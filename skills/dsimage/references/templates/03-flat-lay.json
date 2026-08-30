@@ -1,8 +1,21 @@
 {
   "id": "flat-lay",
   "name": "平铺图",
-  "keywords": ["平铺图", "flat lay", "俯拍", "top-down", "flatlay", "俯视图"],
-  "trigger_phrases": ["平铺图", "flat lay", "俯拍", "top-down view", "产品平铺"],
+  "keywords": [
+    "平铺图",
+    "flat lay",
+    "俯拍",
+    "top-down",
+    "flatlay",
+    "俯视图"
+  ],
+  "trigger_phrases": [
+    "平铺图",
+    "flat lay",
+    "俯拍",
+    "top-down view",
+    "产品平铺"
+  ],
   "prompt_template": {
     "type": "flat lay photography, top-down view",
     "subject": "{product_description} as hero at bottom center",
@@ -20,15 +33,26 @@
   "variants": {
     "luxury": {
       "description": "奢华仪式感",
-      "overrides": { "props": "gold foil flakes, pearl beads, dried flowers, silk ribbon, leather journal", "background": "ivory linen with subtle shadow from sheer curtains", "color_palette": "ivory, blush pink, champagne gold, soft cream" }
+      "overrides": {
+        "props": "gold foil flakes, pearl beads, dried flowers, silk ribbon, leather journal",
+        "background": "ivory linen with subtle shadow from sheer curtains",
+        "color_palette": "ivory, blush pink, champagne gold, soft cream"
+      }
     },
     "minimal": {
       "description": "极简风格",
-      "overrides": { "props": "only 2-3 essential items, clean lines", "background": "clean white surface", "color_palette": "white, gray, one accent color" }
+      "overrides": {
+        "props": "only 2-3 essential items, clean lines",
+        "background": "clean white surface",
+        "color_palette": "white, gray, one accent color"
+      }
     },
     "seasonal": {
       "description": "季节主题",
-      "overrides": { "props": "seasonal elements matching theme", "color_palette": "season-appropriate color scheme" }
+      "overrides": {
+        "props": "seasonal elements matching theme",
+        "color_palette": "season-appropriate color scheme"
+      }
     }
   },
   "category_tips": {
@@ -43,5 +67,31 @@
     "Professional {category} flat lay, top-down editorial. {product} centered with curated objects. {background} background. Strict color control. 8K, magazine quality, no text"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "1:1",
+  "composition_rules": {
+    "product_ratio": "30-40%（满铺构图可到 70%）",
+    "whitespace": "常规 ≥40%；满铺构图不要求",
+    "angles": [
+      {
+        "angle": "垂直俯拍（唯一角度）",
+        "prompt": "photographed directly from above at a 90-degree overhead angle"
+      }
+    ]
+  },
+  "text_rules": {
+    "default": "无文字"
+  },
+  "workflow": [
+    "选定背景材质（亚麻布 / 大理石 / 纯色卡纸）并写死颜色 hex",
+    "搭配 2-4 件道具，与产品主题相关，间隔均匀",
+    "声明光线方向（柔和均匀顶光或侧光）",
+    "所有物品严格垂直向下拍摄，无透视",
+    "结尾否定清单：透视变形、影子方向混乱、道具抢镜"
+  ],
+  "pitfalls": [
+    "不是纯正俯拍有透视",
+    "道具喧宾夺主",
+    "影子方向互相矛盾"
+  ]
 }

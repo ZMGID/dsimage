@@ -1,8 +1,23 @@
 {
   "id": "creative-concept",
   "name": "创意概念广告图",
-  "keywords": ["创意图", "概念图", "creative", "概念广告", "品牌广告", "创意广告", "concept art"],
-  "trigger_phrases": ["创意广告", "概念图", "品牌广告", "创意素材", "品牌宣传", "creative concept"],
+  "keywords": [
+    "创意图",
+    "概念图",
+    "creative",
+    "概念广告",
+    "品牌广告",
+    "创意广告",
+    "concept art"
+  ],
+  "trigger_phrases": [
+    "创意广告",
+    "概念图",
+    "品牌广告",
+    "创意素材",
+    "品牌宣传",
+    "creative concept"
+  ],
   "prompt_template": {
     "type": "creative advertising photography",
     "subject": "{product_description}",
@@ -21,15 +36,24 @@
   "variants": {
     "splash-dynamic": {
       "description": "飞溅动态效果",
-      "overrides": { "effects": "water splash / powder explosion frozen in motion, high-speed photography", "art_direction": "dramatic, vivid, commercial style" }
+      "overrides": {
+        "effects": "water splash / powder explosion frozen in motion, high-speed photography",
+        "art_direction": "dramatic, vivid, commercial style"
+      }
     },
     "surreal": {
       "description": "超现实概念",
-      "overrides": { "concept": "product in unexpected surreal environment", "effects": "gravity-defying, impossible geometry" }
+      "overrides": {
+        "concept": "product in unexpected surreal environment",
+        "effects": "gravity-defying, impossible geometry"
+      }
     },
     "minimal-art": {
       "description": "极简艺术风格",
-      "overrides": { "concept": "product as art object in minimalist composition", "color_palette": "monochromatic or two-tone" }
+      "overrides": {
+        "concept": "product as art object in minimalist composition",
+        "color_palette": "monochromatic or two-tone"
+      }
     }
   },
   "category_tips": {
@@ -44,5 +68,30 @@
     "Creative advertising. {product} in {artistic setting}. {colors} palette. Dramatic lighting with {effects}. Art direction: {style}. Award-winning, cinematic, 8K"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "16:9",
+  "composition_rules": {
+    "product_ratio": "25-35%",
+    "whitespace": "≥40%",
+    "angles": [
+      {
+        "angle": "戏剧化视角",
+        "prompt": "dramatic hero angle with surreal staging"
+      }
+    ]
+  },
+  "text_rules": {
+    "default": "通常无文字；可加一句 slogan，serif 字体"
+  },
+  "workflow": [
+    "先用一句话说清创意概念（产品 × 什么超现实/隐喻元素）",
+    "超现实元素必须与产品卖点相关，不是随便堆视觉",
+    "声明渲染质感等级（photorealistic CGI / hyper-detailed render）",
+    "结尾否定清单：概念杂乱、与产品无关的视觉噪音、拼贴感"
+  ],
+  "pitfalls": [
+    "创意与产品卖点无关",
+    "画面元素过杂",
+    "AI 拼贴感明显"
+  ]
 }

@@ -1,8 +1,23 @@
 {
   "id": "lifestyle-scene",
   "name": "场景化生活图",
-  "keywords": ["场景图", "生活图", "lifestyle", "使用场景", "生活场景", "场景化", "lifestyle photography"],
-  "trigger_phrases": ["场景图", "生活图", "使用场景图", "lifestyle photo", "产品场景", "生活化展示"],
+  "keywords": [
+    "场景图",
+    "生活图",
+    "lifestyle",
+    "使用场景",
+    "生活场景",
+    "场景化",
+    "lifestyle photography"
+  ],
+  "trigger_phrases": [
+    "场景图",
+    "生活图",
+    "使用场景图",
+    "lifestyle photo",
+    "产品场景",
+    "生活化展示"
+  ],
   "prompt_template": {
     "type": "lifestyle product photography",
     "subject": "{product_description}",
@@ -21,19 +36,35 @@
   "variants": {
     "morning": {
       "description": "早晨清新氛围",
-      "overrides": { "setting": "bright room with sunlight streaming through window", "lighting": "soft morning golden light, visible dust particles", "mood": "fresh, clean, new beginning" }
+      "overrides": {
+        "setting": "bright room with sunlight streaming through window",
+        "lighting": "soft morning golden light, visible dust particles",
+        "mood": "fresh, clean, new beginning"
+      }
     },
     "cozy": {
       "description": "温馨舒适氛围",
-      "overrides": { "setting": "warm cozy interior, soft textiles, candles", "lighting": "warm ambient lighting, soft golden tones", "mood": "comfortable, intimate" }
+      "overrides": {
+        "setting": "warm cozy interior, soft textiles, candles",
+        "lighting": "warm ambient lighting, soft golden tones",
+        "mood": "comfortable, intimate"
+      }
     },
     "outdoor": {
       "description": "户外自然场景",
-      "overrides": { "setting": "outdoor natural setting, organic elements", "lighting": "golden hour natural sunlight", "mood": "natural, free, adventurous" }
+      "overrides": {
+        "setting": "outdoor natural setting, organic elements",
+        "lighting": "golden hour natural sunlight",
+        "mood": "natural, free, adventurous"
+      }
     },
     "luxury": {
       "description": "奢华高端场景",
-      "overrides": { "setting": "luxury spa/hotel, marble and gold fixtures", "lighting": "cinematic lighting, warm color grading", "mood": "premium, sophisticated" }
+      "overrides": {
+        "setting": "luxury spa/hotel, marble and gold fixtures",
+        "lighting": "cinematic lighting, warm color grading",
+        "mood": "premium, sophisticated"
+      }
     }
   },
   "category_tips": {
@@ -49,5 +80,35 @@
     "{product} in cozy setting, warm ambient lighting, soft textiles, golden hour tones, lifestyle photography, authentic atmosphere"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "4:5",
+  "composition_rules": {
+    "product_ratio": "20-25%（场景图里氛围才是主角）",
+    "whitespace": "≥50%",
+    "angles": [
+      {
+        "angle": "平视环境视角",
+        "prompt": "eye-level environmental shot"
+      },
+      {
+        "angle": "低角度氛围",
+        "prompt": "slightly low angle for a cozy atmospheric feel"
+      }
+    ]
+  },
+  "text_rules": {
+    "default": "生活场景图通常无文字"
+  },
+  "workflow": [
+    "确认使用人群与使用场景（清晨梳妆台 / 周末客厅 / 户外…）",
+    "场景道具贴合人群身份，2-4 件即可，不堆砌",
+    "声明自然光与色温（如 warm morning light, 5000K）",
+    "产品作为场景中自然存在的一员，不刻意居中",
+    "结尾否定清单：杂乱路人、可读品牌 logo、文字"
+  ],
+  "pitfalls": [
+    "场景喧宾夺主产品看不清",
+    "光线色温与产品图不一致",
+    "产品占比过大变成摆拍"
+  ]
 }

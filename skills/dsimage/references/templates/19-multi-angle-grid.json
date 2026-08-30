@@ -1,8 +1,27 @@
 {
   "id": "multi-angle-grid",
   "name": "产品多角度网格",
-  "keywords": ["多角度", "网格", "grid", "多面", "颜色展示", "colorway", "产品角度", "catalog grid", "产品目录"],
-  "trigger_phrases": ["多角度展示", "产品网格", "多面展示", "颜色对比", "multi-angle", "grid layout", "产品目录图", "多色展示"],
+  "keywords": [
+    "多角度",
+    "网格",
+    "grid",
+    "多面",
+    "颜色展示",
+    "colorway",
+    "产品角度",
+    "catalog grid",
+    "产品目录"
+  ],
+  "trigger_phrases": [
+    "多角度展示",
+    "产品网格",
+    "多面展示",
+    "颜色对比",
+    "multi-angle",
+    "grid layout",
+    "产品目录图",
+    "多色展示"
+  ],
   "prompt_template": {
     "type": "product photography grid layout",
     "subject": "{product_description}",
@@ -19,10 +38,33 @@
     "separators": "thin white borders"
   },
   "variants": {
-    "angle-view": { "description": "多角度视角", "overrides": { "variation": "front, side, back, top-down, 3/4 angle views", "grid": "2x2 or 3x3" } },
-    "colorway": { "description": "多配色展示", "overrides": { "variation": "same product in different colors, consistent 3/4 angle", "grid": "3x3 for 9 colors or 2x3 for 6 colors" } },
-    "feature-grid": { "description": "带功能标注网格", "overrides": { "variation": "each cell shows different product feature with label and icon", "grid": "hero image left + 4 smaller shots right column" } },
-    "comparison": { "description": "对比网格", "overrides": { "variation": "before/after or product vs competitor in side-by-side grid" } }
+    "angle-view": {
+      "description": "多角度视角",
+      "overrides": {
+        "variation": "front, side, back, top-down, 3/4 angle views",
+        "grid": "2x2 or 3x3"
+      }
+    },
+    "colorway": {
+      "description": "多配色展示",
+      "overrides": {
+        "variation": "same product in different colors, consistent 3/4 angle",
+        "grid": "3x3 for 9 colors or 2x3 for 6 colors"
+      }
+    },
+    "feature-grid": {
+      "description": "带功能标注网格",
+      "overrides": {
+        "variation": "each cell shows different product feature with label and icon",
+        "grid": "hero image left + 4 smaller shots right column"
+      }
+    },
+    "comparison": {
+      "description": "对比网格",
+      "overrides": {
+        "variation": "before/after or product vs competitor in side-by-side grid"
+      }
+    }
   },
   "category_tips": {
     "beauty": "show bottle angle, cap detail, texture close-up, and open product",
@@ -37,5 +79,42 @@
     "3x3 color variation grid. Same {product} in 9 different colors, identical 3/4 angle. Clean white cells, subtle drop shadow. Professional catalog, 8K, 2000x2000px"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "1:1",
+  "composition_rules": {
+    "layout": "网格布局 2×2 / 3×3，每格一个角度或配色",
+    "product_ratio": "每格 40%",
+    "angles": [
+      {
+        "angle": "正面",
+        "prompt": "front view"
+      },
+      {
+        "angle": "侧面",
+        "prompt": "90-degree side profile"
+      },
+      {
+        "angle": "背面",
+        "prompt": "rear view"
+      },
+      {
+        "angle": "俯视",
+        "prompt": "90-degree overhead view"
+      }
+    ]
+  },
+  "text_rules": {
+    "labels": "每格可加角度/配色短标签，风格统一"
+  },
+  "workflow": [
+    "先确定网格数与每格内容分配（角度 / 配色 / 局部特写）",
+    "所有格子同一背景、同一光线、同一产品大小",
+    "格子间距一致，整体整齐",
+    "结尾否定清单：格子间光线不一致、产品大小不一、角度重复"
+  ],
+  "pitfalls": [
+    "各格光线色温不一致",
+    "产品在各格大小不一",
+    "角度重复没有信息增量"
+  ]
 }

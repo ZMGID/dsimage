@@ -1,8 +1,29 @@
 {
   "id": "sports-campaign",
   "name": "运动/健身广告",
-  "keywords": ["运动", "健身", "广告", "sports", "fitness", "campaign", "运动鞋", "运动服", "篮球", "跑步", "健身器材"],
-  "trigger_phrases": ["运动广告", "健身广告", "sports campaign", "运动品牌", "运动大片", "健身推广", "运动产品广告", "运动海报"],
+  "keywords": [
+    "运动",
+    "健身",
+    "广告",
+    "sports",
+    "fitness",
+    "campaign",
+    "运动鞋",
+    "运动服",
+    "篮球",
+    "跑步",
+    "健身器材"
+  ],
+  "trigger_phrases": [
+    "运动广告",
+    "健身广告",
+    "sports campaign",
+    "运动品牌",
+    "运动大片",
+    "健身推广",
+    "运动产品广告",
+    "运动海报"
+  ],
   "prompt_template": {
     "type": "sports/fitness advertising campaign photography",
     "subject": "{product_description}",
@@ -18,10 +39,32 @@
     "lighting": "spotlight from above, dramatic body highlights"
   },
   "variants": {
-    "product-hero": { "description": "产品主视觉", "overrides": { "athlete": "no model, product floating at dynamic angle", "props": "motion lines and speed effects around product" } },
-    "athlete-action": { "description": "运动员动态", "overrides": { "athlete": "athlete mid-action wearing product, stadium lights, lens flare" } },
-    "triptych": { "description": "三联画", "overrides": { "layout": "three vertical panels: close-up detail + action shot + product hero, unified bottom strip with branding" } },
-    "gym-power": { "description": "健身力量感", "overrides": { "athlete": "muscular athlete seated on oversized dumbbell or equipment", "props": "exaggerated fitness equipment placed diagonally" } }
+    "product-hero": {
+      "description": "产品主视觉",
+      "overrides": {
+        "athlete": "no model, product floating at dynamic angle",
+        "props": "motion lines and speed effects around product"
+      }
+    },
+    "athlete-action": {
+      "description": "运动员动态",
+      "overrides": {
+        "athlete": "athlete mid-action wearing product, stadium lights, lens flare"
+      }
+    },
+    "triptych": {
+      "description": "三联画",
+      "overrides": {
+        "layout": "three vertical panels: close-up detail + action shot + product hero, unified bottom strip with branding"
+      }
+    },
+    "gym-power": {
+      "description": "健身力量感",
+      "overrides": {
+        "athlete": "muscular athlete seated on oversized dumbbell or equipment",
+        "props": "exaggerated fitness equipment placed diagonally"
+      }
+    }
   },
   "category_tips": {
     "running_shoes": "dynamic forward motion, speed lines, track or road surface context",
@@ -36,5 +79,34 @@
     "Fitness brand campaign. Athletic model wearing {product}, seated on large dumbbell. Dark studio with reflective floor. Spotlight from above. 'STRENGTH' bold headline. Nike campaign quality, 8K"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "16:9",
+  "composition_rules": {
+    "product_ratio": "35-40%",
+    "whitespace": "≥30%",
+    "angles": [
+      {
+        "angle": "动态瞬间",
+        "prompt": "frozen mid-action moment, motion energy"
+      },
+      {
+        "angle": "装备特写",
+        "prompt": "close-up on gear detail with sweat and texture"
+      }
+    ]
+  },
+  "text_rules": {
+    "headline": "口号式标题，粗体无衬线，≤6 词"
+  },
+  "workflow": [
+    "运动场景与产品强关联（使用中的产品 / 装备特写）",
+    "动态元素：汗水、速度线、飞溅颗粒",
+    "硬光高对比，色彩饱和",
+    "结尾否定清单：动作僵硬、产品失焦、提示文字乱码"
+  ],
+  "pitfalls": [
+    "人物动作僵硬不自然",
+    "产品被动态元素盖住",
+    " dynamic 感不足像摆拍"
+  ]
 }

@@ -1,8 +1,29 @@
 {
   "id": "luxury-atmospherics",
   "name": "奢华氛围渲染",
-  "keywords": ["奢华", "氛围", "烟雾", "高级感", "luxury", "atmospheric", "梦幻", "高端", "premium", "烟雾效果", "金色"],
-  "trigger_phrases": ["奢华氛围", "高端渲染", "梦幻效果", "luxury campaign", "氛围渲染", "高端广告", "品牌大片", "premium visual"],
+  "keywords": [
+    "奢华",
+    "氛围",
+    "烟雾",
+    "高级感",
+    "luxury",
+    "atmospheric",
+    "梦幻",
+    "高端",
+    "premium",
+    "烟雾效果",
+    "金色"
+  ],
+  "trigger_phrases": [
+    "奢华氛围",
+    "高端渲染",
+    "梦幻效果",
+    "luxury campaign",
+    "氛围渲染",
+    "高端广告",
+    "品牌大片",
+    "premium visual"
+  ],
   "prompt_template": {
     "type": "luxury product photography with atmospheric effects",
     "subject": "{product_description}",
@@ -18,10 +39,31 @@
     "lighting": "golden rim light from upper-left, cool blue backlight"
   },
   "variants": {
-    "floral-dream": { "description": "花卉梦幻", "overrides": { "atmosphere": "fresh flower petals floating at various heights catching light, scattered gold leaf particles" } },
-    "smoke-mystique": { "description": "烟雾神秘", "overrides": { "atmosphere": "multi-layered violet and midnight blue smoke swirling around product" } },
-    "golden-luxe": { "description": "金色奢华", "overrides": { "atmosphere": "golden bokeh particles, warm amber glow, scattered gold flakes" } },
-    "ice-crystal": { "description": "冰晶冷冽", "overrides": { "atmosphere": "floating ice crystals, frost patterns, diamond-like light refractions", "lighting": "cool platinum spotlight, ice-blue ambient" } }
+    "floral-dream": {
+      "description": "花卉梦幻",
+      "overrides": {
+        "atmosphere": "fresh flower petals floating at various heights catching light, scattered gold leaf particles"
+      }
+    },
+    "smoke-mystique": {
+      "description": "烟雾神秘",
+      "overrides": {
+        "atmosphere": "multi-layered violet and midnight blue smoke swirling around product"
+      }
+    },
+    "golden-luxe": {
+      "description": "金色奢华",
+      "overrides": {
+        "atmosphere": "golden bokeh particles, warm amber glow, scattered gold flakes"
+      }
+    },
+    "ice-crystal": {
+      "description": "冰晶冷冽",
+      "overrides": {
+        "atmosphere": "floating ice crystals, frost patterns, diamond-like light refractions",
+        "lighting": "cool platinum spotlight, ice-blue ambient"
+      }
+    }
   },
   "category_tips": {
     "fragrance": "multi-layer smoke + matching botanical elements, amber liquid visible inside",
@@ -36,5 +78,34 @@
     "Premium atmospheric product rendering. {product} on black marble veined with gold. Floating flower petals and gold leaf particles. Multi-point lighting: golden rim light + cool backlight. Dark void background, 8K"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "4:5",
+  "composition_rules": {
+    "product_ratio": "30-35%",
+    "whitespace": "≥50%（留白就是高级感）",
+    "angles": [
+      {
+        "angle": "单光源戏剧光",
+        "prompt": "single dramatic key light on dark background"
+      },
+      {
+        "angle": "微距质感",
+        "prompt": "macro on material finish with elegant reflections"
+      }
+    ]
+  },
+  "text_rules": {
+    "default": "品牌 slogan，serif 衬线体（Didot 类），小字号低调放置"
+  },
+  "workflow": [
+    "暗调背景写死 hex（如 #1A1A1A / #1A3A2E）",
+    "单光源 + 材质反光细节（金属 / 玻璃 / 丝绒）",
+    "大量留白，画面元素 ≤3 个",
+    "结尾否定清单：亮调、元素堆砌、廉价反光、多余装饰"
+  ],
+  "pitfalls": [
+    "画面太亮失去奢华感",
+    "反光过曝",
+    "元素太多显得廉价"
+  ]
 }

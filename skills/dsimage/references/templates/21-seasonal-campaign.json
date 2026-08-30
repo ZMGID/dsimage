@@ -1,8 +1,27 @@
 {
   "id": "seasonal-campaign",
   "name": "季节主题网格",
-  "keywords": ["季节", "四季", "campaign", "季节主题", "seasonal", "春夏秋冬", "年度campaign", "品牌campaign", "季节变体"],
-  "trigger_phrases": ["季节主题", "四季展示", "seasonal campaign", "年度campaign", "春夏秋冬", "季节变体", "品牌年度", "四季网格"],
+  "keywords": [
+    "季节",
+    "四季",
+    "campaign",
+    "季节主题",
+    "seasonal",
+    "春夏秋冬",
+    "年度campaign",
+    "品牌campaign",
+    "季节变体"
+  ],
+  "trigger_phrases": [
+    "季节主题",
+    "四季展示",
+    "seasonal campaign",
+    "年度campaign",
+    "春夏秋冬",
+    "季节变体",
+    "品牌年度",
+    "四季网格"
+  ],
   "prompt_template": {
     "type": "seasonal product campaign grid",
     "subject": "{product_description}",
@@ -18,10 +37,30 @@
     "consistency": "same product angle and size across all four quadrants"
   },
   "variants": {
-    "four-seasons": { "description": "经典四季", "overrides": { "layout": "2x2, each quadrant a full seasonal scene" } },
-    "holiday-series": { "description": "节日系列", "overrides": { "layout": "2x3 or 3x2 grid, each cell a different holiday theme (Valentine's, Easter, Summer, Halloween, Thanksgiving, Christmas)" } },
-    "day-to-night": { "description": "日夜变体", "overrides": { "layout": "2x2 grid, same scene at dawn, morning, afternoon, night" } },
-    "travel-series": { "description": "旅行主题", "overrides": { "layout": "2x2 grid, product in 4 travel destinations with local elements" } }
+    "four-seasons": {
+      "description": "经典四季",
+      "overrides": {
+        "layout": "2x2, each quadrant a full seasonal scene"
+      }
+    },
+    "holiday-series": {
+      "description": "节日系列",
+      "overrides": {
+        "layout": "2x3 or 3x2 grid, each cell a different holiday theme (Valentine's, Easter, Summer, Halloween, Thanksgiving, Christmas)"
+      }
+    },
+    "day-to-night": {
+      "description": "日夜变体",
+      "overrides": {
+        "layout": "2x2 grid, same scene at dawn, morning, afternoon, night"
+      }
+    },
+    "travel-series": {
+      "description": "旅行主题",
+      "overrides": {
+        "layout": "2x2 grid, product in 4 travel destinations with local elements"
+      }
+    }
   },
   "category_tips": {
     "skincare": "spring=blossoms+dew, summer=sun+kisses, autumn=cozy+cream, winter=frost+glow",
@@ -36,5 +75,30 @@
     "Brand seasonal campaign 2x2 grid. {product} in four seasonal worlds: Spring=pastel marble+dew, Summer=tropical leaves+sunset, Autumn=walnut wood+cinnamon, Winter=frosted glass+pine. Season labels in serif font, 8K"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "1:1",
+  "composition_rules": {
+    "product_ratio": "30%",
+    "whitespace": "≥40%",
+    "angles": [
+      {
+        "angle": "季节符号场景",
+        "prompt": "product staged with seasonal props and color grading"
+      }
+    ]
+  },
+  "text_rules": {
+    "labels": "节日/季节短标签，≤6 字"
+  },
+  "workflow": [
+    "明确季节或节日，列出该季节的符号系统（色彩 + 道具 + 光线）",
+    "同一系列多张时共用 Campaign Style Lock，只换季节元素",
+    "季节氛围融入但不堆砌",
+    "结尾否定清单：季节元素混乱、风格漂移、元素堆砌"
+  ],
+  "pitfalls": [
+    "季节符号用错（圣诞配樱花）",
+    "系列各张风格漂移",
+    "节日元素堆砌杂乱"
+  ]
 }

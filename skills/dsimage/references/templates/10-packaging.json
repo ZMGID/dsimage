@@ -1,8 +1,23 @@
 {
   "id": "packaging",
   "name": "包装设计展示",
-  "keywords": ["包装", "packaging", "礼盒", "gift box", "包装设计", "unboxing", "开箱"],
-  "trigger_phrases": ["包装设计", "包装展示", "礼盒图", "packaging design", "开箱图", "gift box"],
+  "keywords": [
+    "包装",
+    "packaging",
+    "礼盒",
+    "gift box",
+    "包装设计",
+    "unboxing",
+    "开箱"
+  ],
+  "trigger_phrases": [
+    "包装设计",
+    "包装展示",
+    "礼盒图",
+    "packaging design",
+    "开箱图",
+    "gift box"
+  ],
   "prompt_template": {
     "type": "packaging design visualization",
     "subject": "{product_description}",
@@ -19,15 +34,23 @@
   "variants": {
     "luxury-gift": {
       "description": "奢华礼盒",
-      "overrides": { "display": "gift box opened: outer box, inner tray, product, ribbon, brand card", "decorative": "gold foil, pearls, dried roses, silk scarf" }
+      "overrides": {
+        "display": "gift box opened: outer box, inner tray, product, ribbon, brand card",
+        "decorative": "gold foil, pearls, dried roses, silk scarf"
+      }
     },
     "minimal-eco": {
       "description": "极简环保",
-      "overrides": { "display": "sustainable packaging: recycled paper, soy ink, simple label", "decorative": "natural elements, dried leaves, twine" }
+      "overrides": {
+        "display": "sustainable packaging: recycled paper, soy ink, simple label",
+        "decorative": "natural elements, dried leaves, twine"
+      }
     },
     "unboxing": {
       "description": "开箱体验",
-      "overrides": { "display": "unboxing sequence: box opening, tissue reveal, product discovery" }
+      "overrides": {
+        "display": "unboxing sequence: box opening, tissue reveal, product discovery"
+      }
     }
   },
   "category_tips": {
@@ -42,5 +65,34 @@
     "{category} packaging concept on white. Multiple angles, clean presentation, design mockup, 1080x1080px"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "1:1",
+  "composition_rules": {
+    "product_ratio": "40-50%",
+    "whitespace": "≥40%",
+    "angles": [
+      {
+        "angle": "正面 3/4 展示盒型",
+        "prompt": "three-quarter view showing box structure and finish"
+      },
+      {
+        "angle": "微距工艺",
+        "prompt": "macro close-up on foil stamping / embossing detail"
+      }
+    ]
+  },
+  "text_rules": {
+    "default": "品牌名与品类词用占位符描述，明确要求 no readable text 或给定真实文字"
+  },
+  "workflow": [
+    "描述包装结构（盒型 / 袋型 / 瓶型）与工艺（烫金 / 压纹 / 哑光覆膜 / 局部 UV）",
+    "打光突出工艺质感，暗调或浅调背景写死 hex",
+    "如需品牌名：用用户提供的确切文字，否则声明 no readable text",
+    "结尾否定清单：乱码文字、廉价塑料感、结构透视错误"
+  ],
+  "pitfalls": [
+    "包装文字乱码",
+    "盒型结构透视错误",
+    "工艺质感画不出来显廉价"
+  ]
 }

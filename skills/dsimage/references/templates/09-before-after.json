@@ -1,8 +1,22 @@
 {
   "id": "before-after",
   "name": "使用前后对比图",
-  "keywords": ["对比", "before after", "前后", "效果对比", "transformation", "变化图"],
-  "trigger_phrases": ["对比图", "前后对比", "before after", "效果展示", "使用效果", "transformation"],
+  "keywords": [
+    "对比",
+    "before after",
+    "前后",
+    "效果对比",
+    "transformation",
+    "变化图"
+  ],
+  "trigger_phrases": [
+    "对比图",
+    "前后对比",
+    "before after",
+    "效果展示",
+    "使用效果",
+    "transformation"
+  ],
   "prompt_template": {
     "type": "before/after comparison visualization",
     "subject": "{product_description}",
@@ -21,15 +35,23 @@
   "variants": {
     "clinical": {
       "description": "临床数据风格",
-      "overrides": { "metrics": "detailed data grid with 4+ metrics and percentage arrows" }
+      "overrides": {
+        "metrics": "detailed data grid with 4+ metrics and percentage arrows"
+      }
     },
     "cinematic": {
       "description": "电影感蜕变",
-      "overrides": { "before_state": "moody dramatic, cool tone", "after_state": "bright warm golden hour, warm tone", "divider": "decorative vintage frame with product" }
+      "overrides": {
+        "before_state": "moody dramatic, cool tone",
+        "after_state": "bright warm golden hour, warm tone",
+        "divider": "decorative vintage frame with product"
+      }
     },
     "simple": {
       "description": "简洁信息图",
-      "overrides": { "metrics": "simple progress bar with key metric" }
+      "overrides": {
+        "metrics": "simple progress bar with key metric"
+      }
     }
   },
   "category_tips": {
@@ -44,5 +66,30 @@
     "{category} comparison visualization. Split: {before_state} left, {after_state} right. Key metrics below. White background, professional style, 1080x1080px"
   ],
   "anti_ai_tips": "",
-  "supports_image_reference": true
+  "supports_image_reference": true,
+  "default_ratio": "1:1",
+  "composition_rules": {
+    "layout": "左右分屏 50/50，或上下分屏；两边构图、光线、角度严格一致",
+    "product_ratio": "每侧 35%",
+    "angles": [
+      {
+        "angle": "同机位两侧",
+        "prompt": "identical camera position and lighting on both sides"
+      }
+    ]
+  },
+  "text_rules": {
+    "labels": "BEFORE / AFTER 标签，无衬线体，放角落"
+  },
+  "workflow": [
+    "两侧同一机位、同一光线、同一背景——只允许使用状态不同",
+    "效果差异要可信，不做夸张变形",
+    "禁止任何医疗/功效承诺文案",
+    "结尾否定清单：左右光线不一致、构图错位、夸张效果"
+  ],
+  "pitfalls": [
+    "左右光线角度不一致穿帮",
+    "效果差异太夸张失去可信度",
+    "两侧构图没对齐"
+  ]
 }
