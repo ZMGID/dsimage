@@ -89,7 +89,8 @@
         "angle": "等距拆解",
         "prompt": "isometric exploded view, components separated along axis lines"
       }
-    ]
+    ],
+    "whitespace": "≥20%（部件展开占位）"
   },
   "text_rules": {
     "labels": "部件标注（可选）：细线引出 + 短词，风格统一"

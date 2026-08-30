@@ -78,7 +78,8 @@
         "angle": "手机竖屏视角",
         "prompt": "vertical phone screen view of a livestream room"
       }
-    ]
+    ],
+    "whitespace": "不要求（UI 满版）"
   },
   "text_rules": {
     "ui": "价格贴/促销条文字简短（价格 + 一个卖点），平台母语",

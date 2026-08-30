@@ -76,7 +76,8 @@
         "angle": "同机位两侧",
         "prompt": "identical camera position and lighting on both sides"
       }
-    ]
+    ],
+    "whitespace": "分屏标签区留白 ≥30%"
   },
   "text_rules": {
     "labels": "BEFORE / AFTER 标签，无衬线体，放角落"

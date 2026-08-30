@@ -101,7 +101,8 @@
         "angle": "俯视",
         "prompt": "90-degree overhead view"
       }
-    ]
+    ],
+    "whitespace": "每格 ≥20%"
   },
   "text_rules": {
     "labels": "每格可加角度/配色短标签，风格统一"

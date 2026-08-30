@@ -78,7 +78,8 @@
         "angle": "标准三视图",
         "prompt": "front, side and back orthographic views"
       }
-    ]
+    ],
+    "whitespace": "标注区留白 ≥30%"
   },
   "text_rules": {
     "default": "以数字标注为主：尺寸线 + 数字，单位明确",
