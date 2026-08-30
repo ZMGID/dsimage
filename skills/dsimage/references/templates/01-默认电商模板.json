@@ -39,19 +39,31 @@
         "slot": "H1",
         "purpose": "主图：产品突出 + 价格信息",
         "scene": "01-hero-image.json",
-        "ratio": "1:1"
+        "ratio": "1:1",
+        "overrides": {
+          "layout": "标题左上、产品居中偏上、价格左下，元素位置每张一致",
+          "price_block": "44pt 强调色 #C8452C，左下角，仅确认报价后渲染"
+        }
       },
       {
         "slot": "H2",
         "purpose": "质感细节",
         "scene": "04-detail-macro.json",
-        "ratio": "1:1"
+        "ratio": "1:1",
+        "overrides": {
+          "layout": "微距特写居中，单行工艺标注",
+          "product_ratio": "55-60%"
+        }
       },
       {
         "slot": "H3",
         "purpose": "使用场景",
         "scene": "02-lifestyle-scene.json",
-        "ratio": "4:5"
+        "ratio": "4:5",
+        "overrides": {
+          "layout": "生活场景自然融入，产品不刻意居中",
+          "product_ratio": "25%"
+        }
       }
     ]
   },

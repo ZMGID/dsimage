@@ -68,7 +68,7 @@ python3 scripts/gen_image.py --env-file .env --prompt-file prompt.txt
 
 ## 情景系统
 
-`references/scenes/` 下 26 个内置情景（01-26，通用拍法）；`references/templates/` 下是**模板层**——带甲方风格/语言/参数的定制实例（目前含默认示例 `templates/01-默认电商模板.json` 和箱包报价模板 `templates/02-箱包单品报价模板.json`）。两者结构不同：情景 = 拍摄方法（骨架/构图/文字渲染规则）；模板 = 品牌风格 + 语言 + 图片包 + 执行流程，通过 pack 引用情景，模板字段规范见 `references/templates/_TEMPLATE_SPEC.md`。**每个情景是该类画面的完整执行规范**，包含：
+`references/scenes/` 下 26 个内置情景（01-26，通用拍法）；`references/templates/` 下是**模板层**——带甲方风格/语言/参数的定制实例（目前含默认示例 `templates/01-默认电商模板.json` 和箱包报价模板 `templates/02-箱包单品报价模板.json`）。两者结构不同：情景 = 拍摄方法（骨架/构图/文字渲染规则），保持通用、不带品牌；模板 = 品牌风格 + 语言 + 图片包 + 执行流程，通过 pack 引用情景，并用槽位 `overrides` 写明品牌对每张图的特化（构图占比/背景/布局/标注等），优化优先落在 overrides。模板字段规范见 `references/templates/_TEMPLATE_SPEC.md`。**每个情景是该类画面的完整执行规范**，包含：
 
 | 字段 | 含义 |
 |---|---|
@@ -204,7 +204,7 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 | 坑的类型 | 判断 | 沉淀到 |
 |---|---|---|
 | 拍法的坑（换个客户也会踩） | 影响这一类图 | 所引情景的 `pitfalls` |
-| 品牌的坑（只跟这个甲方有关） | 影响这一个模板 | 模板的 `pitfalls` 或 `text_rules` |
+| 品牌的坑（只跟这个甲方有关） | 影响这一个模板 | 该槽位的 `overrides`（画面特化）或模板 `pitfalls` / `text_rules` |
 | 模型本身的坑（跨情景跨品牌） | 影响所有出图 | SKILL.md「常见翻车点」表 |
 
 回流格式：`"症状（→修法）"`；情景 `pitfalls` 上限 3-5 条，满了合并同类。回流后跑 `python3 scripts/check_scenes.py` 并提交。

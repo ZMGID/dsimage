@@ -32,7 +32,7 @@
 | ★ `examples` | ≥1 条 | 示例 Prompt 或执行记录 |
 | ★ `supports_image_reference` | 必填 | bool |
 | ○ `style_lock` | 可选 | 固定的 Style Lock 文本；不写则按 SKILL.md 规则从 template_meta.brand 现场生成 |
-| ○ `pitfalls` | 可选 | 品牌坑的沉淀容器（法务红线、配色偏差、版式雷点）；出图后连同所引情景的 pitfalls 一起检查。拍法坑回情景，模型通用坑回 SKILL.md |
+| ○ `pitfalls` | 可选 | 品牌/行业特有翻车点；出图后连同所引情景的 pitfalls 一起检查。拍法坑回情景，模型通用坑回 SKILL.md |
 
 ## 结构化字段细则
 
@@ -61,13 +61,24 @@
 {
   "default_count": "3 张（用户指定数量时以用户为准）",
   "images": [
-    {"slot": "H1", "purpose": "主图：产品突出 + 价格信息", "scene": "01-hero-image.json", "ratio": "1:1"}
+    {
+      "slot": "H1",
+      "purpose": "主图：产品突出 + 价格信息",
+      "scene": "01-hero-image.json",
+      "ratio": "1:1",
+      "overrides": {
+        "layout": "标题左上、产品居中偏上、价格左下，元素位置每张一致",
+        "price_block": "44pt 强调色 hex，左下角，仅确认报价后渲染"
+      }
+    }
   ]
 }
 ```
 
 - `images[].scene` 必须是 `references/scenes/` 里真实存在的文件名，校验器会检查
-- 每个槽位：slot 编号、purpose（用途）、scene（拍法来源）、ratio（画幅，覆盖情景 default_ratio）
+- 每个槽位：slot 编号、purpose（一句话意图）、scene（拍法来源）、ratio（画幅）、`overrides`（品牌对这张图的特化）
+- **`overrides` 是槽位的沉淀容器**：key 为要覆盖的方面（layout / product_ratio / background / callouts / price_block / condition / forbidden…自由命名），value 写具体要求；只写与情景默认的**差异**，不要把情景内容抄一遍
+- 后续优化落点：品牌对某张图不满意 → 改该槽位 `overrides`；某类图通用的坑 → 改所引情景的 `pitfalls`/`composition_rules`
 - 用户指定数量/比例时**永远以用户为准**，pack 只是缺省方案
 
 ### workflow（执行流程——流程归模板）
