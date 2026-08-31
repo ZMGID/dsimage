@@ -1,7 +1,7 @@
 # 模板创建指南（Agent 按此引导用户）
 
-> 用途：用户提供甲方材料（风格参考 PDF/图片、文字要求、文案）加一句"制作一个模板 / 创建模板"（可能带"使用 dsimage"），Agent 分析并创建一个新模板。
-> 用户不需要知道本文件存在——SKILL.md 已经规定：识别到"制作模板"类任务就读本文件。
+> 用途：用户提供甲方材料（风格参考 PDF/图片、文字要求、文案）加一句"制作一个模板 / 创建模板"（可能带"使用 dsimage"），或**一套品出完后确认要建模板**，Agent 分析并创建一个新模板。
+> 用户不需要知道本文件存在——SKILL.md 已经规定：识别到"制作模板"类任务、或出图后用户同意建模板，就读本文件。出图后转来时，本轮成图、Prompt、产品参考图和已给参数都算检查点 1 的现成素材，不要再让用户从头交一遍。
 > 术语：产出是一个「模板」JSON，存入模板库 `references/templates/`。模板 = 品牌风格 + 图内语言 + 图片包（pack）+ 执行流程（workflow），通过 pack 引用情景库 `references/scenes/` 的拍法。
 > 前置必读：`references/templates/_TEMPLATE_SPEC.md`（模板字段规范）；拍摄方法参照 `references/scenes/` 情景库（26 个）。
 
@@ -74,7 +74,7 @@
 
 **做什么**（数值全部来自检查点 1 的分析，不凭空写）：
 
-1. `workflow`：5-8 步执行流程——读 pack 规划 → 建 Campaign Style Lock（用品牌 hex）→ 逐张"读引用情景 → 情景骨架 + 品牌 hex + text_rules 拼 Prompt" → 调 gen_image.py（--image）→ 检查 → 汇报；可按甲方要求特化（如报价表模板规定"价格必须人工确认后才渲染"）。
+1. `workflow`：5-8 步执行流程——读 pack 规划 → 建 Campaign Style Lock（用品牌 hex）→ 逐张"读引用情景 → 情景骨架 + 品牌 hex + text_rules 拼 Prompt" → 有 API 时 `gen_image.py --batch`，没有则用 Codex 原生生图 → 检查 → 汇报；generation 默认 1k，不必 2k。
 2. `text_rules`：每个文字角色的字号、hex、位置、长度上限（价格、标题、标注…逐个来）。
 3. `generation`：默认 `1k` / `png` / `high`。不必 2k；接口返回原图直接用，禁止升采样。用户当场要求 2k 再写 2k。
 4. 模板级 `pitfalls`：3-5 条，来自甲方强调过的点（如"跨张版式漂移""价格乱码"）。

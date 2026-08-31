@@ -117,7 +117,7 @@
     "旅行道具制造虚假功能关系（行李箱、拉杆或护照只在证明已确认功能时出现，不作随机装饰）"
   ],
   "generation": {
-    "resolution": "2k",
+    "resolution": "1k",
     "format": "png",
     "quality": "high"
   }

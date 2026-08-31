@@ -88,7 +88,7 @@
     "产品细节与参考图不一致（必须 --image 传入并出图后核对）"
   ],
   "generation": {
-    "resolution": "2k",
+    "resolution": "1k",
     "format": "png"
   }
 }

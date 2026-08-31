@@ -2,10 +2,11 @@
 
 **给 AI 装一个电商美工。**
 
-Dsimage 是一个电商视觉创作 Skill，装进 Claude Code / Codex / OpenClaw 后，你只需要说一句：
+Dsimage 是一个电商视觉创作 Skill，装进 Claude Code / Codex / OpenClaw 后，开口带上「使用 dsimage」：
 
 ```text
-基于 data/shirt.jpg 生成 Amazon 详情页全套图片
+使用 dsimage 来制作，基于 data/shirt.jpg 生成 Amazon 详情页全套图片
+使用 dsimage 模板：箱包单品报价模板，基于这张图出全套
 ```
 
 它就会产出 5 张主图 + 9 张详情页——首图卖点、功能特写、场景匹配、方案对比、信任背书、CTA，一张不缺。换个说法，社媒推广图、直播间场景、海报 Banner、模特上身图也都能直接生成。不用 PS，不用抠图，也不用自己写提示词。
@@ -14,7 +15,7 @@ Dsimage 是一个电商视觉创作 Skill，装进 Claude Code / Codex / OpenCla
 
 1. **做整套，不做单张** — 内置 26 种情景（主图、生活方式、平铺、模特、直播间、爆炸图、杂志大片……）。多图任务自动生成 Campaign Style Lock，把色板、冷暖调、字体、背景、光线全部锁死，整套图一个风格，不会一张一个样。
 2. **为转化出图，不为好看出图** — 动手前先诊断产品靠什么打动买家：视觉驱动、痛点驱动还是情感价值驱动，再按对应的转化逻辑规划图片顺序，而不是堆一堆好看但不出单的图。
-3. **从 Prompt 到成图一条龙** — 未配置 API 时，输出结构完整、可直接执行的专业生图 Prompt，拿到任何平台都能用；配置任意 OpenAI 兼容图片 API 后一句话直接出图，生图脚本纯 Python 标准库，零第三方依赖。
+3. **从 Prompt 到成图一条龙** — Codex 账号登录即可直接出图，不必先配 API；也可以再配任意 OpenAI 兼容图片 API（额度/并发通常更高，适合整套批量）。两者可同时开。未配置时只输出可执行 Prompt。生图脚本纯 Python 标准库，零第三方依赖。
 
 ## 安装
 
@@ -30,7 +31,7 @@ cd dsimage
 # 2. 把 skills/dsimage 复制到你所用工具的技能目录（目录见下表）
 mkdir -p .claude/skills && cp -r skills/dsimage .claude/skills/
 
-# 3. 配置 API（见下节），重启工具即可使用
+# 3. 可选：配置 API（Codex 账号登录不配也能生图；要更高额度/并发可再配）
 ```
 
 各工具的技能目录（`<项目>` 指你的项目根目录 / OpenClaw 工作区）：
@@ -45,7 +46,7 @@ OpenClaw 也可以在克隆出的仓库目录内用命令安装：`openclaw skil
 
 ### 方式二：让 AI 自动安装
 
-把下面这段发给项目里的 AI（Claude Code / Codex 等），它会读取指南，自动完成安装和 API 配置：
+把下面这段发给项目里的 AI（Claude Code / Codex 等），它会读取指南，自动完成安装，并让你选择出图方式：
 
 ```text
 请安装并配置 dsimage，严格按照以下指南执行：
@@ -54,11 +55,19 @@ https://raw.githubusercontent.com/ZMGID/dsimage/main/skills/dsimage/SETUP.md
 
 已克隆仓库的，直接让 AI 读本地文件 `skills/dsimage/SETUP.md` 即可。
 
-Agent 会按指南执行：安装 Skill → 询问你是否配置生图 API → 确认后收集 `IMG_BASE_URL` 和 `IMG_API_KEY` → 自动拉取该服务的模型列表供你选择 `IMG_MODEL` → 写入 `.env` 并可选生成测试图验证。
+Agent 会按指南执行：安装 Skill → **列出三个选项让你选（1 和 2 可同时选，不是二选一）**：
 
-也可以让 AI 交互式引导配置：让它读 `skills/dsimage/SETUP.md` 执行即可（会询问地址和 key、拉取模型列表让你选模型、写入 `.env`）。
+1. Codex 账号登录使用（用 Codex 原生生图，不配 API 也能出图）
+2. 配置生图 API（额度/并发通常更高，适合整套批量；可与 1 一起选）
+3. 什么都不配置（只输出 Prompt）
 
-### API 配置
+选了 2 之后才会收集 `IMG_BASE_URL` 和 `IMG_API_KEY` → 拉取模型列表供你选择 `IMG_MODEL` → 写入 `.env` 并可选生成测试图验证。
+
+也可以让 AI 交互式引导配置：让它读 `skills/dsimage/SETUP.md` 执行即可。
+
+### API 配置（可选）
+
+Codex 账号登录不配也能生图。图片 API 额度/并发通常更高，适合整套批量，**可以和账号登录同时用**。
 
 在 **Skill 目录内**创建 `.env`（仓库里是 `skills/dsimage/.env`；复制安装后则是 `~/.codex/skills/dsimage/.env` 这类路径）。配置随 Skill 全局生效——换会话、换项目都可用；也可以在某个项目根目录另放 `.env`，仅对该项目覆盖：
 
@@ -78,32 +87,35 @@ IMG_API_KEY=your-api-key-here
 
 ## 使用
 
-安装后在 Claude Code 里用自然语言直接说：
+装好之后就三件事。开口最好带上「使用 dsimage」，套模板写成「使用 dsimage 模板：某某模板」。
 
-```
-基于 data/产品图.jpg 生成 Amazon 详情页全套图片
-```
+**1. 出图**  
+把产品图丢过来，能给的信息一起给（品名、价格、货号、尺寸、卖点、颜色），再说一句要什么，就可以开始。缺的会先问一轮，你说先出也行。一套出完：已经套了定制模板会问要不要对照刚出的图改模板；否则会问要不要给这类货新建模板。
 
-```
-用 data/产品图.jpg 生成 3 张 Twitter/X 推广帖，风格要真实手机拍照感
-```
-
-```
-为我的护肤品设计一张白底主图 Prompt      # 未配置 API 时只出 Prompt，不出图
+```text
+使用 dsimage 来制作，基于这张衣服图做 Amazon 详情页
+使用 dsimage 模板：箱包单品报价模板，基于这张图出全套
+使用 dsimage，用这张产品图出 3 张小红书图，要真实拍照感
 ```
 
-也可以不经过 Skill，直接调用生图脚本（Windows 用 `python`，macOS/Linux 用 `python3`）：
+**2. 同类品做模板**  
+同一类货、同一套版式要反复出，就说「使用 dsimage，按这些参考图 / PDF 做一个模板」。下次同类品直接套模板，不用从头讲。
+
+**3. 模板会越用越好**  
+哪里不对直接说，比如「H5 不该是生活图」「字糊了」「少了拉杆带」。也可以把甲方成品图丢过来，让它对照着改模板。改的是这个品牌模板，下次同类品会跟着变好。
+
+也可以不经过对话，直接调生图脚本（Windows 用 `python`，macOS/Linux 用 `python3`）：
 
 ```bash
 python skills/dsimage/scripts/gen_image.py \
   --prompt "clean product hero image, white background, studio lighting" \
-  --size 1:1 --resolution 2k --image data/product.jpg
+  --size 1:1 --image data/product.jpg
 ```
 
 多图套图用**批量模式**一次并发生成（比逐张串行快得多）：
 
 ```bash
-python skills/dsimage/scripts/gen_image.py --batch jobs.json --concurrency 4
+python skills/dsimage/scripts/gen_image.py --batch jobs.json
 ```
 
 `jobs.json` 批量清单示例（`prompt_file` / `image` / `output_dir` 的相对路径都相对清单文件所在目录）：
@@ -111,7 +123,7 @@ python skills/dsimage/scripts/gen_image.py --batch jobs.json --concurrency 4
 ```json
 {
   "output_dir": "generated-images/backpack-pdp",
-  "defaults": {"size": "1:1", "resolution": "2k", "image": "data/backpack.jpg"},
+  "defaults": {"size": "1:1", "resolution": "1k", "image": "data/backpack.jpg"},
   "jobs": [
     {"slot": "H1", "prompt_file": "prompts/prompt-H1.txt"},
     {"slot": "H2", "prompt_file": "prompts/prompt-H2.txt", "size": "4:5"}
@@ -126,10 +138,10 @@ python skills/dsimage/scripts/gen_image.py --batch jobs.json --concurrency 4
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
 | `--prompt` / `--prompt-file` / `--batch` | Prompt 来源或批量清单，三选一必填 | — |
-| `--concurrency` | 批量模式并发任务数 | `4` |
+| `--concurrency` | 批量起始并发；429/超时自动 8→4→2→1 回退 | `8` |
 | `--skip-existing` | 批量模式跳过输出已存在的槽位（失败重跑用） | 关 |
 | `--size` | 画幅比例：`1:1`、`2:3`、`16:9` 等 14 种 | `1:1` |
-| `--resolution` | 分辨率档位 `1k` / `2k` / `4k`（4K 仅 6 种宽幅） | `2k` |
+| `--resolution` | 分辨率档位 `1k` / `2k` / `4k`（4K 仅 6 种宽幅） | `1k` |
 | `--image` | 产品参考图路径，提升产品一致性 | 无 |
 | `--output-dir` | 图片输出目录 | `generated-images` |
 | `--env-file` | 指定 `.env` 路径（默认向上查找含 `IMG_` 配置的 `.env`，兜底 Skill 目录） | 自动 |
@@ -159,7 +171,7 @@ dsimage/
 
 - 本项目不内置任何 API 密钥；`.env` 已被 gitignore，请勿把 key 提交进仓库或在对话中回显
 - 缺价格、尺寸、卖点时先问用户；不补则按假设出图并列出假设。认证/评分/销量用示意占位，不要写成已核实
-- 直接生图依赖任意 OpenAI 兼容 Images API（官方或第三方服务均可），不同服务商对尺寸/分辨率/参考图的支持范围不同
+- 直接生图可以走 Codex 账号登录的原生生图，也可以走任意 OpenAI 兼容 Images API；两者可同时开。已配 API 时套图优先走脚本批量。不同服务商对尺寸/分辨率/参考图的支持范围不同
 
 ## 许可
 

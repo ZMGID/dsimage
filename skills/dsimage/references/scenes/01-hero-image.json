@@ -108,7 +108,7 @@
     "海外平台主图出现文字或图形（Amazon 主图必须纯白底无文字）"
   ],
   "generation": {
-    "resolution": "2k",
+    "resolution": "1k",
     "format": "png"
   }
 }

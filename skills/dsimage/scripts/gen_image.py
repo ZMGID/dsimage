@@ -269,7 +269,7 @@ def http_post(url: str, api_key: str, payload: dict[str, Any], timeout: int = 12
 
 def http_post_multipart(url: str, api_key: str, fields: dict[str, str], file_field: str,
                         filename: str, file_data: bytes, file_mime: str,
-                        timeout: int = 180) -> dict[str, Any]:
+                        timeout: int = 300) -> dict[str, Any]:
     """以 multipart/form-data 提交（OpenAI /images/edits 图生图标准格式）。"""
     boundary = "dsimage-" + uuid.uuid4().hex
     chunks: list[bytes] = []
@@ -363,7 +363,7 @@ def run_sync(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
     payload = build_sync_payload(args, prompt, model)
     endpoint = f"{base_url}/images/generations"
     log(label, f"提交生成请求到 {endpoint}...")
-    result = http_post(endpoint, api_key, payload, timeout=180)
+    result = http_post(endpoint, api_key, payload, timeout=300)
     return save_sync_images(result, output_dir, fmt, name_prefix)
 
 
@@ -499,6 +499,42 @@ def generate_one(base_url: str, api_key: str, model: str, mode: str,
     return run_sync(base_url, api_key, args, prompt, model, output_dir, args.format, label, name_prefix)
 
 
+def is_rate_limit(exc: BaseException) -> bool:
+    return is_backoff_error(str(exc))
+
+
+def is_backoff_error(message: str) -> bool:
+    """并发上限、超时、5xx 等可回退重试；401/文件错误不回退。"""
+    text = message.lower()
+    if any(x in text for x in ("401", "403", "不存在", "prompt 为空", "缺少配置")):
+        return False
+    return any(x in text for x in (
+        "429", "rate_limit", "concurrency limit", "超时", "timeout",
+        "连接失败", "http 5", "503", "502", "500",
+    ))
+
+
+def generate_with_retry(base_url: str, api_key: str, model: str, mode: str,
+                        args: argparse.Namespace, prompt: str, output_dir: Path,
+                        label: str, name_prefix: str | None = None,
+                        retries: int = 4) -> list[Path]:
+    """单张：额度/超时退避重试。批量模式由 run_batch 降并发回退，不走这里。"""
+    delay = 15
+    last: BaseException | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            return generate_one(base_url, api_key, model, mode, args, prompt,
+                                output_dir, label, name_prefix)
+        except GenError as exc:
+            last = exc
+            if not is_backoff_error(str(exc)) or attempt == retries:
+                raise
+            log(label, f"出错，{delay}s 后重试（{attempt}/{retries - 1}）...")
+            time.sleep(delay)
+            delay = min(delay * 2, 60)
+    raise last  # pragma: no cover
+
+
 # ── 批量模式 ──────────────────────────────────────────────
 
 JOB_FIELDS = ("size", "resolution", "quality", "n", "image", "format")
@@ -572,34 +608,80 @@ def run_batch(args: argparse.Namespace, base_url: str, api_key: str, model: str)
     output_dir, jobs = load_batch(Path(args.batch), args)
     mode = detect_mode(base_url, args.mode)
     log("batch", f"API 模式: {mode} | base_url={base_url} | model={model}")
-    log("batch", f"共 {len(jobs)} 个槽位，并发 {max(1, args.concurrency)}，输出目录 {output_dir}")
-
-    def worker(job: dict[str, Any]) -> tuple[str, Any]:
-        slot: str = job["slot"]
-        job_args: argparse.Namespace = job["args"]
-        name_prefix = slot.lower()
-        primary = output_dir / f"{name_prefix}.{job_args.format}"
-        if args.skip_existing and primary.exists():
-            return "skip", [primary]
-        try:
-            return "ok", generate_one(base_url, api_key, model, mode, job_args,
-                                      job["prompt"], output_dir, slot, name_prefix)
-        except GenError as exc:
-            return "fail", str(exc)
-        except Exception as exc:  # 单个槽位的意外错误不拖垮整批
-            return "fail", f"{type(exc).__name__}: {exc}"
 
     results: dict[str, tuple[str, Any]] = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.concurrency)) as pool:
-        futures = {pool.submit(worker, job): job["slot"] for job in jobs}
-        for future in concurrent.futures.as_completed(futures):
-            slot = futures[future]
-            results[slot] = future.result()
-            status, payload = results[slot]
+    pending: list[dict[str, Any]] = []
+    for job in jobs:
+        slot = job["slot"]
+        name_prefix = slot.lower()
+        primary = output_dir / f"{name_prefix}.{job['args'].format}"
+        if args.skip_existing and primary.exists():
+            results[slot] = ("skip", [primary])
+        else:
+            pending.append(job)
+
+    concurrency = max(1, args.concurrency)
+    log("batch", f"共 {len(jobs)} 个槽位，起始并发 {concurrency}，输出目录 {output_dir}")
+
+    def run_wave(wave: list[dict[str, Any]], workers: int) -> dict[str, tuple[str, Any]]:
+        wave_results: dict[str, tuple[str, Any]] = {}
+
+        def worker(job: dict[str, Any]) -> tuple[str, Any]:
+            slot = job["slot"]
+            try:
+                paths = generate_one(
+                    base_url, api_key, model, mode, job["args"],
+                    job["prompt"], output_dir, slot, slot.lower(),
+                )
+                return "ok", paths
+            except GenError as exc:
+                return "fail", str(exc)
+            except Exception as exc:
+                return "fail", f"{type(exc).__name__}: {exc}"
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(worker, job): job["slot"] for job in wave}
+            for future in concurrent.futures.as_completed(futures):
+                slot = futures[future]
+                wave_results[slot] = future.result()
+                status, payload = wave_results[slot]
+                if status == "ok":
+                    log("batch", f"{slot} 完成")
+                else:
+                    log("batch", f"{slot} 失败：{payload}")
+        return wave_results
+
+    while pending:
+        workers = min(concurrency, len(pending))
+        log("batch", f"本轮 {len(pending)} 个槽位，并发 {workers}")
+        wave_results = run_wave(pending, workers)
+        next_pending: list[dict[str, Any]] = []
+        hit_limit = False
+        for job in pending:
+            slot = job["slot"]
+            status, payload = wave_results[slot]
             if status == "ok":
-                log("batch", f"{slot} 完成")
-            elif status == "fail":
-                log("batch", f"{slot} 失败：{payload}")
+                results[slot] = (status, payload)
+            elif is_backoff_error(str(payload)):
+                hit_limit = True
+                next_pending.append(job)
+            else:
+                results[slot] = (status, payload)
+        if not next_pending:
+            break
+        if not hit_limit:
+            for job in next_pending:
+                results[job["slot"]] = wave_results[job["slot"]]
+            break
+        if concurrency <= 1:
+            log("batch", "并发已降到 1 仍失败，停止回退")
+            for job in next_pending:
+                results[job["slot"]] = wave_results[job["slot"]]
+            break
+        concurrency = max(1, concurrency // 2)
+        log("batch", f"报错回退，并发改为 {concurrency}，15s 后重试 {len(next_pending)} 个槽位")
+        time.sleep(15)
+        pending = next_pending
 
     counts = {"ok": 0, "skip": 0, "fail": 0}
     failed: list[str] = []
@@ -631,13 +713,13 @@ def parse_args() -> argparse.Namespace:
     prompt_group.add_argument("--prompt", help="直接传入图片生成 Prompt。")
     prompt_group.add_argument("--prompt-file", help="从文本文件读取图片生成 Prompt。")
     prompt_group.add_argument("--batch", help="批量清单 JSON 路径（含 output_dir / defaults / jobs 数组），并发生成整套图，输出按槽位命名。")
-    parser.add_argument("--concurrency", type=int, default=4, help="批量模式并发任务数，默认 4。")
+    parser.add_argument("--concurrency", type=int, default=8, help="批量模式起始并发数，默认 8；429/超时自动 8→4→2→1 回退。")
     parser.add_argument("--skip-existing", action="store_true", help="批量模式跳过输出文件已存在的槽位，用于失败后重跑补齐。")
     parser.add_argument("--output-dir", default="generated-images", help="图片输出目录，默认 generated-images。")
     parser.add_argument("--env-file", help="指定 .env 配置文件；不指定时从当前目录向上查找（只认含 IMG_ 配置的），兜底 Skill 目录。")
     parser.add_argument("--mode", choices=("sync", "async"), help="API 模式。不指定时根据 base URL 自动检测（含 apimart → async，其他 → sync）。")
     parser.add_argument("--size", default="1:1", help="图片尺寸。异步模式用比例格式（1:1、16:9 等），同步模式用像素格式（1024x1024 等）。默认 1:1。")
-    parser.add_argument("--resolution", default="2k", choices=VALID_RESOLUTIONS, help="异步模式分辨率档位，默认 2k。")
+    parser.add_argument("--resolution", default="1k", choices=VALID_RESOLUTIONS, help="异步模式分辨率档位，默认 1k。")
     parser.add_argument("--quality", choices=("low", "medium", "high"), help="同步模式图片质量参数。")
     parser.add_argument("--n", type=int, default=1, help="同步模式生成图片数量，默认 1。")
     parser.add_argument("--image", help="参考产品图片路径，传入以提升产品一致性。")
@@ -666,7 +748,7 @@ def main() -> None:
         prompt = read_prompt(args)
         mode = detect_mode(base_url, args.mode)
         log(mode, f"API 模式: {mode} | base_url={base_url} | model={model}")
-        paths = generate_one(base_url, api_key, model, mode, args, prompt, Path(args.output_dir), mode)
+        paths = generate_with_retry(base_url, api_key, model, mode, args, prompt, Path(args.output_dir), mode)
         print("生成完成：")
         for path in paths:
             print(path)

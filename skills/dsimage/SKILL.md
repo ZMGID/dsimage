@@ -1,6 +1,6 @@
 ---
 name: dsimage
-description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets — marketplace hero images, Amazon/Shopify PDP detail pages, social/ad creatives, livestream scenes — using 26 built-in shooting scenes, with Campaign Style Lock keeping multi-image sets visually consistent. Uses the user's reference photos to preserve product identity. Generates images directly via the host agent's built-in image generation (e.g. Codex) when available, or via the user's configured OpenAI-compatible image API. Also builds reusable client-specific scenes from client materials (style reference PDFs, brand requirements). Use when the user asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or visual strategy and image-generation prompts for selling scenarios, or asks to 制作模板 / 创建模板 / 建一个模板 / create a template from their materials.
+description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets using 26 shooting scenes, with Campaign Style Lock for visual consistency. Generates via Codex built-in imagegen or a configured OpenAI-compatible image API. Also builds reusable client templates from brand materials. Use when the user says 使用 dsimage / 使用dsimage / dsimage, or asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or 制作模板 / 创建模板 / 使用 dsimage 模板.
 ---
 
 # dsimage Skill
@@ -12,7 +12,7 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 1. **Brief / Prompt 模式**：只输出视觉简报和可执行图片 Prompt。
 2. **Generate 模式**：当用户明确要求"生图、生成图片、出图、render image"时，先输出最终 Prompt，再调用生图。
 
-不要暴露、索要、写入、提交或回显真实 API key。使用者必须通过自己的环境变量配置 API。
+不要暴露、索要、写入、提交或回显真实 API key。生图 API 不是必须的：Codex 账号登录即可用原生生图；需要更高额度/并发时可再配 API，两者可同时开，不是二选一。
 
 ---
 
@@ -30,8 +30,12 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 4. 多图任务：先建立 **Campaign Style Lock**（见下文），原样放进每张 Prompt 开头。
 5. 商品/营销任务：先做**转化驱动力诊断**（见下文）。
 6. 逐张写 Prompt：Style Lock → 情景 `prompt_template` 骨架（替换 `{variables}`）→ 按需套用 `variants` / `category_tips` → 按通用规则收尾。
-7. Generate 模式：宿主自带生图工具（如 Codex 的 imagegen）优先直接使用；没有时调用 `scripts/gen_image.py`，用户提供了产品图必须带 `--image`；**多图任务用 `--batch` 批量清单一次并发生成**（见「多图执行规则」）。**命令参数优先级**：用户显式指定 > 命中模板的 `generation` / 槽位 `ratio` > 情景 `generation` / `default_ratio`。`--size` 用比例（`1:1`），不要写死 `1024x1024` 或 `2048x2048`。未特别要求 2k 时用模板默认 `1k`，不要从情景抄 `2k`。接口返回多大就保存多大，禁止本地升采样。
+7. Generate 模式：按下方**出图通道**选路；用户提供了产品图必须带上参考图。走脚本时**多图任务用 `--batch` 批量清单一次并发生成**（见「多图执行规则」）。**命令参数优先级**：用户显式指定 > 命中模板的 `generation` / 槽位 `ratio` > 情景 `generation` / `default_ratio`。`--size` 用比例（`1:1`），不要写死 `1024x1024` 或 `2048x2048`。未特别要求 2k 时用模板默认 `1k`，不要从情景抄 `2k`。接口返回多大就保存多大，禁止本地升采样。
 8. 出图后按情景 `pitfalls` + 下方 QA 清单检查，返回文件路径和关键假设。
+9. **一套品出完必须收口**（本轮已经在建/改模板则跳过）：
+   - 本轮套的是**定制模板**（不是「默认电商模板」）→ 问：「这套要不要对照刚出的图改一下这个模板？」说要 → 按「坑跟谁走」改该模板的槽位 `overrides` / `pitfalls`，**不要再走 CREATE_TEMPLATE 新建**。
+   - 本轮只用了情景或默认电商模板 → 问：「这类货以后还要反复出的话，要不要用这次的图和版式建一个模板？」说要 / 好 / 建 → **立刻读 `CREATE_TEMPLATE.md`**，把本轮成图、Prompt、产品图和已给信息当作检查点 1 的素材，不要从头再问一遍已经有的东西。
+   - 用户说不用则结束。
 
 ---
 
@@ -47,7 +51,13 @@ IMG_API_KEY=your-api-key
 
 脚本兼容别名：`OPENAI_BASE_URL`、`OPENAI_API_BASE`、`OPENAI_IMAGE_MODEL`、`OPENAI_MODEL`、`OPENAI_API_KEY`。
 
-**出图通道优先级**：宿主 Agent 自带生图能力（如 Codex 的原生 imagegen）时优先直接使用，Prompt 交给它即可，无需任何配置；否则调用脚本（Windows 用 `python`，macOS/Linux 用 `python3`，下同）：
+**出图通道**（Codex 账号登录和生图 API 可同时存在，不是二选一）：
+
+1. **已配置生图 API**（Skill 目录或项目有 `IMG_*` / 兼容别名）→ 走 `scripts/gen_image.py`。多图套图必须 `--batch`。API 额度/并发通常更高，有 API 时套图优先走脚本，不要只用 Codex 一张一张出。
+2. **未配 API，但当前是 Codex 账号登录**（或宿主有原生生图，如 Codex imagegen）→ 用宿主生图，Prompt 交给它即可，**不要再追问 API**。
+3. **API 和宿主生图都没有** → 只输出 Prompt 包；若用户坚持要出图，读取 `SETUP.md` 第 2 步，列出三个选项让用户选（1 和 2 可同时选），不要只问「是否配置 API」。
+
+走脚本时（Windows 用 `python`，macOS/Linux 用 `python3`，下同）：
 
 ```bash
 # 单张
@@ -55,7 +65,7 @@ python scripts/gen_image.py --prompt "..." --size 1:1 --image data/product.jpg
 python scripts/gen_image.py --prompt-file prompt.txt --output-dir generated-images
 
 # 多图套图：批量清单一次并发生成（多图任务必须用这个，不要逐张串行调用）
-python scripts/gen_image.py --batch jobs.json --concurrency 4
+python scripts/gen_image.py --batch jobs.json
 ```
 
 批量清单 `jobs.json` 格式（相对路径相对清单文件所在目录）：
@@ -76,10 +86,10 @@ python scripts/gen_image.py --batch jobs.json --concurrency 4
 - 自动适配两种 API：URL 含 `apimart` → 异步轮询（比例格式 `1:1` + `--resolution`）；其他 → OpenAI 同步（像素尺寸自动转换）
 - **带参考图时同步模式自动走 `/images/edits` 图生图端点**，原图真实上传给模型
 - `--image`：参考产品图路径，保证产品一致性，强烈建议总是使用
-- **批量模式**：输出按槽位命名（`h1.png`、`h2.png`…）；部分槽位失败时其余照常产出、退出码 1；加 `--skip-existing` 重跑同一命令即可只补失败的槽位
-- 其他参数：`--output-dir`、`--poll-interval`、`--timeout`（4k 默认放宽到 480s）、`--format`、`--quality`、`--n`、`--concurrency`
+- **批量模式**：默认并发 8，碰到 429/超时自动降到 4→2→1 只重跑失败槽位；输出按槽位命名（`h1.png`、`h2.png`…）；部分槽位最终失败时其余照常产出、退出码 1；加 `--skip-existing` 重跑同一命令即可只补失败的槽位
+- 其他参数：`--output-dir`、`--poll-interval`、`--timeout`（同步图生图 300s；异步 1k/2k 默认 180，4k 默认 480）、`--format`、`--quality`、`--n`、`--concurrency`
 
-如果缺少任何生图配置，先询问用户是否现在配置：确认后读取本 Skill 目录下的 `SETUP.md`，按其中流程引导完成（收集 `IMG_BASE_URL` / `IMG_API_KEY` → 拉取模型列表让用户选择 `IMG_MODEL` → 写入 Skill 目录 `.env`）；用户暂不配置则只输出 Prompt 包。
+安装或首次配置时，读取本 Skill 目录下的 `SETUP.md`，按第 2 步列出三个选项让用户选，不要自行默认。
 
 ---
 
@@ -94,7 +104,6 @@ python scripts/gen_image.py --batch jobs.json --concurrency 4
 | `default_ratio` | 该场景默认画幅（用户指定优先） |
 | `composition_rules` | 产品占比、留白、平台预留区、推荐角度及英文短语 |
 | `text_rules` | 图内文字的字号、颜色、长度规则 |
-
 | `pitfalls` | 该场景常见翻车点（出图后检查用） |
 | `anti_ai_tips` | 防 AI 味技巧（UGC/社媒/直播类必读） |
 | `examples` | 成品 Prompt 示例 |
@@ -134,8 +143,8 @@ python scripts/gen_image.py --batch jobs.json --concurrency 4
 
 | 触发词 | 模板文件 |
 |---|---|
-| 默认模板, default template, 通用电商主图, 起步套图 | `templates/01-默认电商模板.json` |
-| 箱包单品报价, 箱包报价表, BEAUTY&U风格, bag quote sheet, 风格四 | `templates/02-箱包单品报价模板.json` |
+| 使用 dsimage 模板：默认电商模板, 默认模板, default template, 通用电商主图, 起步套图 | `templates/01-默认电商模板.json` |
+| 使用 dsimage 模板：箱包单品报价模板, 箱包单品报价, 箱包报价表, BEAUTY&U风格, bag quote sheet, 风格四 | `templates/02-箱包单品报价模板.json` |
 
 无匹配 → 默认 `01-hero-image.json`。**只读取匹配到的情景，不要一次性加载全部。**
 
@@ -143,8 +152,8 @@ python scripts/gen_image.py --batch jobs.json --concurrency 4
 
 **区分两种任务**：
 
-- **用情景出图**（"基于 xx.jpg 生成主图"）→ 按上方核心流程走。
-- **制作一个模板**（用户丢来一堆甲方材料/风格参考/要求总结，说"制作一个模板 / 创建模板 / 建个模板"，可能带"使用 dsimage"）→ 这是模板创建任务：以甲方材料生成一条带品牌风格的**定制情景**（业务上就是你说的"模板"），**读 `CREATE_TEMPLATE.md`**，按其 4 个固定检查点（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮。模板需要而情景库没有的拍法，按该流程**一并新建情景**。模板层现状：默认示例 `templates/01-默认电商模板.json`（内置，可当起点），已登记箱包报价定制模板 `templates/02-箱包单品报价模板.json`。
+- **用情景或模板出图**（"使用 dsimage 来制作 / 使用 dsimage 模板：某某"）→ 按上方核心流程走。一套品出完后按第 9 步收口：定制模板问要不要对照改模板，否则问要不要新建。
+- **制作一个模板**（用户丢来甲方材料/风格参考，或出图后确认「建模板」，说"制作一个模板 / 创建模板 / 建个模板"，可能带"使用 dsimage"）→ 读 `CREATE_TEMPLATE.md`，按其 4 个固定检查点（素材分析 → 骨架 → 执行规则 → 成稿登记）引导用户完成，每个检查点必须等用户确认才能进下一轮。出图后转来的，本轮成图和 Prompt 算已有素材，检查点 1 直接用，不要装没做过。模板需要而情景库没有的拍法，按该流程**一并新建情景**。模板层现状：默认示例 `templates/01-默认电商模板.json`（内置，可当起点），已登记箱包报价定制模板 `templates/02-箱包单品报价模板.json`。
 
 **新建或修改情景的规范**：字段规范看 `references/scenes/_SCENE_SPEC.md`；写完跑 `python scripts/check_scenes.py` 校验，并在上方匹配表登记（校验器会检查登记，漏登记会报错）。
 
@@ -197,7 +206,7 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 5. 输出目录用产品英文 slug：`generated-images/<slug>-pdp/`。
 6. 走脚本出图时**必须用批量模式**：写好全部 Prompt 文件后生成 `jobs.json`（每槽位 slot / prompt_file / size / image），一次 `python scripts/gen_image.py --batch jobs.json` 并发生成；有槽位失败时修正对应 Prompt 后加 `--skip-existing` 重跑同一命令只补失败的图，不要从头重出全套。
 7. API 或模型不支持某尺寸时，改用最接近的支持尺寸并说明。
-8. 缺生图配置时只输出完整 Prompt 包，不调用脚本。
+8. 未配 API 且宿主也不能原生生图时，只输出完整 Prompt 包，不调用脚本。有 Codex 原生生图就用它，不要因为没有 `.env` 就改成只出 Prompt。
 9. 缺参数先问再出图：用户不补则按假设生成并在结果里列出假设，禁止因缺价格/尺寸/卖点而跳槽。认证、评分、销量、评价用示意占位即可，不要写成已核实。
 
 ---
@@ -216,6 +225,7 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 - [ ] UGC / 社媒 / 直播场景已应用 `anti_ai_tips`
 - [ ] 文件和输出中没有 API key 或私密凭据
 - [ ] 出图发现问题已按「坑跟谁走」询问用户是否回流沉淀
+- [ ] 一套品出完已按第 9 步收口：定制模板问对照改模板，否则问是否新建；用户说要则已转入对应流程
 
 ---
 

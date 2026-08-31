@@ -121,7 +121,7 @@
     "不同配色的口袋、肩带或五金结构漂移（所有配色复用同一产品结构参考）"
   ],
   "generation": {
-    "resolution": "2k",
+    "resolution": "1k",
     "format": "png"
   }
 }
