@@ -27,7 +27,7 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
    - `pitfalls` — 出图后按这个清单检查
    - `anti_ai_tips` — 有则必须应用
 3. 价格、尺寸、卖点、文案等缺了先问一轮；用户不补或说先出图，则按合理假设继续，槽位不跳过。产品外形以参考图为准。**源图文件名要参与生图**（见「源图文件名」）：型号、哪张当正面/背面参考，都从文件名读。认证/评分/销量不要写成已核实事实，可用示意占位。
-4. 多图任务：先建立 **Campaign Style Lock**（见下文），原样放进每张 Prompt 开头。
+4. 多图任务：先建立 **Campaign Style Lock**（见下文），原样放进每张 Prompt 开头。一品多色先锁主色（见「一品多色」），其他颜色不要在套图里反复出现。
 5. 商品/营销任务：先做**转化驱动力诊断**（见下文）。
 6. 逐张写 Prompt：Style Lock → 情景 `prompt_template` 骨架（替换 `{variables}`）→ 按需套用 `variants` / `category_tips` → 按通用规则收尾。
 7. Generate 模式：按下方**出图通道**选路；用户提供了产品图必须带上参考图。走脚本时多图用 `--batch`；走 Codex/宿主原生生图时多图**积极派子代理并行**（见「多图执行规则」）。用户丢来「大文件夹 + 每子文件夹一个品」时，按「批量品目录」落盘，不要写进源文件夹。**命令参数优先级**：用户显式指定 > 命中模板的 `generation` / 槽位 `ratio` > 情景 `generation` / `default_ratio`。`--size` 用比例（`1:1`），不要写死 `1024x1024` 或 `2048x2048`。未特别要求 2k 时用模板默认 `1k`，不要从情景抄 `2k`。接口返回多大就保存多大，禁止本地升采样。
@@ -41,15 +41,17 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 
 ## 生图配置
 
-图像生成使用任意 OpenAI 兼容 API（示例用官方地址）。`.env` 放在 Skill 目录内（与 SKILL.md 同级）即全局生效，换会话、换项目都可用；脚本查找顺序：`--env-file` > 从当前目录向上查找 > Skill 自身目录。不要把真实 API key 写进仓库：
+官方 OpenAI / Grok / Gemini 的接口地址写死在 `scripts/gen_image.py`，配置时只选服务商、填 key、选模型，**不要问用户要 URL**。`.env` 放在 Skill 目录内（与 SKILL.md 同级）即全局生效；脚本查找顺序：`--env-file` > 从当前目录向上查找 > Skill 自身目录。不要把真实 API key 写进仓库：
 
 ```dotenv
-IMG_BASE_URL=https://api.openai.com/v1
+IMG_PROVIDER=openai
 IMG_MODEL=gpt-image-2
 IMG_API_KEY=your-api-key
 ```
 
-脚本兼容别名：`OPENAI_BASE_URL`、`OPENAI_API_BASE`、`OPENAI_IMAGE_MODEL`、`OPENAI_MODEL`、`OPENAI_API_KEY`。
+`IMG_PROVIDER` 取值：`openai`（`https://api.openai.com/v1`）/ `grok`（`https://api.x.ai/v1`）/ `gemini`（`https://generativelanguage.googleapis.com/v1beta`）。其他兼容网关才设 `IMG_PROVIDER=custom` 并填 `IMG_BASE_URL`。
+
+脚本兼容别名：`OPENAI_BASE_URL`、`OPENAI_API_BASE`、`OPENAI_IMAGE_MODEL`、`OPENAI_MODEL`、`OPENAI_API_KEY`、`XAI_API_KEY`、`GEMINI_API_KEY`、`GOOGLE_API_KEY`。默认模型：OpenAI `gpt-image-2`，Grok `grok-imagine-image-2.0`，Gemini `gemini-3.1-flash-image`。
 
 **出图通道**（Codex 账号登录和生图 API 可同时存在，不是二选一）：
 
@@ -83,8 +85,8 @@ python scripts/gen_image.py --batch jobs.json
 
 脚本要点：
 
-- 自动适配两种 API：URL 含 `apimart` → 异步轮询（比例格式 `1:1` + `--resolution`）；其他 → OpenAI 同步（像素尺寸自动转换）
-- **带参考图时同步模式自动走 `/images/edits` 图生图端点**，原图真实上传给模型
+- 按 `IMG_PROVIDER` / 模型名走对应协议：OpenAI 同步（像素尺寸）；Grok 官方 JSON（`aspect_ratio` + `resolution`，参考图走 `/images/edits` JSON 而非 multipart）；Gemini 官方 `generateContent`（`x-goog-api-key`）；URL 含 `apimart` → 异步轮询
+- **带参考图时**：OpenAI 走 multipart `/images/edits`；Grok 走 JSON `/images/edits`；Gemini 把原图作为 `inline_data` 一并提交。原图真实交给模型，不要只把路径写进 Prompt
 - `--image`：参考产品图路径，保证产品一致性，强烈建议总是使用
 - **批量模式**：默认并发 8，碰到 429/超时自动降到 4→2→1 只重跑失败槽位；输出按槽位命名（`h1.png`、`h2.png`…）；部分槽位最终失败时其余照常产出、退出码 1；加 `--skip-existing` 重跑同一命令即可只补失败的槽位
 - 其他参数：`--output-dir`、`--poll-interval`、`--timeout`（同步图生图 300s；异步 1k/2k 默认 180，4k 默认 480）、`--format`、`--quality`、`--n`、`--concurrency`
@@ -170,6 +172,18 @@ python scripts/gen_image.py --batch jobs.json
 5. 中文文字用「」包裹渲染更准；复杂笔画中文字换简单同义字；拉丁语言（英/葡/西等）直接写。
 6. Prompt 结构顺序：Style Lock → 主体场景 → 目的与情绪 → 构图镜头 → 光线材质 → 风格真实感 → 画幅比例 → 图内文字 → 负面约束。
 7. Prompt 保持简洁具体，自然语言优于关键词堆砌；写清楚材质（磨砂玻璃、拉丝金属、哑光饰面）。
+8. **一品多色锁主色**：同一产品多张图、每张一种颜色时，整套主图/场景/细节只用一个主色；其他颜色只集中出现在**一张**配色合集里，不要一张一个色轮着出。细则见「一品多色」。
+
+---
+
+## 一品多色
+
+不限于批量文件夹。用户一次丢来多张产品图、每张一种颜色，或一个品文件夹里每张图一种颜色，都按这条执行。
+
+1. **选定一个主色**，整套功能图、主图、场景、细节都只用这张主色参考。用户指定优先；否则用文件名/文件夹带「主、主色」或无颜色词的那张；再不行用正面主图。汇报里写明主色是哪张。
+2. **其他颜色不要在套图里反复出现**。不要一张一个色轮着出，不要把配色散到每张生活图/细节图里。
+3. **可以有一张「各色在一起」**：模板已有配色槽（如 H9）就用那一张；pack 没有配色槽时加一张合集（主色大图 + 其余小图或整齐色卡），参考各色源图，不要编源图里没有的颜色。
+4. 用户明确要求「每个颜色出一套」时才按色分套，不要混进主色套图里。
 
 ---
 
@@ -226,7 +240,7 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 
 5. 写 Prompt、选 `--image` / 宿主参考图之前先读该品所有源文件名。
 6. 文件名标明角度或部位的，对上槽位再用：正面/主图/hero → 主图槽；背面/back → 背负、背面结构槽；侧面/side → 侧面槽；细节/macro → 细节槽。jobs.json 里每个 job 的 `image` 按这个选，不要全套共用一张。
-7. 文件名或品文件夹名带颜色档的，配色页用对应那张，不要拿主色图去冒充其他色。
+7. 一品多色见上方「一品多色」：先定主色，配色合集只出一张。
 8. 没有角度词的图当主参考；该槽位没有对得上的源图时，用主参考，不要因为缺背面图就跳槽。
 9. 批量品目录里：子文件夹名是品名（或颜色档），图片名才是型号；两者都保留，不要用英文 slug 替换型号。
 
@@ -278,7 +292,7 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 - [ ] 商品/营销任务已做转化驱动力诊断
 - [ ] 颜色全部 hex、占比和留白有数字、否定清单具体
 - [ ] 图内文字短且必要，符合情景 `text_rules`
-- [ ] 源图文件名已用于型号和参考图匹配（正面/背面等对上槽位，没有拿第一张图套全套）
+- [ ] 一品多色已锁主色，其他颜色只出现在一张配色合集上
 - [ ] 批量品目录已在大文件夹同级建 `{名}-成图`，子文件夹名与源品文件夹一致，没有写进源目录
 - [ ] 走 Codex/宿主原生生图的多图任务已派子代理并行（同时最多 4 路），成图按槽位落在输出目录
 - [ ] 出图后按情景 `pitfalls` 逐条检查通过
@@ -311,6 +325,7 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 | 品牌色漂移 | 全部用 hex 码 |
 | 画面填满无留白 | 按情景 `composition_rules` 显式声明 |
 | 全套图角度雷同 | 按情景 `composition_rules.angles` 分配，不连续 3 张同角度 |
+| 一品多色每张换色 | 锁一个主色出套图，其他颜色只放进一张合集 |
 | 图内文字乱码 | 放大检查，乱码整张重出 |
 
 场景特化的翻车点见各情景 `pitfalls` 字段，出图后必须对照检查。

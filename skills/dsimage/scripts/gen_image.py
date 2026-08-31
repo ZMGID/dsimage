@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
-"""统一图像生成脚本，同时兼容 OpenAI 同步 API 和 apimart.ai 异步 API。
+"""统一图像生成脚本。
 
 单张模式：--prompt / --prompt-file
 批量模式：--batch jobs.json —— 多图套图推荐用法，一次并发生成全部槽位；
 失败槽位加 --skip-existing 重跑同一命令即可只补失败的图。
 
-自动检测 API 模式：
-  - 基础 URL 包含 "apimart" → 异步轮询模式
-  - 其他 → OpenAI 同步模式
-  - 可用 --mode sync|async 或环境变量 IMG_API_MODE 强制指定
+官方服务商地址写死在脚本里，只需 IMG_PROVIDER + IMG_API_KEY + IMG_MODEL：
+  openai → https://api.openai.com/v1          （同步 /images/generations|/edits）
+  grok   → https://api.x.ai/v1                （JSON，aspect_ratio + resolution）
+  gemini → https://generativelanguage.googleapis.com/v1beta  （generateContent）
+其他兼容网关才填 IMG_BASE_URL；URL 含 apimart → 异步轮询。
 
-配置来自环境变量或 .env 文件：
-- IMG_BASE_URL: API 根地址
-- IMG_MODEL: 图片模型名
-- IMG_API_KEY: API key
-- IMG_API_MODE（可选）: sync 或 async，覆盖自动检测
+可用 --mode 或 IMG_API_MODE 强制指定 sync|async|grok|gemini。
 """
 
 from __future__ import annotations
@@ -45,11 +42,44 @@ if hasattr(sys.stdout, "reconfigure"):
 ENV_BASE_URL = "IMG_BASE_URL"
 ENV_MODEL = "IMG_MODEL"
 ENV_API_KEY = "IMG_API_KEY"
+ENV_PROVIDER = "IMG_PROVIDER"
 ENV_ALIASES = {
     ENV_BASE_URL: ("OPENAI_BASE_URL", "OPENAI_API_BASE"),
     ENV_MODEL: ("OPENAI_IMAGE_MODEL", "IMAGE_MODEL", "OPENAI_MODEL"),
-    ENV_API_KEY: ("OPENAI_API_KEY",),
+    ENV_API_KEY: ("OPENAI_API_KEY", "XAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"),
 }
+
+# 官方地址定死，SETUP / 脚本都用这里的值，不要再问用户要 URL。
+OFFICIAL_PROVIDERS: dict[str, dict[str, Any]] = {
+    "openai": {
+        "base_url": "https://api.openai.com/v1",
+        "hosts": ("api.openai.com",),
+        "default_model": "gpt-image-2",
+        "models": ("gpt-image-2", "gpt-image-1.5", "gpt-image-1", "dall-e-3"),
+    },
+    "grok": {
+        "base_url": "https://api.x.ai/v1",
+        "hosts": ("api.x.ai",),
+        "default_model": "grok-imagine-image-2.0",
+        "models": ("grok-imagine-image-2.0", "grok-imagine-image"),
+    },
+    "gemini": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta",
+        "hosts": ("generativelanguage.googleapis.com",),
+        "default_model": "gemini-3.1-flash-image",
+        "models": (
+            "gemini-3.1-flash-image",
+            "gemini-2.5-flash-image",
+            "gemini-3-pro-image-preview",
+        ),
+    },
+}
+PROVIDER_ALIASES = {
+    "xai": "grok", "x.ai": "grok", "x-ai": "grok",
+    "google": "gemini", "nano-banana": "gemini",
+    "gpt": "openai",
+}
+API_MODES = ("sync", "async", "grok", "gemini")
 
 VALID_RATIOS = ("auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5",
                 "16:9", "9:16", "2:1", "1:2", "21:9", "9:21")
@@ -170,28 +200,115 @@ def load_env_file(env_file: Path | None) -> None:
             os.environ[key] = strip_env_value(value)
 
 
-def require_config(name: str) -> str:
+def optional_config(name: str) -> str:
     candidates = (name, *ENV_ALIASES.get(name, ()))
     for candidate in candidates:
         value = os.environ.get(candidate, "").strip()
         if value:
             return value
-    accepted = "、".join(candidates)
+    return ""
+
+
+def require_config(name: str) -> str:
+    value = optional_config(name)
+    if value:
+        return value
+    accepted = "、".join((name, *ENV_ALIASES.get(name, ())))
     fail(
-        f"缺少配置 {name}。请在 .env 中设置 IMG_BASE_URL、IMG_MODEL、IMG_API_KEY；"
-        f"也兼容这些变量名：{accepted}。"
+        f"缺少配置 {name}。官方服务商设 IMG_PROVIDER=openai|grok|gemini（地址已写死）"
+        f"以及 IMG_MODEL、IMG_API_KEY；其他兼容接口再填 IMG_BASE_URL。"
+        f"也兼容：{accepted}。"
     )
 
 
-# ── 模式检测 ──────────────────────────────────────────────
+# ── 服务商 / 模式检测 ──────────────────────────────────────
 
-def detect_mode(base_url: str, explicit_mode: str | None) -> str:
-    if explicit_mode in ("sync", "async"):
+def _normalize_provider(value: str) -> str:
+    key = value.strip().lower()
+    return PROVIDER_ALIASES.get(key, key)
+
+
+def _host_of(url: str) -> str:
+    raw = url if "://" in url else f"https://{url}"
+    return urllib.parse.urlparse(raw).netloc.lower()
+
+
+def _provider_from_host(url: str) -> str | None:
+    host = _host_of(url)
+    for name, spec in OFFICIAL_PROVIDERS.items():
+        if any(host == h or host.endswith("." + h) for h in spec["hosts"]):
+            return name
+    return None
+
+
+def _provider_from_model(model: str) -> str | None:
+    m = model.lower()
+    if "gemini" in m:
+        return "gemini"
+    if m.startswith("grok") or "grok-imagine" in m:
+        return "grok"
+    if m.startswith("gpt-image") or m.startswith("dall-e"):
+        return "openai"
+    return None
+
+
+def detect_provider(base_url: str, model: str, explicit: str | None) -> str:
+    if explicit:
+        key = _normalize_provider(explicit)
+        if key in (*OFFICIAL_PROVIDERS, "custom"):
+            return key
+        fail(f"未知 IMG_PROVIDER={explicit}，允许 openai / grok / gemini / custom。")
+    if base_url:
+        by_host = _provider_from_host(base_url)
+        if by_host:
+            return by_host
+        return "custom"
+    by_model = _provider_from_model(model)
+    if by_model:
+        return by_model
+    return "custom"
+
+
+def resolve_base_url(provider: str, configured: str) -> str:
+    spec = OFFICIAL_PROVIDERS.get(provider)
+    if spec:
+        return spec["base_url"]
+    return configured.rstrip("/")
+
+
+def resolve_runtime() -> tuple[str, str, str, str]:
+    """返回 (provider, base_url, model, api_key)。官方地址一律用写死的值。"""
+    api_key = require_config(ENV_API_KEY)
+    model = optional_config(ENV_MODEL)
+    configured_url = optional_config(ENV_BASE_URL).rstrip("/")
+    explicit = os.environ.get(ENV_PROVIDER, "").strip() or None
+    provider = detect_provider(configured_url, model, explicit)
+    base_url = resolve_base_url(provider, configured_url)
+    if not model:
+        spec = OFFICIAL_PROVIDERS.get(provider)
+        if spec:
+            model = spec["default_model"]
+        else:
+            fail("缺少配置 IMG_MODEL。请在 .env 中设置图片模型名。")
+    if not base_url:
+        fail(
+            "缺少 API 地址。官方服务商请设 IMG_PROVIDER=openai / grok / gemini（地址已写死，不用填 URL）；"
+            "其他兼容接口请设 IMG_BASE_URL。"
+        )
+    return provider, base_url, model, api_key
+
+
+def detect_mode(provider: str, base_url: str, explicit_mode: str | None) -> str:
+    if explicit_mode in API_MODES:
         return explicit_mode
     env_mode = os.environ.get("IMG_API_MODE", "").strip().lower()
-    if env_mode in ("sync", "async"):
+    if env_mode in API_MODES:
         return env_mode
-    if "apimart" in base_url.lower():
+    if provider == "gemini":
+        return "gemini"
+    if provider == "grok":
+        return "grok"
+    if "apimart" in (base_url or "").lower():
         return "async"
     return "sync"
 
@@ -262,13 +379,15 @@ def _post_json(request: urllib.request.Request, timeout: int, what: str) -> dict
     return parsed
 
 
-def http_post(url: str, api_key: str, payload: dict[str, Any], timeout: int = 120) -> dict[str, Any]:
+def http_post(url: str, api_key: str, payload: dict[str, Any], timeout: int = 120,
+              *, auth: str = "bearer") -> dict[str, Any]:
+    headers = {"Content-Type": "application/json", "User-Agent": UA}
+    if auth == "gemini":
+        headers["x-goog-api-key"] = api_key
+    else:
+        headers["Authorization"] = f"Bearer {api_key}"
     body = json.dumps(payload).encode("utf-8")
-    request = urllib.request.Request(
-        url, data=body,
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "User-Agent": UA},
-        method="POST",
-    )
+    request = urllib.request.Request(url, data=body, headers=headers, method="POST")
     return _post_json(request, timeout, "接口")
 
 
@@ -377,6 +496,165 @@ def run_sync(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
     log(label, f"提交生成请求到 {endpoint}...")
     result = http_post(endpoint, api_key, payload, timeout=300)
     return save_sync_images(result, output_dir, fmt, name_prefix)
+
+
+# ── Grok（xAI 官方，地址写死为 https://api.x.ai/v1）────────
+
+GROK_RATIO_FALLBACK = {"5:4": "4:3", "4:5": "3:4", "9:21": "9:16"}
+GROK_RATIOS = {
+    "auto", "1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3",
+    "2:1", "1:2", "19.5:9", "9:19.5", "20:9", "9:20", "21:9", "5:2",
+}
+
+
+def grok_ratio(size: str) -> str:
+    if size.lower() == "auto":
+        return "auto"
+    ratio = size_to_ratio(size)
+    mapped = GROK_RATIO_FALLBACK.get(ratio, ratio)
+    return mapped if mapped in GROK_RATIOS else "1:1"
+
+
+def grok_resolution(resolution: str) -> str:
+    return "2k" if resolution == "4k" else resolution
+
+
+def grok_quality(quality: str | None) -> str | None:
+    if not quality:
+        return None
+    return "medium" if quality == "high" else quality
+
+
+def build_grok_payload(args: argparse.Namespace, prompt: str, model: str) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "model": model,
+        "prompt": prompt,
+        "n": args.n,
+        "aspect_ratio": grok_ratio(args.size),
+        "resolution": grok_resolution(args.resolution),
+        "response_format": "b64_json",
+    }
+    quality = grok_quality(args.quality)
+    if quality:
+        payload["quality"] = quality
+    if args.image:
+        payload["image"] = {"url": encode_image_data_uri(args.image), "type": "image_url"}
+    return payload
+
+
+def run_grok(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
+             model: str, output_dir: Path, fmt: str,
+             label: str = "grok", name_prefix: str | None = None) -> list[Path]:
+    if args.resolution == "4k":
+        log(label, "Grok 官方接口最高 2k，已把 4k 降为 2k。")
+    payload = build_grok_payload(args, prompt, model)
+    endpoint = f"{base_url}/images/edits" if args.image else f"{base_url}/images/generations"
+    log(label, f"{'图生图' if args.image else '文生图'}：{endpoint}")
+    result = http_post(endpoint, api_key, payload, timeout=max(300, resolve_timeout(args)))
+    return save_sync_images(result, output_dir, fmt, name_prefix)
+
+
+# ── Gemini（官方 generateContent，地址写死）────────────────
+
+GEMINI_RATIO_FALLBACK = {"2:1": "16:9", "1:2": "9:16"}
+GEMINI_SIZE = {"1k": "1K", "2k": "2K", "4k": "4K"}
+
+
+def gemini_ratio(size: str) -> str:
+    if size.lower() == "auto":
+        return "1:1"
+    ratio = size_to_ratio(size)
+    return GEMINI_RATIO_FALLBACK.get(ratio, ratio)
+
+
+def _mime_suffix(mime: str, fallback: str) -> str:
+    text = (mime or "").lower()
+    if "jpeg" in text or "jpg" in text:
+        return "jpeg"
+    if "webp" in text:
+        return "webp"
+    if "png" in text:
+        return "png"
+    return fallback
+
+
+def _gemini_inline(part: dict[str, Any]) -> dict[str, Any] | None:
+    inline = part.get("inlineData") or part.get("inline_data")
+    if isinstance(inline, dict) and inline.get("data"):
+        return inline
+    return None
+
+
+def save_gemini_images(result: dict[str, Any], output_dir: Path, fmt: str,
+                       name_prefix: str | None = None, start_index: int = 0) -> list[Path]:
+    feedback = result.get("promptFeedback") or result.get("prompt_feedback") or {}
+    block = feedback.get("blockReason") or feedback.get("block_reason")
+    if block:
+        fail(f"Gemini 拒绝生成：{block} {json.dumps(result)[:400]}")
+    candidates = result.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
+        err = result.get("error") or {}
+        fail(f"Gemini 返回中没有 candidates：{err.get('message') or json.dumps(result)[:400]}")
+    inlines: list[dict[str, Any]] = []
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        content = candidate.get("content") or {}
+        for part in content.get("parts") or []:
+            if isinstance(part, dict):
+                inline = _gemini_inline(part)
+                if inline:
+                    inlines.append(inline)
+    if not inlines:
+        finish = None
+        if isinstance(candidates[0], dict):
+            finish = candidates[0].get("finishReason") or candidates[0].get("finish_reason")
+        fail(f"Gemini 没有返回图片（finishReason={finish}）：{json.dumps(result)[:400]}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    paths: list[Path] = []
+    for offset, inline in enumerate(inlines):
+        try:
+            image_bytes = base64.b64decode(inline["data"])
+        except (binascii.Error, ValueError) as exc:
+            fail(f"无法解码 Gemini 图片：{exc}")
+        mime = str(inline.get("mimeType") or inline.get("mime_type") or "")
+        p = output_dir / output_name(name_prefix, start_index + offset, _mime_suffix(mime, fmt))
+        p.write_bytes(image_bytes)
+        paths.append(p)
+    return paths
+
+
+def run_gemini(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
+               model: str, output_dir: Path, fmt: str,
+               label: str = "gemini", name_prefix: str | None = None) -> list[Path]:
+    model_id = model.split("/")[-1]
+    endpoint = f"{base_url}/models/{model_id}:generateContent"
+    parts: list[dict[str, Any]] = [{"text": prompt}]
+    if args.image:
+        data, mime, _ = read_image_file(args.image)
+        parts.append({"inline_data": {"mime_type": mime, "data": base64.b64encode(data).decode("ascii")}})
+        log(label, f"图生图模式：参考图经 {endpoint} 提交...")
+    else:
+        log(label, f"提交生成请求到 {endpoint}...")
+    payload: dict[str, Any] = {
+        "contents": [{"parts": parts}],
+        "generationConfig": {
+            "responseModalities": ["TEXT", "IMAGE"],
+            "imageConfig": {
+                "aspectRatio": gemini_ratio(args.size),
+                "imageSize": GEMINI_SIZE.get(args.resolution, "1K"),
+            },
+        },
+    }
+    timeout = max(300, resolve_timeout(args))
+    paths: list[Path] = []
+    n = max(1, int(args.n))
+    for index in range(n):
+        result = http_post(endpoint, api_key, payload, timeout=timeout, auth="gemini")
+        paths.extend(save_gemini_images(result, output_dir, fmt, name_prefix, start_index=len(paths)))
+        if n > 1:
+            log(label, f"已生成 {index + 1}/{n}")
+    return paths
 
 
 def save_sync_images(result: dict[str, Any], output_dir: Path, fmt: str,
@@ -513,6 +791,12 @@ def generate_one(base_url: str, api_key: str, model: str, mode: str,
         payload = build_async_payload(args, prompt, model)
         return run_async(base_url, api_key, payload, output_dir, args.format,
                          args.poll_interval, resolve_timeout(args), label, name_prefix)
+    if mode == "gemini":
+        return run_gemini(base_url, api_key, args, prompt, model, output_dir,
+                          args.format, label, name_prefix)
+    if mode == "grok":
+        return run_grok(base_url, api_key, args, prompt, model, output_dir,
+                        args.format, label, name_prefix)
     return run_sync(base_url, api_key, args, prompt, model, output_dir, args.format, label, name_prefix)
 
 
@@ -637,9 +921,9 @@ def _existing_output(output_dir: Path, name_prefix: str, fmt: str) -> Path | Non
     return None
 
 
-def run_batch(args: argparse.Namespace, base_url: str, api_key: str, model: str) -> None:
+def run_batch(args: argparse.Namespace, base_url: str, api_key: str, model: str,
+              mode: str) -> None:
     output_dir, jobs = load_batch(Path(args.batch), args)
-    mode = detect_mode(base_url, args.mode)
     log("batch", f"API 模式: {mode} | base_url={base_url} | model={model}")
 
     results: dict[str, tuple[str, Any]] = {}
@@ -739,7 +1023,7 @@ def run_batch(args: argparse.Namespace, base_url: str, api_key: str, model: str)
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="统一图像生成脚本，自动兼容 OpenAI 同步 API 和 apimart.ai 异步 API；--batch 批量并发生成整套图。"
+        description="统一图像生成脚本。官方 OpenAI / Grok / Gemini 地址写死；兼容网关走 IMG_BASE_URL；--batch 批量并发生成整套图。"
     )
     prompt_group = parser.add_mutually_exclusive_group()
     prompt_group.add_argument("--prompt", help="直接传入图片生成 Prompt。")
@@ -749,7 +1033,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--skip-existing", action="store_true", help="批量模式跳过输出文件已存在的槽位，用于失败后重跑补齐。")
     parser.add_argument("--output-dir", default="generated-images", help="图片输出目录，默认 generated-images。")
     parser.add_argument("--env-file", help="指定 .env 配置文件；不指定时从当前目录向上查找（只认含 IMG_ 配置的），兜底 Skill 目录。")
-    parser.add_argument("--mode", choices=("sync", "async"), help="API 模式。不指定时根据 base URL 自动检测（含 apimart → async，其他 → sync）。")
+    parser.add_argument("--mode", choices=API_MODES, help="API 模式。默认按 IMG_PROVIDER / 官方地址 / 模型名检测（gemini、grok、apimart→async、其余→sync）。")
     parser.add_argument("--size", default="1:1", help="图片尺寸。异步模式用比例格式（1:1、16:9 等），同步模式用像素格式（1024x1024 等）。默认 1:1。")
     parser.add_argument("--resolution", default="1k", choices=VALID_RESOLUTIONS, help="异步模式分辨率档位，默认 1k。")
     parser.add_argument("--quality", choices=("low", "medium", "high"), help="同步模式图片质量参数。")
@@ -769,16 +1053,14 @@ def main() -> None:
     try:
         env_file = Path(args.env_file) if args.env_file else find_default_env_file()
         load_env_file(env_file)
-        base_url = require_config(ENV_BASE_URL).rstrip("/")
-        model = require_config(ENV_MODEL)
-        api_key = require_config(ENV_API_KEY)
+        _provider, base_url, model, api_key = resolve_runtime()
+        mode = detect_mode(_provider, base_url, args.mode)
 
         if args.batch:
-            run_batch(args, base_url, api_key, model)
+            run_batch(args, base_url, api_key, model, mode)
             return
 
         prompt = read_prompt(args)
-        mode = detect_mode(base_url, args.mode)
         log(mode, f"API 模式: {mode} | base_url={base_url} | model={model}")
         paths = generate_with_retry(base_url, api_key, model, mode, args, prompt, Path(args.output_dir), mode)
         print("生成完成：")

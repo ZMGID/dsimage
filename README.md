@@ -15,7 +15,7 @@ Dsimage 是一个电商视觉创作 Skill，装进 Claude Code / Codex / OpenCla
 
 1. **做整套，不做单张** — 内置 26 种情景（主图、生活方式、平铺、模特、直播间、爆炸图、杂志大片……）。多图任务自动生成 Campaign Style Lock，把色板、冷暖调、字体、背景、光线全部锁死，整套图一个风格，不会一张一个样。
 2. **为转化出图，不为好看出图** — 动手前先诊断产品靠什么打动买家：视觉驱动、痛点驱动还是情感价值驱动，再按对应的转化逻辑规划图片顺序，而不是堆一堆好看但不出单的图。
-3. **从 Prompt 到成图一条龙** — Codex 账号登录即可直接出图，不必先配 API；也可以再配任意 OpenAI 兼容图片 API（额度/并发通常更高，适合整套批量）。两者可同时开。未配置时只输出可执行 Prompt。生图脚本纯 Python 标准库，零第三方依赖。
+3. **从 Prompt 到成图一条龙** — Codex 账号登录即可直接出图，不必先配 API；也可以再配 OpenAI / Grok / Gemini 官方接口或其他兼容网关（额度/并发通常更高，适合整套批量）。两者可同时开。未配置时只输出可执行 Prompt。生图脚本纯 Python 标准库，零第三方依赖。
 
 ## 安装
 
@@ -61,7 +61,7 @@ Agent 会按指南执行：安装 Skill → **列出三个选项让你选（1 �
 2. 配置生图 API（额度/并发通常更高，适合整套批量；可与 1 一起选）
 3. 什么都不配置（只输出 Prompt）
 
-选了 2 之后才会收集 `IMG_BASE_URL` 和 `IMG_API_KEY` → 拉取模型列表供你选择 `IMG_MODEL` → 写入 `.env` 并可选生成测试图验证。
+选了 2 之后选服务商（OpenAI / Grok / Gemini 地址已写死，不用填 URL）→ 只填 API key → 从内置名单选模型 → 写入 `.env`，并可生成测试图验证。
 
 也可以让 AI 交互式引导配置：让它读 `skills/dsimage/SETUP.md` 执行即可。
 
@@ -83,18 +83,19 @@ Codex 账号登录不配也能生图。图片 API 额度/并发通常更高，�
 在 **Skill 目录内**创建 `.env`（仓库里是 `skills/dsimage/.env`；复制安装后则是 `~/.codex/skills/dsimage/.env` 这类路径）。配置随 Skill 全局生效——换会话、换项目都可用；也可以在某个项目根目录另放 `.env`，仅对该项目覆盖：
 
 ```dotenv
-IMG_BASE_URL=https://api.openai.com/v1
+IMG_PROVIDER=openai
 IMG_MODEL=gpt-image-2
 IMG_API_KEY=your-api-key-here
 ```
 
 | 变量 | 说明 |
 |------|------|
-| `IMG_BASE_URL` | OpenAI 兼容 API 根地址（官方 `https://api.openai.com/v1` 或任意第三方兼容服务） |
-| `IMG_MODEL` | 图片模型名（如 `gpt-image-2`） |
+| `IMG_PROVIDER` | `openai` / `grok` / `gemini` / `custom`。官方三家地址写死，不必填 URL |
+| `IMG_MODEL` | 图片模型名。默认：OpenAI `gpt-image-2`，Grok `grok-imagine-image-2.0`，Gemini `gemini-3.1-flash-image` |
 | `IMG_API_KEY` | 你的 API 密钥 |
+| `IMG_BASE_URL` | 仅 `custom` 兼容网关需要 |
 
-也兼容 `OPENAI_BASE_URL`、`OPENAI_API_BASE`、`OPENAI_MODEL`、`OPENAI_API_KEY` 等常见别名。
+也兼容 `OPENAI_BASE_URL`、`OPENAI_API_BASE`、`OPENAI_MODEL`、`OPENAI_API_KEY`、`XAI_API_KEY`、`GEMINI_API_KEY` 等别名。
 
 ## 使用
 
@@ -159,7 +160,7 @@ python skills/dsimage/scripts/gen_image.py --batch jobs.json
 | `--image` | 产品参考图路径，提升产品一致性 | 无 |
 | `--output-dir` | 图片输出目录 | `generated-images` |
 | `--env-file` | 指定 `.env` 路径（默认向上查找含 `IMG_` 配置的 `.env`，兜底 Skill 目录） | 自动 |
-| `--mode` | `sync` / `async`，按 URL 是否含 apimart 自动检测 | 自动 |
+| `--mode` | `sync` / `async` / `grok` / `gemini`，按服务商自动检测 | 自动 |
 | `--format` | `png` / `jpeg` / `webp` | `png` |
 
 异步模式另有 `--poll-interval`（默认 5 秒）、`--timeout`（1k/2k 默认 180 秒，4k 默认 480 秒）；同步模式支持 `--quality`（low/medium/high）和 `--n`（生成数量）。
@@ -185,7 +186,7 @@ dsimage/
 
 - 本项目不内置任何 API 密钥；`.env` 已被 gitignore，请勿把 key 提交进仓库或在对话中回显
 - 缺价格、尺寸、卖点时先问用户；不补则按假设出图并列出假设。认证/评分/销量用示意占位，不要写成已核实
-- 直接生图可以走 Codex 账号登录的原生生图，也可以走任意 OpenAI 兼容 Images API；两者可同时开。已配 API 时套图优先走脚本批量。不同服务商对尺寸/分辨率/参考图的支持范围不同
+- 直接生图可以走 Codex 账号登录的原生生图，也可以走 OpenAI / Grok / Gemini 官方接口或其他兼容网关；两者可同时开。已配 API 时套图优先走脚本批量。官方三家不用填 URL。不同服务商对尺寸/分辨率/参考图的支持范围不同
 
 ## 许可
 

@@ -47,44 +47,89 @@
 
 若当前对话看起来就是 Codex，可在选项下面加一句「你现在很像选项 1 的环境，需要批量高并发时建议加上选项 2」，但**仍必须等用户选**，不要替他决定。
 
-## 3. 收集 IMG_BASE_URL 和 IMG_API_KEY
+## 3. 选服务商，只收 API key（官方 URL 已写死）
 
-向用户依次索取：
+**禁止向用户索要官方服务商的 URL。** OpenAI / Grok / Gemini 的地址写死在下表和 `scripts/gen_image.py` 里，你自己填进 `.env`，不要问。
 
-| 变量 | 说明 |
-|---|---|
-| `IMG_BASE_URL` | OpenAI 兼容 API 根地址，例如 `https://api.openai.com/v1` 或第三方兼容服务 |
-| `IMG_API_KEY` | 用户在该服务商的 API 密钥 |
+先把下面四个选项原样列给用户，等编号：
+
+```text
+请选生图服务商（官方地址已写死，不用填 URL）：
+
+1. OpenAI
+2. Grok（xAI）
+3. Gemini（Google）
+4. 其他兼容网关（才需要填地址，如 apimart）
+```
+
+| 用户选择 | 你写入的 `IMG_PROVIDER` | 你写入的地址（不要问，直接用） |
+|---|---|---|
+| 1 | `openai` | `https://api.openai.com/v1` |
+| 2 | `grok` | `https://api.x.ai/v1` |
+| 3 | `gemini` | `https://generativelanguage.googleapis.com/v1beta` |
+| 4 | `custom` | 这时才问用户要根地址，写入 `IMG_BASE_URL` |
+
+然后**只问 API key**。官方三家不要问 URL、不要问「接口地址填哪个」。
 
 安全规则（必须遵守）：
 
 - API key 只允许写入 `.env`，不得回显到对话、写入日志、README、脚本或任何其他文件。
 - 需要向用户确认 key 时，只显示前 6 位和总长度。
-- 用户在对话中直接粘贴 key 属于正常输入，不要中断流程，收下后立即进入写文件环节。
+- 用户在对话中直接粘贴 key 属于正常输入，不要中断流程，收下后立即进入选模型。
 
-## 4. 获取模型列表，让用户选择 IMG_MODEL
+## 4. 让用户选 IMG_MODEL
 
-1. 请求模型列表：
+官方三家用下面的内置名单，以编号列出，标出推荐项。**不要**再请求 `/models` 来凑名单。用户说名单里没有的，才让他直接打模型名。
+
+**OpenAI**
+
+1. `gpt-image-2`（推荐）
+2. `gpt-image-1.5`
+3. `gpt-image-1`
+4. `dall-e-3`
+
+**Grok**
+
+1. `grok-imagine-image-2.0`（推荐）
+2. `grok-imagine-image`
+
+**Gemini**
+
+1. `gemini-3.1-flash-image`（推荐）
+2. `gemini-2.5-flash-image`
+3. `gemini-3-pro-image-preview`
+
+只有选了「4. 其他兼容网关」才拉模型列表：
 
 ```
 GET {IMG_BASE_URL}/models
 Authorization: Bearer {IMG_API_KEY}
 ```
 
-2. 从响应 `data[].id` 提取全部模型 ID。
-3. 筛选出图像生成模型（ID 通常含 `image`、`dall-e`、`flux`、`seedream`、`stable-diffusion`、`sd3`、`imagen` 等）；无法判断用途的模型可以列出但要标注「用途未知」。
-4. 以编号列表展示给用户选择；列表中存在 `gpt-image-2` 时标注为推荐。
-5. 请求失败时降级处理：
-   - `404`：服务商可能不提供 `/models`，或根地址缺少 `/v1` —— 先尝试给 `IMG_BASE_URL` 末尾补 `/v1` 后重试；
-   - `401`：key 无效或未授权，请用户检查后重试；
-   - 仍然失败：请用户直接输入模型名，并给出常见示例（如 `gpt-image-2`）。
+从 `data[].id` 筛图像模型（ID 通常含 `image`、`dall-e`、`flux`、`seedream`、`grok-imagine`、`gemini`、`stable-diffusion`、`sd3`、`imagen`）；看不出用途的可列出但标注「用途未知」。失败时：
+
+- `404`：可能不提供 `/models`，或根地址缺 `/v1` —— 末尾补 `/v1` 后重试一次；
+- `401`：key 无效，请用户检查后重试；
+- 仍然失败：请用户直接输入模型名。
 
 ## 5. 写入配置并验证
 
-1. 把 `.env` 写入 **Skill 自己的目录**（刚安装的 `.../skills/dsimage/.env`，与 SKILL.md 同级）。这样配置随 Skill 全局生效——换会话、换项目、换工作目录都可用。**不要**写进某个会话的临时工作目录或"当前项目"，否则其他对话找不到配置。若用户日后想按项目覆盖，可在该项目根目录另放一份 `.env`（优先级更高）：
+1. 把 `.env` 写入 **Skill 自己的目录**（刚安装的 `.../skills/dsimage/.env`，与 SKILL.md 同级）。这样配置随 Skill 全局生效——换会话、换项目、换工作目录都可用。**不要**写进某个会话的临时工作目录或"当前项目"，否则其他对话找不到配置。若用户日后想按项目覆盖，可在该项目根目录另放一份 `.env`（优先级更高）。
+
+官方三家按第 3 步的表写入（地址用表里的固定值，不要留空、不要改）：
 
 ```dotenv
-IMG_BASE_URL=<第 3 步收集的地址>
+IMG_PROVIDER=<openai 或 grok 或 gemini>
+IMG_BASE_URL=<第 3 步表里的固定地址>
+IMG_MODEL=<第 4 步用户选择的模型>
+IMG_API_KEY=<第 3 步收集的 key>
+```
+
+其他兼容网关：
+
+```dotenv
+IMG_PROVIDER=custom
+IMG_BASE_URL=<用户提供的地址>
 IMG_MODEL=<第 4 步用户选择的模型>
 IMG_API_KEY=<第 3 步收集的 key>
 ```
