@@ -74,7 +74,7 @@
 
 **做什么**（数值全部来自检查点 1 的分析，不凭空写）：
 
-1. `workflow`：5-8 步执行流程——读 pack 规划 → 建 Campaign Style Lock（用品牌 hex）→ 逐张"读引用情景 → 情景骨架 + 品牌 hex + text_rules 拼 Prompt" → 有 API 时 `gen_image.py --batch`，没有则用 Codex 原生生图 → 检查 → 汇报；generation 默认 1k，不必 2k。
+1. `workflow`：5-8 步执行流程——读 pack 规划 → 建 Campaign Style Lock（用品牌 hex）→ 逐张"读引用情景 → 情景骨架 + 品牌 hex + text_rules 拼 Prompt" → 有 API 时 `gen_image.py --batch`，Codex 原生生图时按 SKILL「子代理并行」立刻派发 → 检查 → 汇报；generation 默认 1k，不必 2k。
 2. `text_rules`：每个文字角色的字号、hex、位置、长度上限（价格、标题、标注…逐个来）。
 3. `generation`：默认 `1k` / `png` / `high`。不必 2k；接口返回原图直接用，禁止升采样。用户当场要求 2k 再写 2k。
 4. 模板级 `pitfalls`：3-5 条，来自甲方强调过的点（如"跨张版式漂移""价格乱码"）。
@@ -87,7 +87,7 @@
 
 **按顺序执行**：
 
-1. 组装完整 JSON，写入 `references/templates/NN-中文名.json`（模板层独立编号，从 01 起；中文名与 name/id 一致；UTF-8，中文不转义）。
+1. 组装完整 JSON，写入 `references/templates/NN-中文名.json`。编号接在目录里**已有最大号之后**（现有 01、02 则下一条是 03），**禁止覆盖已有文件**；重名则继续 +1。中文名与 name/id 一致；UTF-8，中文不转义。
 2. 运行 `python scripts/check_scenes.py`（macOS/Linux 用 `python3`），**必须全部通过**；不通过就修，修完重跑。
 3. 向用户展示完整模板内容 + `examples` 里 2 条成品 Prompt。
 4. 在 SKILL.md 匹配表登记一行（触发词 | 文件名）；README 中情景数量如有提及则同步。

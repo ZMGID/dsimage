@@ -14,7 +14,7 @@
 
 ## 文件约定
 
-- 位置：`references/templates/`，命名 `NN-中文名.json`（中文名与 `name`/`id` 字段一致），编号**独立于情景**，从 01 起
+- 位置：`references/templates/`，命名 `NN-中文名.json`（中文名与 `name`/`id` 字段一致），编号**独立于情景**，接在目录已有最大号之后；禁止覆盖已有模板文件
 - `id` 与文件名中文名一致（`01-默认电商模板.json` → `"id": "默认电商模板"`），校验器自动核对
 - UTF-8，标准 JSON，中文不转义
 
@@ -84,7 +84,7 @@
 
 ### workflow（执行流程——流程归模板）
 
-- 5-8 步，标准结构：读 pack 规划 → 建 Campaign Style Lock（用 template_meta.brand 的 hex）→ 逐张"读引用情景 → 情景骨架 + 品牌 hex + text_rules 拼 Prompt" → 调 gen_image.py（--image 带参考图）→ 按情景 pitfalls + 本模板 pitfalls 检查 → 汇报
+- 5-8 步，标准结构：读 pack 规划 → 建 Campaign Style Lock（用 template_meta.brand 的 hex）→ 逐张"读引用情景 → 情景骨架 + 品牌 hex + text_rules 拼 Prompt" → 有 API 调 gen_image.py --batch，Codex 原生生图按 SKILL 派子代理并行 → 按情景 pitfalls + 本模板 pitfalls 检查 → 汇报
 - 这是"原来 Skill 里的流程"的落点：每个模板可以有自己的流程特化（如报价表模板规定价格必须人工确认）
 
 ## 最小骨架（复制即用）
