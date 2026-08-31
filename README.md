@@ -65,6 +65,17 @@ Agent 会按指南执行：安装 Skill → **列出三个选项让你选（1 �
 
 也可以让 AI 交互式引导配置：让它读 `skills/dsimage/SETUP.md` 执行即可。
 
+### 更新
+
+已安装的用户把下面这句发给 AI 即可。更新会保留你的 `.env`、自建模板/情景，以及用出来的翻车点沉淀，不会被新版本覆盖掉：
+
+```text
+请更新 dsimage，严格按照以下指南的「更新」一节执行：
+https://raw.githubusercontent.com/ZMGID/dsimage/main/skills/dsimage/SETUP.md
+```
+
+已克隆仓库的，先 `git pull`，再让 AI 读本地 `skills/dsimage/SETUP.md` 按「更新」一节执行。
+
 ### API 配置（可选）
 
 Codex 账号登录不配也能生图。图片 API 额度/并发通常更高，适合整套批量，**可以和账号登录同时用**。
