@@ -55,6 +55,7 @@ VALID_RATIOS = ("auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5",
                 "16:9", "9:16", "2:1", "1:2", "21:9", "9:21")
 VALID_RESOLUTIONS = ("1k", "2k", "4k")
 VALID_FORMATS = ("png", "jpeg", "webp")
+KNOWN_IMAGE_SUFFIXES = ("png", "jpeg", "jpg", "webp")
 
 PIXEL_TO_RATIO: dict[str, str] = {
     "1024x1024": "1:1", "2048x2048": "1:1",
@@ -197,8 +198,12 @@ def detect_mode(base_url: str, explicit_mode: str | None) -> str:
 
 def size_to_ratio(size: str) -> str:
     if ":" in size:
+        if size not in VALID_RATIOS:
+            fail(f"不支持的画幅比例 '{size}'。允许的比例：{'、'.join(r for r in VALID_RATIOS if r != 'auto')}。")
         return size
     lower = size.lower()
+    if lower == "auto":
+        fail("异步模式不支持 --size auto，请使用具体比例，如 1:1、16:9、2:3。")
     if lower in PIXEL_TO_RATIO:
         return PIXEL_TO_RATIO[lower]
     fail(f"无法将像素尺寸 '{size}' 转换为比例。请直接使用比例格式，如 1:1、16:9、2:3。")
@@ -322,6 +327,13 @@ def output_name(name_prefix: str | None, index: int, suffix: str) -> str:
     return f"image-{timestamp}-{uuid.uuid4().hex[:6]}-{index + 1:02d}.{suffix}"
 
 
+def _suffix_from_url(image_url: str, fallback: str) -> str:
+    """从图片 URL 提取扩展名；不是已知图片扩展名时回退到请求的格式。"""
+    url_path = urllib.parse.urlparse(image_url).path
+    suffix = Path(url_path).suffix.lower().lstrip(".")
+    return suffix if suffix in KNOWN_IMAGE_SUFFIXES else fallback
+
+
 # ── 同步模式（OpenAI 兼容）──────────────────────────────────
 
 SYNC_SIZE_MAP: dict[str, str] = {
@@ -389,8 +401,13 @@ def save_sync_images(result: dict[str, Any], output_dir: Path, fmt: str,
             image_url = item["url"]
             p = output_dir / output_name(name_prefix, index, _suffix_from_url(image_url, fmt))
             dl_req = urllib.request.Request(image_url, headers={"User-Agent": UA})
-            with urllib.request.urlopen(dl_req, timeout=120) as resp:
-                p.write_bytes(resp.read())
+            try:
+                with urllib.request.urlopen(dl_req, timeout=120) as resp:
+                    p.write_bytes(resp.read())
+            except urllib.error.URLError as exc:
+                fail(f"无法下载图片：{exc.reason}")
+            except TimeoutError:
+                fail("下载图片超时。")
             paths.append(p)
         else:
             fail("图片结果既没有 b64_json，也没有 url。")
@@ -504,12 +521,19 @@ def is_rate_limit(exc: BaseException) -> bool:
 
 
 def is_backoff_error(message: str) -> bool:
-    """并发上限、超时、5xx 等可回退重试；401/文件错误不回退。"""
+    """并发上限、超时、5xx 等可回退重试；鉴权/文件/参数错误不回退。
+
+    排除项匹配要精确（误判会挡住本该重试的槽位）；重试项可以宽松
+    （误判只是多试一次）。
+    """
     text = message.lower()
-    if any(x in text for x in ("401", "403", "不存在", "prompt 为空", "缺少配置")):
+    if any(x in text for x in (
+        "http 401", "http 403", "code=401", "code=403", "unauthorized",
+        "不存在", "prompt 为空", "缺少配置", "不支持", "非法",
+    )):
         return False
     return any(x in text for x in (
-        "429", "rate_limit", "concurrency limit", "超时", "timeout",
+        "429", "rate_limit", "rate limit", "concurrency limit", "超时", "timeout",
         "连接失败", "http 5", "503", "502", "500",
     ))
 
@@ -604,6 +628,15 @@ def load_batch(manifest_path: Path, args: argparse.Namespace) -> tuple[Path, lis
     return output_dir, jobs
 
 
+def _existing_output(output_dir: Path, name_prefix: str, fmt: str) -> Path | None:
+    """URL 下载会按 URL 后缀保存，跳过检查需覆盖全部已知图片扩展名。"""
+    for suffix in dict.fromkeys((fmt, *KNOWN_IMAGE_SUFFIXES)):
+        candidate = output_dir / f"{name_prefix}.{suffix}"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def run_batch(args: argparse.Namespace, base_url: str, api_key: str, model: str) -> None:
     output_dir, jobs = load_batch(Path(args.batch), args)
     mode = detect_mode(base_url, args.mode)
@@ -613,10 +646,9 @@ def run_batch(args: argparse.Namespace, base_url: str, api_key: str, model: str)
     pending: list[dict[str, Any]] = []
     for job in jobs:
         slot = job["slot"]
-        name_prefix = slot.lower()
-        primary = output_dir / f"{name_prefix}.{job['args'].format}"
-        if args.skip_existing and primary.exists():
-            results[slot] = ("skip", [primary])
+        existing = _existing_output(output_dir, slot.lower(), job["args"].format)
+        if args.skip_existing and existing is not None:
+            results[slot] = ("skip", [existing])
         else:
             pending.append(job)
 

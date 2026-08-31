@@ -61,14 +61,19 @@ def check_common(fname: str, d: dict) -> None:
         if key in d and (not isinstance(d[key], list) or not d[key]):
             fail(fname, f"{key} 应为非空列表")
     raw = json.dumps(d, ensure_ascii=False)
-    for var in set(re.findall(r"\{[a-zA-Z-]+\}", raw)):
-        if not re.fullmatch(r"\{[a-z_]+\}", var):
+    for var in set(re.findall(r"\{[A-Za-z][A-Za-z0-9_-]*\}", raw)):
+        if not re.fullmatch(r"\{[a-z][a-z0-9_]*\}", var):
             fail(fname, f"占位符 {var} 不符合 snake_case 命名")
 
 
 def check_keywords(fname: str, d: dict) -> None:
+    seen_in_file: set[str] = set()
     for kw in d.get("keywords", []):
         k = kw.lower()
+        if k in seen_in_file:
+            fail(fname, f"keywords 文件内重复：{kw}")
+            continue
+        seen_in_file.add(k)
         if k in all_keywords and all_keywords[k] != fname:
             fail(fname, f"keywords 与 {all_keywords[k]} 重复：{kw}")
         all_keywords[k] = fname
