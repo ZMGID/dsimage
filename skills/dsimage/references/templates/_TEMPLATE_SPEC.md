@@ -10,6 +10,7 @@
 - 模板**不重复**情景内容，只写：品牌风格、语言、出哪些图（pack）、执行流程（workflow）
 - 执行流程（workflow）属于模板层，情景里没有流程
 - 优先级：用户指定 > 模板 > 情景默认 > 脚本默认
+- 模板 `generation` 默认 `1k`，不要抄情景里的 `2k`；`--size` 用比例；接口返回多大就保存多大，禁止本地升采样
 
 ## 文件约定
 
@@ -28,7 +29,7 @@
 | ★ `text_rules` | 必填 | 本品牌的图内文字规则（语言、价格、标题、字号、hex、位置） |
 | ★ `pack` | 必填 | 图片包结构，见下方细则 |
 | ★ `workflow` | 5-8 步 | **执行流程**：读 pack → 建 Style Lock → 逐张引用情景拼 Prompt → 生成 → 检查 |
-| ★ `generation` | 必填 | `{"resolution": "2k", "format": "png"}`，pack 可按槽位覆盖 ratio |
+| ★ `generation` | 必填 | `{"resolution": "1k", "format": "png"}`；默认不必 2k，接口原图直接用；pack 可按槽位覆盖 ratio |
 | ★ `examples` | ≥1 条 | 示例 Prompt 或执行记录 |
 | ★ `supports_image_reference` | 必填 | bool |
 | ○ `style_lock` | 可选 | 固定的 Style Lock 文本；不写则按 SKILL.md 规则从 template_meta.brand 现场生成 |
@@ -106,7 +107,7 @@
     ]
   },
   "workflow": ["读 pack 规划", "建 Style Lock", "逐张引用情景拼 Prompt", "生成", "按 pitfalls 检查", "汇报"],
-  "generation": {"resolution": "2k", "format": "png"},
+  "generation": {"resolution": "1k", "format": "png", "quality": "high"},
   "examples": ["示例 Prompt"],
   "supports_image_reference": true
 }

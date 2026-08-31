@@ -76,7 +76,7 @@
 
 1. `workflow`：5-8 步执行流程——读 pack 规划 → 建 Campaign Style Lock（用品牌 hex）→ 逐张"读引用情景 → 情景骨架 + 品牌 hex + text_rules 拼 Prompt" → 调 gen_image.py（--image）→ 检查 → 汇报；可按甲方要求特化（如报价表模板规定"价格必须人工确认后才渲染"）。
 2. `text_rules`：每个文字角色的字号、hex、位置、长度上限（价格、标题、标注…逐个来）。
-3. `generation`：resolution / format。
+3. `generation`：默认 `1k` / `png` / `high`。不必 2k；接口返回原图直接用，禁止升采样。用户当场要求 2k 再写 2k。
 4. 模板级 `pitfalls`：3-5 条，来自甲方强调过的点（如"跨张版式漂移""价格乱码"）。
 
 **等用户确认流程与数值。**

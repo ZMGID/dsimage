@@ -105,7 +105,7 @@
     "读取 pack；用户指定数量、比例或删槽时覆盖默认。价格、卖点、尺寸等缺了先问一轮；用户不补或说先出图，则按假设生成 H1–H5 全套，禁止因缺参数跳槽",
     "原样复用 style_lock，写入每张 Prompt 开头，禁止改写或缩短",
     "逐张完整读取引用情景，只应用该槽位 overrides（H1 的左上标题/左下价格不得套到 H2–H5），用情景骨架 + 品牌 hex + text_rules 拼独立 Prompt；产品外形跟参考图，文案和数字可以是假设",
-    "H1–H5 Prompt 写入单独文件后生成批量清单，一次调用 scripts/gen_image.py --batch 并发生成；--image 带同一产品参考图，size 用槽位 ratio，其余按 generation；失败槽位加 --skip-existing 重跑补齐",
+    "H1–H5 Prompt 写入单独文件后生成批量清单，一次调用 scripts/gen_image.py --batch；--image 带同一产品参考图，size 用槽位 ratio（不要写像素尺寸），其余按本模板 generation（1k/png/high，不要从情景抄 2k）；接口返回原图直接保存，禁止升采样；失败槽位加 --skip-existing 重跑补齐",
     "按所引情景 pitfalls + 本模板 pitfalls 检查 hex、信息图结构和跨张光线",
     "输出 H1–H5 全部路径，并列出本次用到的文案/价格/尺寸假设"
   ],
@@ -117,7 +117,7 @@
     "H4 利益点图标风格漂移或退化成一张产品照片"
   ],
   "generation": {
-    "resolution": "2k",
+    "resolution": "1k",
     "format": "png",
     "quality": "high"
   },

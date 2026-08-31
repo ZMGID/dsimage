@@ -30,7 +30,7 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 4. 多图任务：先建立 **Campaign Style Lock**（见下文），原样放进每张 Prompt 开头。
 5. 商品/营销任务：先做**转化驱动力诊断**（见下文）。
 6. 逐张写 Prompt：Style Lock → 情景 `prompt_template` 骨架（替换 `{variables}`）→ 按需套用 `variants` / `category_tips` → 按通用规则收尾。
-7. Generate 模式：宿主自带生图工具（如 Codex 的 imagegen）优先直接使用；没有时调用 `scripts/gen_image.py`，用户提供了产品图必须带 `--image`；**多图任务用 `--batch` 批量清单一次并发生成**（见「多图执行规则」）。**命令参数从情景取**：`--size` 用情景 `default_ratio`；`--resolution` / `--format` / `--quality` 用情景 `generation` 字段（未写则用脚本默认）；用户显式指定的参数优先于情景值。
+7. Generate 模式：宿主自带生图工具（如 Codex 的 imagegen）优先直接使用；没有时调用 `scripts/gen_image.py`，用户提供了产品图必须带 `--image`；**多图任务用 `--batch` 批量清单一次并发生成**（见「多图执行规则」）。**命令参数优先级**：用户显式指定 > 命中模板的 `generation` / 槽位 `ratio` > 情景 `generation` / `default_ratio`。`--size` 用比例（`1:1`），不要写死 `1024x1024` 或 `2048x2048`。未特别要求 2k 时用模板默认 `1k`，不要从情景抄 `2k`。接口返回多大就保存多大，禁止本地升采样。
 8. 出图后按情景 `pitfalls` + 下方 QA 清单检查，返回文件路径和关键假设。
 
 ---
@@ -51,7 +51,7 @@ IMG_API_KEY=your-api-key
 
 ```bash
 # 单张
-python scripts/gen_image.py --prompt "..." --size 1:1 --resolution 2k --image data/product.jpg
+python scripts/gen_image.py --prompt "..." --size 1:1 --image data/product.jpg
 python scripts/gen_image.py --prompt-file prompt.txt --output-dir generated-images
 
 # 多图套图：批量清单一次并发生成（多图任务必须用这个，不要逐张串行调用）
@@ -63,7 +63,7 @@ python scripts/gen_image.py --batch jobs.json --concurrency 4
 ```json
 {
   "output_dir": "generated-images/<slug>-pdp",
-  "defaults": {"size": "1:1", "resolution": "2k", "image": "data/product.jpg"},
+  "defaults": {"size": "1:1", "resolution": "1k", "quality": "high", "image": "data/product.jpg"},
   "jobs": [
     {"slot": "H1", "prompt_file": "prompt-H1.txt"},
     {"slot": "H2", "prompt_file": "prompt-H2.txt", "size": "4:5"}
