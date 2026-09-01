@@ -65,7 +65,6 @@
     "Product infographic. Left: {product} on gradient. Right: {n} feature blocks with icons vertically, callout lines connecting to product. Clean modern, {color} accents, 2000x2000px",
     "{category} specification guide. Product centered with dimension callouts. Feature highlights with icons. Data visualization. Clean typography, mobile-friendly, 2000x2000px"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "2:3",
   "composition_rules": {

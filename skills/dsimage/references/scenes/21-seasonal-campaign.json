@@ -30,7 +30,7 @@
     "summer": "bright warm tones, tropical elements, golden light",
     "autumn": "warm amber, dried leaves, cinnamon, window light",
     "winter": "cool blues, pine branches, frost, moonlight",
-    "quality": "8K, brand campaign photography, consistent product placement"
+    "quality": "brand campaign photography, consistent product placement"
   },
   "defaults": {
     "layout": "2x2 grid with thin white or gold borders",
@@ -71,10 +71,9 @@
     "candles": "seasonal scents visualized through corresponding natural elements"
   },
   "examples": [
-    "2x2 seasonal grid. Same {product} in four settings: Spring with cherry blossoms, Summer with citrus and sunshine, Autumn with maple leaves, Winter with pine and snow. Consistent product angle, 8K, 2000x2000px",
-    "Brand seasonal campaign 2x2 grid. {product} in four seasonal worlds: Spring=pastel marble+dew, Summer=tropical leaves+sunset, Autumn=walnut wood+cinnamon, Winter=frosted glass+pine. Season labels in serif font, 8K"
+    "2x2 seasonal grid. Same {product} in four settings: Spring with cherry blossoms, Summer with citrus and sunshine, Autumn with maple leaves, Winter with pine and snow. Consistent product angle, 2000x2000px",
+    "Brand seasonal campaign 2x2 grid. {product} in four seasonal worlds: Spring=pastel marble+dew, Summer=tropical leaves+sunset, Autumn=walnut wood+cinnamon, Winter=frosted glass+pine. Season labels in serif font"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "1:1",
   "composition_rules": {

@@ -1,6 +1,6 @@
 # 情景规范（新建情景前必读）
 
-> 新建或修改任何情景**之前必读本文件**。每个情景 JSON 是**一类画面的拍摄方法规范**（怎么拍），不含执行流程——流程归模板层：模板（references/templates/）= 品牌风格 + 语言 + 图片包 + workflow，通过 pack 引用情景，规范见 references/templates/_TEMPLATE_SPEC.md。
+> 新建或修改任何情景**之前必读本文件**。每个情景 JSON 是一类画面的**缺省**拍摄方法（怎么拍），不含执行流程。流程归模板层。被模板 pack 引用时：**模板 JSON（含槽位 overrides）大于本文件**，冲突听模板。品牌专用规则不要写进情景。规范见 `references/templates/_TEMPLATE_SPEC.md`。
 > 写完必须：① 跑 `python scripts/check_scenes.py` 通过（macOS/Linux 用 `python3`）→ ② 在 SKILL.md 匹配表登记（校验器会检查漏登记）→ ③ 提交。
 
 ## 一、文件约定
@@ -60,8 +60,9 @@
 
 - 可写键：`resolution`（`1k`/`2k`/`4k`，异步模式生效）、`format`（`png`/`jpeg`/`webp`）、`quality`（`low`/`medium`/`high`，仅同步模式生效）
 - 不写该字段 = 用脚本默认（1k / png）；写了一个键就表示该情景有意覆盖默认
+- Prompt 里不要写 8K / 升采样；出图大小由 `generation.resolution` 和接口返回决定
 - 画幅 `--size` 不在本字段里，由 `default_ratio` 承担
-- 优先级：用户命令行显式指定 > 命中模板 JSON / 甲方 `要求.json` > 情景 `generation` > 脚本默认
+- 优先级：用户本轮 / 命令行 > 模板 JSON > 甲方 `要求.json` > 情景 `generation` > 脚本默认。被模板引用时不要用本字段盖过模板的 1k
 - 参考图 `--image`、输出目录 `--output-dir`、模式 `--mode` 是运行时信息，**禁止**写入情景
 
 ### text_rules
@@ -78,7 +79,7 @@
 ### pack_structure（仅多图编排型）
 
 - 定义图片包：`conversion_drivers`（各驱动力序列）、`hero_pack` / `detail_pack`（张数、每屏 id/名称/信息图元素/角度/对应情景）、`font_pairing`、`rhythm`
-- 用户明确指定的数量和比例**永远优先**于 pack 默认，本字段只是缺省值
+- 用户明确指定的数量和比例**永远优先**于 pack 默认。命中模板时用模板 `pack`，不要用本字段盖过模板槽位
 
 ## 四、{variables} 占位符
 

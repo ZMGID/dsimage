@@ -79,7 +79,6 @@
     "{category} promotional poster. {product} centered on {background}. Bold {headline} at top, price {price}, {cta} button. Clean minimalist, accent colors, professional layout, 2000x2000px",
     "Holiday {category} gift campaign. {background} with decorative elements. Center: {product} with gift wrapping. Headline {headline} modern script. Price tag {price} decorative frame. Festive sophisticated, warm cinematic lighting, 1080x1350px"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "16:9",
   "composition_rules": {

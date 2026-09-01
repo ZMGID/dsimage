@@ -24,7 +24,7 @@
     "arrangement": "organized composition, all products clearly visible",
     "background": "{background_description}",
     "decorative": "{decorative_elements}",
-    "quality": "professional product photography, 8K"
+    "quality": "professional product photography"
   },
   "defaults": {
     "arrangement": "organized with consistent spacing, all visible, no overlap",
@@ -61,11 +61,10 @@
     "home": "collection of coordinating items"
   },
   "examples": [
-    "Luxury {category} gift set on premium surface: {product_list}. Organized composition with product cards. Scattered: gold foil, pearls, dried flowers, velvet ribbon. Bottom left: set description. Bottom right: price with original crossed out. Soft directional lighting, premium photography, 8K",
+    "Luxury {category} gift set on premium surface: {product_list}. Organized composition with product cards. Scattered: gold foil, pearls, dried flowers, velvet ribbon. Bottom left: set description. Bottom right: price with original crossed out. Soft directional lighting, premium photography",
     "Premium {category} routine set. Main product centered, lid open showing texture. Surrounding: routine products arranged naturally. Soft background, decorative elements. Warm studio lighting, gift-ready, 2000x2000px",
     "{category} gift set display. {n} products neat row, consistent spacing. Clean photography, soft shadows, professional bundle image, no text, 2000x2000px"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "1:1",
   "composition_rules": {

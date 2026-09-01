@@ -29,7 +29,7 @@
     "exterior": "clean facade with signage and window display",
     "interior": "curated display shelving, consultation area, ambient lighting",
     "lighting": "golden hour exterior or warm ambient interior",
-    "quality": "8K, editorial architectural photography, wide-angle sharp"
+    "quality": "editorial architectural photography, wide-angle sharp"
   },
   "defaults": {
     "exterior": "large glass windows, signage, entrance details, potted plants",
@@ -73,10 +73,9 @@
     "pop_up": "temporary creative installation, bold graphics, unique display fixtures"
   },
   "examples": [
-    "Storefront photography. Modern {business} with glass windows showing warm interior. Entrance with potted plants. Golden hour light. Architectural photography, 8K",
-    "Premium interior photography of {business}. Wide-angle shot showing product displays, consultation area, herringbone floor. Warm ambient lighting throughout. Architectural Digest quality, 8K, 1536x1024px"
+    "Storefront photography. Modern {business} with glass windows showing warm interior. Entrance with potted plants. Golden hour light. Architectural photography",
+    "Premium interior photography of {business}. Wide-angle shot showing product displays, consultation area, herringbone floor. Warm ambient lighting throughout. Architectural Digest quality, 1536x1024px"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "16:9",
   "composition_rules": {

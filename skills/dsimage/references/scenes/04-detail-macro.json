@@ -24,7 +24,7 @@
     "detail": "visible {texture_description}",
     "lighting": "{lighting_style}",
     "camera": "shot with {camera_setup}",
-    "quality": "ultra macro detail, 8K, professional product photography"
+    "quality": "ultra macro detail, professional product photography"
   },
   "defaults": {
     "focus_area": "texture and material quality",
@@ -61,9 +61,9 @@
     "jewelry": "show gemstone cut, metal finish, clasp detail"
   },
   "examples": [
-    "Extreme close-up beauty macro, Canon EOS R5 100mm f/2.8 macro. {product} filling 80% of frame, focusing on {focus_area}. Visible pores, fine lines, natural imperfections, NOT retouched. Formula visible with realistic light reflection. Natural side lighting. 8K",
-    "Cinematic {category} close-up. {product} detail showing {texture_description}. Formula/texture visible between fingertips with subtle light reflection. Soft blur background. Dramatic side lighting, warm tones, 8K",
-    "Macro detail of {product}, Sony A7R V 90mm macro, focus stacking. Extreme detail showing {focus_area}. Professional product photography, 8K"
+    "Extreme close-up beauty macro, Canon EOS R5 100mm f/2.8 macro. {product} filling 80% of frame, focusing on {focus_area}. Visible pores, fine lines, natural imperfections, NOT retouched. Formula visible with realistic light reflection. Natural side lighting. native resolution",
+    "Cinematic {category} close-up. {product} detail showing {texture_description}. Formula/texture visible between fingertips with subtle light reflection. Soft blur background. Dramatic side lighting, warm tones",
+    "Macro detail of {product}, Sony A7R V 90mm macro, focus stacking. Extreme detail showing {focus_area}. Professional product photography"
   ],
   "anti_ai_tips": "For hand shots: specify real skin (visible knuckle lines, slight dryness on cuticles, natural warm tone). NOT retouched or smoothed.",
   "supports_image_reference": true,

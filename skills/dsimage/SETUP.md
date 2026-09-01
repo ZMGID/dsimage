@@ -49,7 +49,7 @@
 
 ## 3. 选服务商，只收 API key（官方 URL 已写死）
 
-**禁止向用户索要官方服务商的 URL。** OpenAI / Grok / Gemini 的地址写死在下表和 `scripts/gen_image.py` 里，你自己填进 `.env`，不要问。
+**禁止向用户索要官方服务商的 URL。** OpenAI / Grok / Gemini 的地址写死在下表和 `scripts/gen_image.py` 里；官方三家**不要**把 URL 写入 `.env`（写了脚本也会忽略）。
 
 先把下面四个选项原样列给用户，等编号：
 
@@ -62,11 +62,11 @@
 4. 其他兼容网关（才需要填地址，如 apimart）
 ```
 
-| 用户选择 | 你写入的 `IMG_PROVIDER` | 你写入的地址（不要问，直接用） |
+| 用户选择 | 写入 `.env` 的 `IMG_PROVIDER` | 地址 |
 |---|---|---|
-| 1 | `openai` | `https://api.openai.com/v1` |
-| 2 | `grok` | `https://api.x.ai/v1` |
-| 3 | `gemini` | `https://generativelanguage.googleapis.com/v1beta` |
+| 1 | `openai` | 脚本内 `https://api.openai.com/v1`，不要写入 `.env` |
+| 2 | `grok` | 脚本内 `https://api.x.ai/v1`，不要写入 `.env` |
+| 3 | `gemini` | 脚本内 `https://generativelanguage.googleapis.com/v1beta`，不要写入 `.env` |
 | 4 | `custom` | 这时才问用户要根地址，写入 `IMG_BASE_URL` |
 
 然后**只问 API key**。官方三家不要问 URL、不要问「接口地址填哪个」。
@@ -116,11 +116,10 @@ Authorization: Bearer {IMG_API_KEY}
 
 1. 把 `.env` 写入 **Skill 自己的目录**（刚安装的 `.../skills/dsimage/.env`，与 SKILL.md 同级）。这样配置随 Skill 全局生效——换会话、换项目、换工作目录都可用。**不要**写进某个会话的临时工作目录或"当前项目"，否则其他对话找不到配置。若用户日后想按项目覆盖，可在该项目根目录另放一份 `.env`（优先级更高）。
 
-官方三家按第 3 步的表写入（地址用表里的固定值，不要留空、不要改）：
+官方三家按第 3 步的表写入（**不要写 IMG_BASE_URL**，地址由脚本写死；填了也会被忽略）：
 
 ```dotenv
 IMG_PROVIDER=<openai 或 grok 或 gemini>
-IMG_BASE_URL=<第 3 步表里的固定地址>
 IMG_MODEL=<第 4 步用户选择的模型>
 IMG_API_KEY=<第 3 步收集的 key>
 ```

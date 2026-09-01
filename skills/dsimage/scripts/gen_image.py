@@ -4,7 +4,7 @@
 单张模式：--prompt / --prompt-file
 批量模式：--batch jobs.json —— 多图套图推荐用法，一次并发生成全部槽位；
 失败槽位加 --skip-existing 重跑同一命令即可只补失败的图。
-jobs.json 的 image 可为字符串或数组（替换模板：[母版, 产品图]）。
+jobs.json 的 image 可为字符串或数组（lock=master 换货：[母版, 产品图]）。
 
 官方服务商地址写死在脚本里，只需 IMG_PROVIDER + IMG_API_KEY + IMG_MODEL：
   openai → https://api.openai.com/v1          （同步 /images/generations|/edits）
@@ -22,6 +22,7 @@ import base64
 import binascii
 import concurrent.futures
 import http.client
+import ipaddress
 import json
 import os
 import sys
@@ -105,6 +106,8 @@ PIXEL_TO_RATIO: dict[str, str] = {
 }
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
+BLOCKED_DOWNLOAD_HOSTS = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
 
 
 class GenError(RuntimeError):
@@ -375,7 +378,7 @@ def _post_json(request: urllib.request.Request, timeout: int, what: str) -> dict
         with urllib.request.urlopen(request, timeout=timeout) as response:
             raw = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
+        detail = exc.read().decode("utf-8", errors="replace")[:400]
         fail(f"{what}返回 HTTP {exc.code}：{detail}")
     except urllib.error.URLError as exc:
         fail(f"无法连接接口：{exc.reason}")
@@ -429,6 +432,43 @@ def http_post_multipart(url: str, api_key: str, fields: dict[str, str],
     return _post_json(request, timeout, "图生图接口")
 
 
+def assert_download_url(url: str) -> None:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        fail(f"拒绝下载非 http(s) 图片地址：{parsed.scheme or '缺少协议'}")
+    host = (parsed.hostname or "").lower()
+    if not host or host in BLOCKED_DOWNLOAD_HOSTS or host.endswith(".localhost"):
+        fail("拒绝下载指向本机的图片地址。")
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return
+    if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+        fail("拒绝下载指向内网地址的图片。")
+
+
+def download_to_path(url: str, dest: Path) -> None:
+    assert_download_url(url)
+    request = urllib.request.Request(url, headers={"User-Agent": UA})
+    try:
+        with urllib.request.urlopen(request, timeout=120) as resp:
+            length = resp.headers.get("Content-Length")
+            if length:
+                try:
+                    if int(length) > MAX_DOWNLOAD_BYTES:
+                        fail(f"图片过大（Content-Length {length}），拒绝下载。")
+                except ValueError:
+                    pass
+            data = resp.read(MAX_DOWNLOAD_BYTES + 1)
+    except urllib.error.URLError as exc:
+        fail(f"无法下载图片：{exc.reason}")
+    except TimeoutError:
+        fail("下载图片超时。")
+    if len(data) > MAX_DOWNLOAD_BYTES:
+        fail("图片超过 25MB，拒绝保存。")
+    dest.write_bytes(data)
+
+
 def http_get(url: str, api_key: str, timeout: int = 30) -> dict[str, Any]:
     request = urllib.request.Request(
         url, headers={"Authorization": f"Bearer {api_key}", "User-Agent": UA}, method="GET",
@@ -437,7 +477,7 @@ def http_get(url: str, api_key: str, timeout: int = 30) -> dict[str, Any]:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             raw = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
+        detail = exc.read().decode("utf-8", errors="replace")[:400]
         fail(f"查询接口返回 HTTP {exc.code}：{detail}")
     except (urllib.error.URLError, http.client.RemoteDisconnected, TimeoutError):
         fail("查询接口连接失败或超时。")
@@ -702,14 +742,7 @@ def save_sync_images(result: dict[str, Any], output_dir: Path, fmt: str,
         elif item.get("url"):
             image_url = item["url"]
             p = output_dir / output_name(name_prefix, index, _suffix_from_url(image_url, fmt))
-            dl_req = urllib.request.Request(image_url, headers={"User-Agent": UA})
-            try:
-                with urllib.request.urlopen(dl_req, timeout=120) as resp:
-                    p.write_bytes(resp.read())
-            except urllib.error.URLError as exc:
-                fail(f"无法下载图片：{exc.reason}")
-            except TimeoutError:
-                fail("下载图片超时。")
+            download_to_path(image_url, p)
             paths.append(p)
         else:
             fail("图片结果既没有 b64_json，也没有 url。")
@@ -795,14 +828,7 @@ def _save_async_images(task_data: dict[str, Any], output_dir: Path, fmt: str,
         image_url = url_list[0]
         output_path = output_dir / output_name(name_prefix, index, _suffix_from_url(image_url, fmt))
         log(label, f"下载图片: {image_url}")
-        dl_req = urllib.request.Request(image_url, headers={"User-Agent": UA})
-        try:
-            with urllib.request.urlopen(dl_req, timeout=120) as resp:
-                output_path.write_bytes(resp.read())
-        except urllib.error.URLError as exc:
-            fail(f"无法下载图片：{exc.reason}")
-        except TimeoutError:
-            fail("下载图片超时。")
+        download_to_path(image_url, output_path)
         paths.append(output_path)
     return paths
 
@@ -1069,7 +1095,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--resolution", default="1k", choices=VALID_RESOLUTIONS, help="异步模式分辨率档位，默认 1k。")
     parser.add_argument("--quality", choices=("low", "medium", "high"), help="同步模式图片质量参数。")
     parser.add_argument("--n", type=int, default=1, help="同步模式生成图片数量，默认 1。")
-    parser.add_argument("--image", action="append", help="参考图路径，可重复传入。替换模板：先母版后产品图。")
+    parser.add_argument("--image", action="append", help="参考图路径，可重复传入。母版换货：先母版后产品图。")
     parser.add_argument("--poll-interval", type=int, default=5, help="异步模式轮询间隔秒数，默认 5。")
     parser.add_argument("--timeout", type=int, help="异步模式轮询超时秒数；默认 1k/2k 为 180，4k 为 480。")
     parser.add_argument("--format", choices=VALID_FORMATS, default="png", help="图片保存格式，默认 png。")

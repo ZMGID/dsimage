@@ -67,7 +67,6 @@
     "Product detail card. Left: {product} with dimension annotations {measurements}, arrows and lines. Right: {n}-step usage guide with icons. White background, minimal, professional, 2000x1500px",
     "{category} specification card. {product} with detailed dimensions and reference object. Usage steps with icons. Key features. Clean layout, mobile-friendly, 2000x2000px"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "2:3",
   "composition_rules": {

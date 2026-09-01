@@ -31,7 +31,7 @@
     "evidence": "use only user-confirmed angles, colors, names, SKUs and product structures",
     "background": "clean white in each cell",
     "separators": "thin white borders between cells",
-    "quality": "8K, catalog photography, uniform lighting across all cells"
+    "quality": "catalog photography, uniform lighting across all cells"
   },
   "defaults": {
     "grid": "2x2 grid, 4 views",
@@ -78,11 +78,10 @@
     "accessories": "for bags and accessories, preserve exact pocket, strap, closure and hardware structure across confirmed colorways; render exact confirmed color names and SKU labels"
   },
   "examples": [
-    "2x2 product grid. {product} shown from 4 angles: front, side, back, top-down. Clean white background per cell. Thin borders. Uniform studio lighting, 8K, 2000x2000px",
-    "3x3 color variation grid. Same {product} in 9 user-confirmed colors, identical 3/4 angle. Exact confirmed color labels and SKU values. Clean white cells, subtle drop shadow. Professional catalog, 8K, 2000x2000px",
+    "2x2 product grid. {product} shown from 4 angles: front, side, back, top-down. Clean white background per cell. Thin borders. Uniform studio lighting, 2000x2000px",
+    "3x3 color variation grid. Same {product} in 9 user-confirmed colors, identical 3/4 angle. Exact confirmed color labels and SKU values. Clean white cells, subtle drop shadow. Professional catalog, 2000x2000px",
     "Catalog colorway page, square 1:1. Main confirmed color product as a large hero on the left occupying 46%, with four smaller user-confirmed colorways in a 2x2 grid on the right. Identical 3/4 angle, structure, scale and lighting. Exact confirmed color names and SKU labels below each item. No invented colors, identifiers, materials or structural changes."
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "1:1",
   "composition_rules": {

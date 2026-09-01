@@ -23,7 +23,7 @@
     "background": "{background_material}",
     "color_palette": "{color_scheme}",
     "lighting": "soft natural window light from top-left at 45 degrees",
-    "quality": "8K, editorial photography, no text, no watermark"
+    "quality": "editorial photography, no text, no watermark"
   },
   "defaults": {
     "props": "carefully curated complementary objects",
@@ -62,11 +62,10 @@
     "home": "decor items, textures, materials spread showing lifestyle"
   },
   "examples": [
-    "Luxurious {category} ritual flat lay, top-down photography. {product} with lid open showing texture as hero at bottom center. Surrounding: gold-tone palette, crystal bottle, dried lavender with silk ribbon, gold foil flakes, pearl beads. Background: ivory linen. Color: ivory, blush, champagne gold. Soft window light top-left at 45 degrees. 8K, no text, no watermark",
-    "{product} flat lay top-down as hero. Surrounding: {props}. {background} background. Color: {colors}. Soft window light top-left. Clean aesthetic, 8K",
-    "Professional {category} flat lay, top-down editorial. {product} centered with curated objects. {background} background. Strict color control. 8K, magazine quality, no text"
+    "Luxurious {category} ritual flat lay, top-down photography. {product} with lid open showing texture as hero at bottom center. Surrounding: gold-tone palette, crystal bottle, dried lavender with silk ribbon, gold foil flakes, pearl beads. Background: ivory linen. Color: ivory, blush, champagne gold. Soft window light top-left at 45 degrees. no text, no watermark",
+    "{product} flat lay top-down as hero. Surrounding: {props}. {background} background. Color: {colors}. Soft window light top-left. Clean aesthetic",
+    "Professional {category} flat lay, top-down editorial. {product} centered with curated objects. {background} background. Strict color control. magazine quality, no text"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "1:1",
   "composition_rules": {

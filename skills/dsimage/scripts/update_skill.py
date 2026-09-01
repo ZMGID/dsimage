@@ -56,14 +56,9 @@ def is_library_json(rel: Path) -> bool:
         return True
     if rel.parts[:2] != ("references", "templates"):
         return False
-    if len(rel.parts) == 3:
-        return rel.name not in {"要求.json"}
-    if len(rel.parts) == 4 and rel.name == "要求.json":
-        return True
-    return (
-        len(rel.parts) == 5
-        and rel.parts[3] in {"风格", "替换"}
-    )
+    if rel.name == "要求.json":
+        return len(rel.parts) == 4
+    return 3 <= len(rel.parts) <= 5
 
 
 def _move_json_and_sidecar(src: Path, dest_dir: Path, report: list[str]) -> None:
@@ -82,6 +77,21 @@ def _move_json_and_sidecar(src: Path, dest_dir: Path, report: list[str]) -> None
             shutil.move(str(sidecar), str(dest_side))
             report.append(f"迁移母版 {src.stem}/ → {dest_dir.as_posix()}")
     report.append(f"迁移 {src.name} → {dest_dir.as_posix()}")
+
+
+def _nest_into_package(json_path: Path, report: list[str]) -> None:
+    if json_path.name in {"要求.json", "_甲方.json"}:
+        return
+    if json_path.parent.name == json_path.stem:
+        return
+    pkg = json_path.parent / json_path.stem
+    dest = pkg / json_path.name
+    pkg.mkdir(parents=True, exist_ok=True)
+    if dest.exists():
+        report.append(f"{json_path.name} 已有 {pkg.name}/{json_path.name}，未覆盖")
+        return
+    shutil.move(str(json_path), str(dest))
+    report.append(f"迁移 {json_path.name} → {pkg.as_posix()}/")
 
 
 def migrate_flat_templates(dest: Path, report: list[str]) -> None:
@@ -128,6 +138,30 @@ def migrate_flat_templates(dest: Path, report: list[str]) -> None:
         if old_meta.is_file() and not new_meta.exists():
             shutil.move(str(old_meta), str(new_meta))
             report.append(f"迁移 {client_dir.name}/_甲方.json → 要求.json")
+        for kind in ("风格", "替换"):
+            kind_dir = client_dir / kind
+            if not kind_dir.is_dir():
+                continue
+            for path in sorted(kind_dir.glob("*.json")):
+                _move_json_and_sidecar(path, client_dir, report)
+            leftovers = [p.name for p in kind_dir.iterdir() if p.name not in {".gitkeep", ".DS_Store"}]
+            if leftovers:
+                report.append(f"{client_dir.name}/{kind}/ 仍有未迁移文件：{', '.join(leftovers)}")
+            else:
+                for extra in kind_dir.glob(".gitkeep"):
+                    extra.unlink()
+                try:
+                    kind_dir.rmdir()
+                    report.append(f"已删除空目录 {client_dir.name}/{kind}/")
+                except OSError:
+                    report.append(f"{client_dir.name}/{kind}/ 未清空，未删除")
+    for path in sorted(root.glob("*.json")):
+        _nest_into_package(path, report)
+    for entry in sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith("_")):
+        if not (entry / "要求.json").is_file() and not (entry / "_甲方.json").is_file():
+            continue
+        for path in sorted(entry.glob("*.json")):
+            _nest_into_package(path, report)
 
 
 def dump_json(data: dict[str, Any]) -> str:
@@ -155,14 +189,12 @@ def merge_list(new: list[Any], old: list[Any]) -> tuple[list[Any], int]:
 def merge_text_rules(
     new: dict[str, Any], old: dict[str, Any], notes: list[str], prefix: str
 ) -> dict[str, Any]:
+    """内置键跟新版走；只保留用户多出来的键。"""
     out = dict(new)
     for key, value in old.items():
         if key not in out:
             out[key] = value
             notes.append(f"{prefix}text_rules.{key} 保留用户键")
-        elif out[key] != value:
-            out[key] = value
-            notes.append(f"{prefix}text_rules.{key} 保留用户值")
     return out
 
 
@@ -231,6 +263,10 @@ def merge_client_meta(
             out["notes"], added = merge_list(out["notes"], value)
             if added:
                 notes.append(f"{label} notes +{added}")
+        elif key == "templates" and isinstance(value, list) and isinstance(out.get("templates"), list):
+            out["templates"], added = merge_list(out["templates"], value)
+            if added:
+                notes.append(f"{label} templates +{added}")
         elif key in {"language", "generation", "style", "brand", "name"} and out.get(key) != value:
             out[key] = value
             notes.append(f"{label} {key} 保留用户值")
@@ -289,14 +325,13 @@ def register_user_files(dest: Path, user_rels: list[Path], report: list[str]) ->
         if rel.parts[:2] == ("references", "templates"):
             if rel.name == "要求.json":
                 continue
-            ttype = (data or {}).get("template_type") or "style"
-            heading = "### 替换模板匹配表" if ttype == "replace" else "### 风格模板匹配表"
+            heading = "### 模板匹配表"
             if len(rel.parts) == 3:
                 cell = f"`templates/{fname}`"
-            elif len(rel.parts) == 5 and rel.parts[3] in {"风格", "替换"}:
-                client, kind = rel.parts[2], rel.parts[3]
-                cell = f"`templates/{client}/{kind}/{fname}`"
-                heading = "### 替换模板匹配表" if kind == "替换" else "### 风格模板匹配表"
+            elif len(rel.parts) == 4:
+                cell = f"`templates/{rel.parts[2]}/{fname}`"
+            elif len(rel.parts) == 5:
+                cell = f"`templates/{rel.parts[2]}/{rel.parts[3]}/{fname}`"
             else:
                 continue
         else:

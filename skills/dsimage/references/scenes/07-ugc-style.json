@@ -83,7 +83,7 @@
   "default_ratio": "9:16",
   "composition_rules": {
     "product_ratio": "25-35%",
-    "whitespace": "不要求（生活化满构图）",
+    "whitespace": "0-15%（生活化满构图，不强制大留白）",
     "angles": [
       {
         "angle": "镜面自拍",

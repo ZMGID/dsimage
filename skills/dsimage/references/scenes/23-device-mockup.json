@@ -30,7 +30,7 @@
     "screen_content": "modern clean app/dashboard interface",
     "desk_accessories": "coffee cup, plant, notebook, natural work environment",
     "lighting": "natural window light with warm fill",
-    "quality": "8K, tech product photography, screen content tack-sharp"
+    "quality": "tech product photography, screen content tack-sharp"
   },
   "defaults": {
     "device": "latest laptop on clean desk",
@@ -74,10 +74,9 @@
     "ai_product": "show chat interface, AI responses, modern dark or light theme"
   },
   "examples": [
-    "Product mockup on laptop. Silver laptop on white desk, screen showing modern dashboard with charts. Coffee cup and small plant nearby. Natural window light. Clean product photography, 8K",
-    "Multi-device mockup. iPad with keyboard showing {product} app, iPhone showing notification, Apple Watch showing widget. All screens consistent UI in sage green. Scandinavian desk, 8K, 1536x1024px"
+    "Product mockup on laptop. Silver laptop on white desk, screen showing modern dashboard with charts. Coffee cup and small plant nearby. Natural window light. Clean product photography",
+    "Multi-device mockup. iPad with keyboard showing {product} app, iPhone showing notification, Apple Watch showing widget. All screens consistent UI in sage green. Scandinavian desk, 1536x1024px"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "16:9",
   "composition_rules": {

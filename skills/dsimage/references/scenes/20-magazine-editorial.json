@@ -30,7 +30,7 @@
     "background": "studio backdrop in warm/tonal color",
     "lighting": "beauty dish + rim light, editorial setup",
     "layout": "magazine masthead area at top, barcode space at bottom",
-    "quality": "8K, Vogue-quality editorial photography"
+    "quality": "Vogue-quality editorial photography"
   },
   "defaults": {
     "lighting": "beauty dish from front-left, soft rim light on hair",
@@ -76,8 +76,8 @@
     "makeup": "bold lip or eye focus, product in hand, editorial beauty"
   },
   "examples": [
-    "Beauty magazine cover. Woman with glowing skin holding {product} near face. Beauty dish lighting, soft background. Top area for masthead. Vogue-quality editorial, 8K, 1080x1350px",
-    "Fashion editorial magazine cover. Striking woman wearing {product} in contemplative pose. Bold makeup, sleek hair. High-contrast editorial lighting. Magazine layout overlay with border frame. 8K, 1080x1350px"
+    "Beauty magazine cover. Woman with glowing skin holding {product} near face. Beauty dish lighting, soft background. Top area for masthead. Vogue-quality editorial, 1080x1350px",
+    "Fashion editorial magazine cover. Striking woman wearing {product} in contemplative pose. Bold makeup, sleek hair. High-contrast editorial lighting. Magazine layout overlay with border frame. 1080x1350px"
   ],
   "anti_ai_tips": "For authentic editorial feel: specify actual camera (Phase One IQ4, Canon EOS R5 85mm f/1.2), add visible skin texture, use real beauty lighting terminology",
   "supports_image_reference": true,

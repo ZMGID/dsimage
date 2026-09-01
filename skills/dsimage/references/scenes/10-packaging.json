@@ -25,7 +25,7 @@
     "surface": "premium marble surface",
     "decorative": "scattered luxury elements",
     "lighting": "soft directional with metallic reflections",
-    "quality": "premium design presentation, 8K"
+    "quality": "premium design presentation"
   },
   "defaults": {
     "display": "full spread: product, outer box, tissue, ribbon, brand card",
@@ -60,11 +60,10 @@
     "electronics": "box design, inner foam, cable organization, quick-start guide"
   },
   "examples": [
-    "Luxury {category} packaging concept. Full spread: (1) product with lid, label visible, (2) outer gift box: embossed pattern, gold logo, magnetic closure, (3) tissue with subtle watermark, (4) satin ribbon with monogram, (5) brand card gold foil, (6) sustainable fill. On marble with gold foil, pearls, dried petals. Soft directional lighting, metallic reflections. Premium presentation, 8K, 1080x1620px",
+    "Luxury {category} packaging concept. Full spread: (1) product with lid, label visible, (2) outer gift box: embossed pattern, gold logo, magnetic closure, (3) tissue with subtle watermark, (4) satin ribbon with monogram, (5) brand card gold foil, (6) sustainable fill. On marble with gold foil, pearls, dried petals. Soft directional lighting, metallic reflections. Premium presentation, 1080x1620px",
     "Premium packaging showcase. {product} in gift box open, tissue, ribbon, brand card, luxury unboxing. Professional photography, 1080x1080px",
     "{category} packaging concept on white. Multiple angles, clean presentation, design mockup, 1080x1080px"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "1:1",
   "composition_rules": {

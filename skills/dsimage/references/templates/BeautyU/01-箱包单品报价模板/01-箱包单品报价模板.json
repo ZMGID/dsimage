@@ -1,21 +1,8 @@
 {
   "id": "箱包单品报价模板",
   "name": "箱包单品报价模板",
-  "template_type": "style",
+  "lock": "rules",
   "template_meta": {
-    "language": "图内文字默认葡萄牙语（巴西）；品名、价格、币种、货号、规格、颜色和卖点必须使用用户确认的数据",
-    "brand": {
-      "background": "#F3F3F3",
-      "paper_white": "#FFFFFF",
-      "text": "#111111",
-      "secondary_text": "#3A3A3A",
-      "accent": "#D6B77A",
-      "functional_accent": "#52B3AA",
-      "dark_background": "#151515",
-      "inverse_text": "#FFFFFF",
-      "font": "Montserrat 字体家族，全套仅使用 Black、SemiBold、Regular 三种字重",
-      "tone": "专业、商务、高级、简洁、产品主导、有销售力"
-    },
     "style_source": "以甲方确认的《箱包产品主图风格四》9 页为主视觉基准，并兼容单品报价信息；固定产品总览→收纳→容量→背负→旅行→防盗→细节→商务场景→颜色报价的叙事顺序"
   },
   "keywords": [
@@ -60,6 +47,7 @@
         "slot": "H1",
         "purpose": "风格四产品总览兼报价主图",
         "scene": "01-hero-image.json",
+        "example": "h1.png",
         "ratio": "1:1",
         "overrides": {
           "layout": "顶部居中品牌+品名+副标题；下方固定 3 个黑底圆角功能标签（白字+青绿细线图标）",
@@ -164,8 +152,8 @@
     "H1–H9 按 pack 全出，禁止因缺参数跳槽或静默换成无关页面；假设用到的价格、SKU、容量、功能写进汇报",
     "按 H1 产品总览、H2 收纳、H3 容量、H4 背负、H5 旅行、H6 防盗、H7 细节、H8 商务场景、H9 配色报价的固定顺序读取 pack；用户指定页数或比例时覆盖默认，但保留所选槽位的风格四构图",
     "建立并原样复用 style_lock，锁定品牌 hex、Montserrat 字体、标题位置、产品占比、黑色功能标签、青绿色功能图标与引导线、金色品质/报价信息以及深色页面节奏",
-    "每张图完整读取所引用情景，将情景 prompt_template 骨架 → 应用槽位 overrides 覆盖情景默认 → 叠加产品参考图、已给参数或本次假设、品牌参数和 text_rules，拼成独立 Prompt；每张明确产品占比、留白、文字位置、镜头角度和否定清单，禁止 H2/H3 互换或用角度网格替代 H9",
-    "H1–H9 Prompt 与 jobs.json 按 SKILL「落盘」写入 generated-images/_prompts/<slug>/（批量则 {名}-成图/_prompts/{品}/），禁止写进源品文件夹或成图文件夹。有 API：对该 jobs.json 跑 scripts/gen_image.py --batch，--image 按 SKILL「源图文件名」选参考（背面槽位用文件名含背面/back 的图，正面槽用主图/正面），size 用槽位 ratio（写成 1:1，不要写 1024x1024 或 2048x2048），失败加 --skip-existing 只补缺的。Codex/宿主原生生图：按 SKILL「子代理并行」立刻派发，每槽位一个、同时最多 4 路，成图落到该品成图目录（h1.png…）。generation 用本模板 1k/png/high，不要从情景抄 2k；没有背面/人物参考仍出 H4–H8，不跳槽；接口返回多大就保存多大，禁止本地升采样",
+    "每张图完整读取所引用情景，将情景 prompt_template 骨架 → 应用槽位 overrides 覆盖情景默认 → 叠加本模板 brand / text_rules / generation（覆盖情景同名）以及产品参考图、已给参数或本次假设，拼成独立 Prompt；不要跟情景折中。每张明确产品占比、留白、文字位置、镜头角度和否定清单，禁止 H2/H3 互换或用角度网格替代 H9",
+    "H1–H9 Prompt 与 jobs.json 按 SKILL「落盘」写入 generated-images/_prompts/<slug>/（批量则 {名}-成图/_prompts/{品}/），禁止写进源品文件夹或成图文件夹。有 API：对该 jobs.json 跑 scripts/gen_image.py --batch，--image 按 SKILL「源图文件名」选参考（背面槽位用文件名含背面/back 的图，正面槽用主图/正面），size 用槽位 ratio（写成 1:1，不要写 1024x1024 或 2048x2048），失败加 --skip-existing 只补缺的。Codex/宿主原生生图：按 SKILL「子代理并行」立刻派发，每槽位一个、同时最多 4 路，成图落到该品成图目录（h1.png…）。generation / 语言 / brand 用 要求.json（本模板没另写）；没有背面/人物参考仍出 H4–H8，不跳槽；接口返回多大就保存多大，禁止本地升采样",
     "将每张成图放大至 200%，逐项核对产品轮廓、口袋、Logo、拉片是否出现虚构刻字、五金、肩带、功能证据、葡语重音、价格、币种、SKU、尺寸和颜色，并与风格四对应页检查标题层级、产品占比、图标数量和深浅页面节奏",
     "输出按 H1-H9 排序的 PNG 路径，并列出本次价格/SKU/容量/功能假设；用户要求 PDF 时再按相同顺序合并，不改变页面比例、色彩或页面顺序"
   ],
@@ -178,11 +166,6 @@
     "葡语、价格、货号或配色和用户给的不一致（给了的按用户原文；没给的按假设出图并在汇报里标明；金色只用于品质/配色/SKU/价格，青绿色只用于功能信息）",
     "把成图强制升到 2k 或写成 2048 像素（按接口原图保存；size 只用 1:1 比例）"
   ],
-  "generation": {
-    "resolution": "1k",
-    "format": "png",
-    "quality": "high"
-  },
   "examples": [
     "Campaign Style Lock: consistent BEAUTY&U Style Four premium bag quotation system across the entire image set; fixed palette #F3F3F3 light background, #FFFFFF paper white, #111111 primary text, #3A3A3A secondary text, #D6B77A premium and price accent, #52B3AA functional accent, #151515 dark detail background, and #FFFFFF inverse text; Montserrat font family only using Black, SemiBold, and Regular weights; fixed Style Four page rhythm of bold uppercase headlines, centered hero hierarchy or disciplined left copy column, black rounded feature pills with thin teal icons, 2-3px teal callout lines, gold premium emphasis, restrained short body copy, realistic neutral-cool product lighting, stable product scale and exact identity, clearly visible fabric weave, stitching, logo, pockets, zippers, straps, and hardware; gold only for premium, color, SKU, and price information; teal only for functional icons, arrows, and callouts; preserve the fixed H1-H9 narrative order; do not replace a required feature page with an unrelated flat lay, angle grid, or generic scene; no palette drift, mixed fonts, or inconsistent product structure. E-commerce Style Four H1 hero quotation cover, square 1:1. Preserve the exact supplied backpack identity, pocket geometry, stitching, logo, straps, zipper pulls, hardware and color. Use #F3F3F3 background and neutral-cool studio lighting. Center the brand at top, the confirmed product name below in 42pt Montserrat Black #111111, and one confirmed subtitle in 16pt #3A3A3A. Place exactly three #151515 rounded feature pills with #52B3AA thin-line icons and confirmed short labels below the subtitle. Center the front-facing slight 3/4 bag below, occupying 56% of the canvas with a grounded shadow. Place one compact #151515 price block with a 3px #D6B77A line at the lower-left without covering the bag, using the user price or a placeholder quote if none was given. Do not use a left-copy/right-product split, props, hands, invented claims, invented price, fake logo, gradients, watermark, extra text, or altered hardware.",
     "[开头原样复制本模板 style_lock 字段全文，再接正文] Style Four H7 premium detail page, square 1:1, #151515 background. Render DETALHES at 32pt Montserrat Black #FFFFFF and PREMIUM at 48pt #D6B77A as a fixed centered two-level heading. Create a 2x2 rounded grid using four macro crops derived from the supplied product reference: confirmed zipper hardware, padded handle, exact readable logo with stitching, and confirmed side pocket or finish detail. Each cell ends with a #151515 label strip, one #52B3AA thin-line icon and one confirmed Portuguese label in #FFFFFF. Preserve plain unbranded zipper pulls when the reference shows no engraving. No invented materials, reinforced-stitching claims, fake logo, extra hardware, hands, watermark, gradients, unreadable text, or overexposed metal.",

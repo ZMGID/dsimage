@@ -61,11 +61,10 @@
     "automotive": "vehicle before/after detailing"
   },
   "examples": [
-    "Cinematic before/after {category} transformation. Left: moody lighting showing {before}, cool tone. Right: bright golden hour showing {after}, warm tone. Center: decorative frame with product. Bottom: comparison data grid. Premium campaign layout, 8K, 1080x1620px",
+    "Cinematic before/after {category} transformation. Left: moody lighting showing {before}, cool tone. Right: bright golden hour showing {after}, warm tone. Center: decorative frame with product. Bottom: comparison data grid. Premium campaign layout, 1080x1620px",
     "Premium before/after comparison. Left: {before_state}, caption 'Before'. Right: {after_state}, caption 'After'. Gold divider with arrow. Bottom: progress metrics {data}. Product thumbnail. Clean clinical aesthetic, 1080x1080px",
     "{category} comparison visualization. Split: {before_state} left, {after_state} right. Key metrics below. White background, professional style, 1080x1080px"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "1:1",
   "composition_rules": {

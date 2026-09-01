@@ -25,7 +25,7 @@
     "lighting": "natural {time_of_day} light",
     "composition": "{composition_style}",
     "mood": "{mood_description}",
-    "quality": "8K, editorial lifestyle photography"
+    "quality": "editorial lifestyle photography"
   },
   "defaults": {
     "setting": "modern living space, clean and organized",
@@ -75,11 +75,10 @@
     "home": "styled room interior, product naturally placed"
   },
   "examples": [
-    "{product} naturally placed in {scene}, morning sunlight through window, botanical touches, warm atmosphere, professional lifestyle photography, 8K",
-    "Cinematic luxury interior with marble walls and gold fixtures. {product} prominently displayed. Morning sunlight through frosted glass. Fresh flowers. Cinematic depth of field, warm color grading, 8K",
+    "{product} naturally placed in {scene}, morning sunlight through window, botanical touches, warm atmosphere, professional lifestyle photography",
+    "Cinematic luxury interior with marble walls and gold fixtures. {product} prominently displayed. Morning sunlight through frosted glass. Fresh flowers. Cinematic depth of field, warm color grading",
     "{product} in cozy setting, warm ambient lighting, soft textiles, golden hour tones, lifestyle photography, authentic atmosphere"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "4:5",
   "composition_rules": {

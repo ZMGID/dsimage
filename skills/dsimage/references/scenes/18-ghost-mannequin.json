@@ -26,7 +26,7 @@
     "details": "natural shoulder slope, bust/chest contour, waist curve visible",
     "background": "clean white or soft gray gradient",
     "lighting": "three-point studio setup, gentle dimension",
-    "quality": "8K, fashion e-commerce standard photography"
+    "quality": "fashion e-commerce standard photography"
   },
   "defaults": {
     "form": "natural body contours - shoulders, bust, waist",
@@ -70,10 +70,9 @@
     "activewear": "compression fit showing body contour, moisture-wicking fabric texture, logo placement"
   },
   "examples": [
-    "Ghost mannequin photography. {product} on invisible mannequin, natural body contours visible. Fabric drapes naturally showing material weight. Pure white background. Soft studio lighting, 8K, fashion e-commerce standard",
-    "Premium ghost mannequin photography. {product} on invisible mannequin, garment partially open revealing inner lining. Background: soft warm gray gradient. Three-point studio lighting, Phase One quality, 8K"
+    "Ghost mannequin photography. {product} on invisible mannequin, natural body contours visible. Fabric drapes naturally showing material weight. Pure white background. Soft studio lighting, fashion e-commerce standard",
+    "Premium ghost mannequin photography. {product} on invisible mannequin, garment partially open revealing inner lining. Background: soft warm gray gradient. Three-point studio lighting, Phase One quality"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "2:3",
   "composition_rules": {

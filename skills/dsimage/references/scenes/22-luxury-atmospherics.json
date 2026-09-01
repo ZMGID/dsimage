@@ -31,7 +31,7 @@
     "atmosphere": "wisps of smoke, floating petals, light particles",
     "lighting": "dramatic rim light + cool ambient fill",
     "background": "infinite dark void with subtle gradient",
-    "quality": "8K, award-winning luxury advertising photography"
+    "quality": "award-winning luxury advertising photography"
   },
   "defaults": {
     "surface": "polished obsidian or black marble platform",
@@ -74,10 +74,9 @@
     "watch": "sharp metallic reflections, precise time visible, ice-blue or golden accent"
   },
   "examples": [
-    "Luxury product photography with atmospheric effects. {product} on polished dark surface, surrounded by wisps of purple-blue smoke. Dramatic rim light. Deep black background. 8K, cinematic quality",
-    "Premium atmospheric product rendering. {product} on black marble veined with gold. Floating flower petals and gold leaf particles. Multi-point lighting: golden rim light + cool backlight. Dark void background, 8K"
+    "Luxury product photography with atmospheric effects. {product} on polished dark surface, surrounded by wisps of purple-blue smoke. Dramatic rim light. Deep black background. cinematic quality",
+    "Premium atmospheric product rendering. {product} on black marble veined with gold. Floating flower petals and gold leaf particles. Multi-point lighting: golden rim light + cool backlight. Dark void background"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "4:5",
   "composition_rules": {

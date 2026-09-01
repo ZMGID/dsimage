@@ -28,7 +28,7 @@
     "arrangement": "vertical stack with increasing spacing",
     "background": "clean light gray or white",
     "labels": "thin leader lines to callout labels with name and key spec",
-    "quality": "8K, technical illustration, precise component rendering"
+    "quality": "technical illustration, precise component rendering"
   },
   "defaults": {
     "arrangement": "vertical exploded stack",
@@ -75,10 +75,9 @@
     "camera": "show lens elements, sensor, image processor, stabilization unit"
   },
   "examples": [
-    "Product exploded view. {product} disassembled into 5 components floating in mid-air with spacing, arranged vertically. Clean light gray background. Soft shadows beneath each part. Technical illustration style, 8K, no text",
-    "{product} technical exploded view infographic. Components floating in isometric arrangement with thin connecting lines. Each component labeled with name and key spec. Clean white background, blueprint-inspired accent lines, 8K"
+    "Product exploded view. {product} disassembled into 5 components floating in mid-air with spacing, arranged vertically. Clean light gray background. Soft shadows beneath each part. Technical illustration style, no text",
+    "{product} technical exploded view infographic. Components floating in isometric arrangement with thin connecting lines. Each component labeled with name and key spec. Clean white background, blueprint-inspired accent lines"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "16:9",
   "composition_rules": {

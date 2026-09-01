@@ -1,6 +1,6 @@
 ---
 name: dsimage
-description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets using 26 shooting scenes, with Campaign Style Lock for visual consistency. Generates via Codex built-in imagegen or a configured OpenAI-compatible image API. Also builds reusable client templates from brand materials — style templates (rules) and replace templates (swap the product in a locked master set). Use when the user says 使用 dsimage / 使用dsimage / dsimage, or asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or 制作模板 / 创建模板 / 使用 dsimage 模板 / 替换模板 / 换品.
+description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets using 26 shooting scenes, with Campaign Style Lock for visual consistency. Generates via Codex built-in imagegen or a configured OpenAI-compatible image API. Also builds reusable client templates from brand materials. A template has one lock: rules (generate from brand rules) or master (swap the product onto a locked page set). Use when the user says 使用 dsimage / 使用dsimage / dsimage, or asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or 制作模板 / 创建模板 / 使用 dsimage 模板 / 替换模板 / 换品 / 换货.
 ---
 
 # dsimage Skill
@@ -20,7 +20,7 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 
 用户心里通常已经有成品长什么样，只是没把做法说全。职责不是让用户学两套模板名，而是**从材料和措辞里确定怎么干，用白话跟他确认，再做成他要的那种。** 已经够清楚就直接干；会走错路才问，问的时候先说出你判断他想要的结果。
 
-内部仍是换品（替换模板）或按感觉新画（风格/情景）。对用户只谈结果，不甩术语。
+内部看命中模板的 `lock`：`master` = 对着母版换货；`rules` = 按品牌规则画（或只用情景）。对用户只谈结果（换货 vs 按感觉新画），不要让用户挑两种模板。
 
 | 用户要的结果 | 怎么干 |
 |---|---|
@@ -31,11 +31,11 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 
 已经够清楚就直接做，不要为问而问：
 
-- 已点名「替换模板：某某 / 只换产品 / 版式别动 / 一模一样 / 各型号统一」→ 换品
-- 已点名「用某某风格模板 / 按这个调性、感觉、规范来 / 参考这个配色」且材料是 PDF、色板、情绪板，不是成套成品主图 → 按感觉新画
-- 只有产品图，没有「标准套图 / 成品主图 / 样板页」→ 按感觉新画（默认电商模板或情景）。可提一句：以后要铺很多型号、要长得一样，可以再把定稿套图做成换品模板
-- 已命中已登记的替换模板名称 → 换品
-- 已命中已登记的风格模板名称，且没有另给一套成品主图 → 按该风格模板画
+- 已点名「替换模板：某某 / 只换产品 / 版式别动 / 一模一样 / 各型号统一」→ 换货（找 `lock=master` 的模板；库里没有则说明，不要假装在换）
+- 已点名「用某某模板 / 按这个调性、感觉、规范来 / 参考这个配色」且材料是 PDF、色板、情绪板，不是成套成品主图 → 按规则画
+- 只有产品图，没有「标准套图 / 成品主图 / 样板页」→ 按规则画（默认电商模板或情景）。可提一句：以后要铺很多型号、要长得一样，可以把定稿套图做成带母版的模板
+- 已命中已登记的模板，且 JSON 里 `lock=master` → 换货
+- 已命中已登记的模板，且 `lock=rules`（或不写），没有另给一套成品主图 → 按该模板规则画
 
 ### 什么时候必须问（除非用户已经说死）
 
@@ -51,7 +51,7 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 ```
 
 **2. 一个大文件夹、每个子文件夹一个型号，同时给了一套样板图**  
-这不是「每个型号各自按风格新画一套」（那样每款版式会对不齐）。正确做法是：**同一套样板当母版，每个型号单独换一次货**——H1 还是那张版式，只是袋子换成该型号。源文件夹有几个型号子文件夹，就出几套成图，版式同一套。用户只点了其中几个子文件夹就只做那几个。问一句：是不是每个型号都套这套样板、只换货。
+这不是「每个型号各自按规则新画一套」（那样每款版式会对不齐）。正确做法是：**同一套样板当母版，每个型号单独换一次货**——H1 还是那张版式，只是袋子换成该型号。源文件夹有几个型号子文件夹，就出几套成图，版式同一套。用户只点了其中几个子文件夹就只做那几个。问一句：是不是每个型号都套这套样板、只换货。
 
 **3. 「做成和这个一样 / 不要走样 / 统一版式」**  
 就是换品。再确认字要不要换成新货号/价格；没说则整页冻住。
@@ -66,52 +66,64 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 这是出几张、什么比例，不是换品/新画。先澄清坑位；若同时又给了成品套图，再走第 1 条。
 
 **7. 只给成品套图，没有新产品图**  
-这是建模板，不是出图。问：登记成以后换货用的母版（推荐，若还要铺型号），还是提炼成风格规则以后重画。然后读 `CREATE_TEMPLATE.md`。
+这是建模板，不是出图。问：登记成以后换货用的母版（推荐，若还要铺型号）→ `lock=master`，还是提炼成规则以后重画 → `lock=rules`。然后读 `CREATE_TEMPLATE.md`：先建文件夹，把这些成品页拷进去，再写 JSON。缺页不要写成 `lock=master`。
 
-**8. 刚用风格模板出完一套，又丢来新型号说「也出一套」**  
-问：用刚出的图当母版换品（各型号更像），还是继续按风格再画（会有差别）。用户说要统一 → 把本轮成图建成替换模板再换货。
+**8. 刚按规则出完一套，又丢来新型号说「也出一套」**  
+问：用刚出的图当母版换货（各型号更像），还是继续按规则再画（会有差别）。用户说要统一 → 把本轮成图建成 `lock=master` 的模板再换货。
 
 **9. 换品路上用户又说「字大一点 / 改版式 / H5 别那样」**  
 那是改母版或改风格，不是这一次换货能顺手做的。先问：只改这一款，还是改母版让以后都变。
 
 ### 问的时候遵守
 
-- 一次只问会做歪的那一点（是不是锁这套版只换货；字改不改）。不要让用户从菜单里挑模板类型。
+- 一次只问会做歪的那一点（是不是锁这套版只换货；字改不改）。不要让用户从菜单里挑模板种类。
 - 用户含糊（「你看着办」「整好看就行」）→ 按你判断的那种结果做，汇报里写明：我按版式不动只换货做的（或按感觉新画）。
 - 用户两种都要（先定一版再铺型号）→ 先画出他要的那一版，再拿成图当母版铺其余型号；说明顺序，不要两套做法叠在同一张图上。
 
 ### 开做前问一句要求（路已经对齐之后）
 
-做法定了、还没写 Prompt / 还没调生图时，**固定问一轮**：还有没有要求。用户心里常有没说出口的细节（改货号、只要某几页、某个型号先不做、文字语言、不要改价）。
+做法定了、还没写 Prompt / 还没调生图时，**先把匹配前 3 名给用户看**，再问还有没有要求。用户心里常有没说出口的细节（改货号、只要某几页、某个型号先不做、文字语言、不要改价）。
 
-已经在本轮说清了全部要求（改哪些字、做哪些型号、几页）→ 不要再问，直接做。
+已经在本轮说清了全部要求、并且点名的模板已命中第 1 名 → 仍要展示排名（让他看见将用的模板和场景），问法可以更短，不要再让他从菜单里挑类型。
 
-问法短、开口，不要变成问卷：
+把 `match_pack.py` 的 stdout 放在前面，末尾保留下面这句（脚本已带）：
 
 ```text
-按「版式不动、只换商品」来做（或：按某某风格出全套）。开始前还有没有要求？比如货号/价格要不要改、只要某几页、某个型号先不出。没有我就按默认开做——没点名的字和版式都不动。
+回 1 / 2 / 3 换方案。还有没有要求（货号、只要某几页、某个型号先不出）？没有就按第 1 个开做。
 ```
 
-用户说「没有 / 先出 / 你看着办」→ 立即开做，默认：换品则字和版式全冻；风格则缺的参数按假设，汇报里列出。不要因为这一问空等。
+用户说「没有 / 先出 / 你看着办 / 1」→ 立即按第 1 名开做。说 2 或 3 → 改用该名次的模板和场景。默认：换货则字和版式全冻；按规则画则缺的参数按假设，汇报里列出。不要因为这一问空等。
 
 ---
 
 ## 核心流程
 
-**本 Skill 只规定通用流程。动手前先走「意图引导」：材料或措辞含糊时，用白话问清是换品还是按感觉新画，不要让用户自己猜两种模板的区别。** 命中风格模板或情景时，具体怎么拍以命中的情景文件为准。命中替换模板时走「替换模板」，不要按情景重画。
+**本 Skill 只规定通用流程。动手前先走「意图引导」：材料或措辞含糊时，用白话问清是换货还是按规则画。** 命中 `lock=master` 时走「换货」，不要按情景重画。
 
-1. 先走「意图引导」，再按匹配表找情景或模板。开口带「替换模板 / 按样图换货 / 只换产品」→ 替换模板；「使用 dsimage 模板：某某」且该模板在替换模板匹配表 → 同样走替换。路对齐后、开做前按「开做前问一句要求」问还有没有要求（本轮已说清则跳过）。
-2. **风格模板 / 情景**：完整读取命中的情景文件，之后按情景执行 `composition_rules` / `text_rules` / `pitfalls` / `anti_ai_tips`。模板若在甲方文件夹里，先读该文件夹的 `要求.json`（语言、分辨率、格式、风格），再读模板 JSON。零散模板（直接放在 `templates/` 根目录）没有 `要求.json`，只读它自己。**替换模板**：读取该模板 JSON + 同名文件夹母版套图，走「替换模板」节；不要加载情景、不要建 Style Lock 去重画。
-3. 价格、尺寸、卖点、文案等缺了先问一轮；用户不补或说先出图，则按合理假设继续，槽位不跳过。**替换模板例外**：未点名的字不改、不问卖点文案；只问 `editable_fields` 里本轮要换的值，以及缺的产品角度。产品外形以参考图为准。**源图文件名要参与生图**（见「源图文件名」）：型号、哪张当正面/背面参考，都从文件名读。认证/评分/销量不要写成已核实事实，可用示意占位。
-4. 多图任务（风格/情景）：先建立 **Campaign Style Lock**（见下文），原样放进每张 Prompt 开头。替换模板不要建 Style Lock。一品多色先锁主色（见「一品多色」），其他颜色不要在套图里反复出现。
-5. 风格商品/营销任务：先做**转化驱动力诊断**（见下文）。替换模板跳过。
-6. 逐张写 Prompt：风格任务 = Style Lock → 情景 `prompt_template` 骨架 → 按需 `variants` / `category_tips` → 通用规则收尾。替换任务 = 「替换模板」里的换货指令，不要套情景骨架。
-7. Generate 模式：按下方**出图通道**选路；用户提供了产品图必须带上参考图。替换模板每槽必须带**母版 + 产品图**两张参考（`jobs.json` 的 `image` 为数组，先母版后产品）。走脚本时多图用 `--batch`；走 Codex/宿主原生生图时多图**积极派子代理并行**（见「多图执行规则」）。用户丢来「大文件夹 + 每子文件夹一个品」时，按「批量品目录」落盘，不要写进源文件夹。Prompt / `jobs.json` 按「落盘」进 `_prompts/`，禁止写进源品文件夹或成图文件夹。**命令参数优先级**：用户显式指定 > 命中模板 JSON 的 `generation` / 槽位 `ratio` > 甲方文件夹里 `要求.json` 的 `generation` / `language` / `style`（零散模板没有这一层）> 情景 `generation` / `default_ratio`。`--size` 用比例（`1:1`），不要写死 `1024x1024` 或 `2048x2048`。未特别要求 2k 时用甲方或模板默认 `1k`，不要从情景抄 `2k`。接口返回多大就保存多大，禁止本地升采样。
-8. 出图后按对应 pitfalls + 下方 QA 清单检查，返回文件路径和关键假设。替换模板对照母版查：未点名的字/图标/版式是否被改。
+**模板大于情景。** 命中 `lock=rules` 的模板时，情景只提供拍法骨架和缺省数值。模板里写了的，一律用模板，不要跟情景折中，也不要为迁就这一套图去改情景。只命中情景、没有模板时，才以情景为准。
+
+| 高 → 低 | 听谁 | 管什么 |
+|---|---|---|
+| 1 | 用户本轮 | 数量、比例、删槽、文案、货号、点名要改的字 |
+| 2 | 模板 JSON | `pack`（含槽位 `ratio` / `purpose` / `overrides`）、`text_rules`、`style_lock`、`template_meta.brand`、`generation`、语言、该模板 `pitfalls` |
+| 3 | 本文件夹 `要求.json` | 仅当该模板文件夹名在它的 `templates` 里：语言、分辨率、格式、风格、brand |
+| 4 | 所引情景 | `prompt_template` 骨架；模板没覆盖的 `composition_rules` / `text_rules` / `default_ratio` / `generation`；`pitfalls` / `anti_ai_tips` |
+| 5 | SKILL / 脚本 | 上面都没有时 |
+
+同名字段直接覆盖，不要平均、不要各用一半。槽位 `overrides` 只作用于该槽。
+
+1. 先走「意图引导」，再跑匹配。开口带「替换模板 / 按样图换货 / 只换产品」→ 按换货意图匹配；「使用 dsimage 模板：某某」按模板名匹配，再看该 JSON 的 `lock`。**每次出图前**执行 `python scripts/match_pack.py --query "<用户原话>"`（见「匹配与展示」），把前 3 名原样给用户看，第 1 个最优。采用第 1 名的模板和它列出的场景。点名不在库里时脚本会说明，**按它给出的前 3 名走，不要改成白底主图充数。** 展示排名时一并问还有没有要求（本轮已说清则只展示排名、按第 1 个做）。
+2. **`lock=rules`**：模板在甲方文件夹里时，先读 `要求.json`，确认该模板文件夹名在 `templates` 里，再读模板 JSON；不在列表里就停下，不要拿这份要求套别的文件。零散模板只读它自己。打开该文件夹里的示例图，对照版式和调性再写 Prompt。然后读该槽引用的情景。Prompt = 情景 `prompt_template` 骨架 → 模板 `style_lock` / brand / `text_rules`（brand / 语言 / generation 模板没写则用 `要求.json`）→ 该槽 `overrides` 覆盖情景默认。情景与模板同名字段用模板的；情景 `pitfalls` / `anti_ai_tips` 仍要查，和模板冲突时听模板。只命中情景、没有模板时，才整份按情景执行。生图参考图用用户产品图，不要把示例图塞进 `--image` 当母版。**`lock=master`**：读取该模板 JSON + 同文件夹里的母版套图，走「换货」节；有甲方则同样先核对 `要求.json` 的 `templates`。缺母版就停下。不要加载情景、不要建 Style Lock 去重画。
+3. 价格、尺寸、卖点、文案等缺了先问一轮；用户不补或说先出图，则按合理假设继续，槽位不跳过。**换货例外**：未点名的字不改、不问卖点文案；只问 `editable_fields` 里本轮要换的值，以及缺的产品角度。产品外形以参考图为准。**源图文件名要参与生图**（见「源图文件名」）：型号、哪张当正面/背面参考，都从文件名读。认证/评分/销量不要写成已核实事实，可用示意占位。
+4. 多图任务（`lock=rules` / 情景）：先建立 **Campaign Style Lock**（见下文），原样放进每张 Prompt 开头。`lock=master` 不要建 Style Lock。一品多色先锁主色（见「一品多色」），其他颜色不要在套图里反复出现。
+5. `lock=rules` 的商品/营销任务：先做**转化驱动力诊断**（见下文）。换货跳过。
+6. 逐张写 Prompt：`lock=rules` = 模板 Style Lock → 情景 `prompt_template` 骨架 → 该槽 `overrides` 覆盖情景默认 → 按需 `variants` / `category_tips` → 通用规则收尾。换货 = 「换货」里的指令，不要套情景骨架。
+7. Generate 模式：按下方**出图通道**选路；用户提供了产品图必须带上参考图。`lock=master` 每槽必须带**母版 + 产品图**两张参考（`jobs.json` 的 `image` 为数组，先母版后产品）。走脚本时多图用 `--batch`；走 Codex/宿主原生生图时多图**积极派子代理并行**（见「多图执行规则」）。用户丢来「大文件夹 + 每子文件夹一个品」时，按「批量品目录」落盘，不要写进源文件夹。Prompt / `jobs.json` 按「落盘」进 `_prompts/`，禁止写进源品文件夹或成图文件夹。**命令参数与 Prompt 字段同一套优先级**（见上方「模板大于情景」）。`--size` 用比例（`1:1`），不要写死 `1024x1024` 或 `2048x2048`。未特别要求 2k 时用甲方或模板默认 `1k`，不要从情景抄 `2k`。接口返回多大就保存多大，禁止本地升采样。
+8. 出图后按对应 pitfalls + 下方 QA 清单检查，返回文件路径和关键假设。换货对照母版查：未点名的字/图标/版式是否被改。
 9. **一套品出完必须收口**（本轮已经在建/改模板则跳过）：
-   - 本轮套的是**替换模板** → 问：「母版要不要对照刚出的图换一张？」说要 → 只换该槽母版图或 `product_ref` / `editable_fields`，不要改成风格模板、不要走 CREATE_TEMPLATE 新建。
-   - 本轮套的是**定制风格模板**（不是「默认电商模板」）→ 问：「这套要不要对照刚出的图改一下这个模板？」说要 → 按「坑跟谁走」改该模板的槽位 `overrides` / `pitfalls`，**不要再走 CREATE_TEMPLATE 新建**。若用户说「以后别的型号要长得一模一样」→ 转 CREATE_TEMPLATE 建**替换模板**，本轮成图当母版。
-   - 本轮只用了情景或默认电商模板 → 问：「这类货以后还要反复出的话，要不要用这次的图和版式建一个模板？」说要 / 好 / 建 → **立刻读 `CREATE_TEMPLATE.md`**，先问风格模板还是替换模板（铺型号、要像素级一致 → 替换；还没有定稿套图 → 风格）。本轮成图、Prompt、产品图和已给信息当作检查点 1 的素材。
+   - 本轮套的是 **`lock=master`** → 问：「母版要不要对照刚出的图换一张？」说要 → 只换该槽母版图或 `product_ref` / `editable_fields`，不要改成 `lock=rules`、不要走 CREATE_TEMPLATE 新建。
+   - 本轮套的是**定制模板且 `lock=rules`**（不是「默认电商模板」）→ 问：「这套要不要对照刚出的图改一下这个模板？」说要 → 按「坑跟谁走」改该模板的槽位 `overrides` / `pitfalls`，**不要再走 CREATE_TEMPLATE 新建**。若用户说「以后别的型号要长得一模一样」→ 转 CREATE_TEMPLATE：建新文件夹，**把本轮成图整套拷进去当母版**，写成 `lock=master`。
+   - 本轮只用了情景或默认电商模板 → 问：「这类货以后还要反复出的话，要不要用这次的图和版式建一个模板？」说要 / 好 / 建 → **立刻读 `CREATE_TEMPLATE.md`**，先定 `lock`（铺型号、要像素级一致 → `master`，本轮成图拷进模板夹当母版；还没有定稿套图 → `rules`，至少把本轮 H1 拷进去当示例）。本轮成图、Prompt、产品图和已给信息当作检查点 1 的素材。不要只写 JSON 不拷图。
    - 用户说不用则结束。
 
 ---
@@ -164,7 +176,7 @@ python scripts/gen_image.py --batch generated-images/_prompts/<slug>/jobs.json
 
 - 按 `IMG_PROVIDER` / 模型名走对应协议：OpenAI 同步（像素尺寸）；Grok 官方 JSON（`aspect_ratio` + `resolution`，参考图走 `/images/edits` JSON 而非 multipart）；Gemini 官方 `generateContent`（`x-goog-api-key`）；URL 含 `apimart` → 异步轮询
 - **带参考图时**：OpenAI 走 multipart `/images/edits`；Grok 走 JSON `/images/edits`；Gemini 把原图作为 `inline_data` 一并提交。原图真实交给模型，不要只把路径写进 Prompt
-- `--image`：参考图路径，可重复传入。风格模板通常一张产品图；**替换模板必须先母版后产品图**（`jobs.json` 里 `image` 用数组）
+- `--image`：参考图路径，可重复传入。`lock=rules` 通常一张产品图；**`lock=master` 必须先母版后产品图**（`jobs.json` 里 `image` 用数组）
 - **批量模式**：默认并发 8，碰到 429/超时自动降到 4→2→1 只重跑失败槽位；输出按槽位命名（`h1.png`、`h2.png`…）；部分槽位最终失败时其余照常产出、退出码 1；加 `--skip-existing` 重跑同一命令即可只补失败的槽位
 - 其他参数：`--output-dir`、`--poll-interval`、`--timeout`（同步图生图 300s；异步 1k/2k 默认 180，4k 默认 480）、`--format`、`--quality`、`--n`、`--concurrency`
 
@@ -174,21 +186,48 @@ python scripts/gen_image.py --batch generated-images/_prompts/<slug>/jobs.json
 
 ## 情景系统
 
-`references/scenes/` 下 26 个内置情景（01-26，通用拍法）。模板**不必**都建文件夹：零散的 JSON 直接放 `templates/` 根目录；同一甲方多个品、要求差不多，才建甲方文件夹。
+`references/scenes/` 下 26 个内置情景（01-26，通用拍法）。
+
+**存放：一个模板一个文件夹。** JSON 和图都在这个文件夹里，整夹复制就能分享或挪位置。匹配看 JSON 里的名字和触发词，不看路径有几层。不要把产品图或成图塞进模板库。
 
 ```text
 references/templates/
-  01-默认电商模板.json          # 零散，不建文件夹
-  BeautyU/                      # 有甲方才建
-    要求.json                   # 语言、分辨率、格式、风格
-    风格/01-箱包单品报价模板.json
-    替换/
+  01-默认电商模板/
+    01-默认电商模板.json
+    h1.png                          # lock=rules 至少一张示例
+  NN-中文名/
+    NN-中文名.json
+    h1.png                          # 有图就和 JSON 放一起
+  BeautyU/                          # 同一甲方多个品才建
+    要求.json                       # templates 列出下面的文件夹名
+    01-箱包单品报价模板/
+      01-箱包单品报价模板.json
+      h1.png
 ```
 
-- `template_type: style`：品牌规则 + pack 引用情景。甲方文件夹里放在 `风格/`。
-- `template_type: replace`：JSON 换货说明书 + **同名文件夹里的母版套图**。甲方文件夹里放在 `替换/`；零散的母版文件夹和 JSON 同级。出图是在母版上换品，不是按情景再画。
+分享 / 移动时整夹走，不要只拷 JSON：
 
-字段规范见 `references/templates/_TEMPLATE_SPEC.md`。**每个情景是该类画面的完整执行规范**（仅风格路径使用），包含：
+| 要带走 | 复制哪一夹 |
+|---|---|
+| 一份零散模板 | `NN-中文名/` |
+| 某个甲方的全部模板 + 共用要求 | `{甲方}/`（含 `要求.json` 和下面每个模板夹） |
+| 甲方里的一份 | `{甲方}/NN-中文名/`。丢进另一个甲方则把文件夹名写入那边的 `templates`；丢到根下当零散，先把 `要求.json` 里的 `generation` / 语言 / brand 写进这份 JSON |
+
+拷进来之后在 SKILL.md 模板匹配表登记一行，再跑 `python scripts/check_scenes.py`。
+
+| 放哪 | 放什么 | 不放什么 |
+|---|---|---|
+| `NN-中文名/NN-中文名.json` | 这一套怎么出图（lock、pack、字规则） | 图片 |
+| `NN-中文名/` 里的图片 | **每个模板都要有。** `lock=master`：每槽母版，文件名 = pack 的 `example`。`lock=rules`：至少 1 张示例（建议 H1 / `h1.png`，该槽写 `example`），只作版式参考 | 用户产品图、成图、`要求.json` |
+| `{甲方}/要求.json` | 本文件夹里那些模板的共用语言/色板/分辨率；`templates` 列文件夹名 | 图片、pack |
+| 用户产品图 | 用户给的路径 / `data/` | 不要拷进 `templates/` |
+| 成图 | `generated-images/` 或 `{名}-成图/` | 不要写回 `templates/` |
+
+`lock=master` 出图读该文件夹里的母版；缺任何一槽母版就不要出、也不要假装是换货。`lock=rules` 出图读 JSON + 用户产品图；先看文件夹里的示例图对照版式和调性，不要把示例图当母版去换货。
+
+不要建 `风格/`、`替换/`。编号接所在目录（根目录或某个甲方文件夹）已有最大号。
+
+字段规范在 `references/templates/_TEMPLATE_SPEC.md`，**只在新建或改模板时再读**，出图不要加载。**情景是一类图的缺省拍法**（仅 `lock=rules` 使用；被模板引用时模板内容大于情景），包含：
 
 | 字段 | 含义 |
 |---|---|
@@ -232,54 +271,69 @@ references/templates/
 | 运动, 健身, sports, fitness | `25-sports-campaign.json` |
 | 箱包功能图, 背包结构, 拉杆带, 防盗袋, bag feature proof | `26-bag-feature-proof.json` |
 
-### 风格模板匹配表
+### 模板匹配表
 
 | 触发词 | 模板文件 |
 |---|---|
-| 使用 dsimage 模板：默认电商模板, 默认模板, default template, 通用电商主图, 起步套图 | `templates/01-默认电商模板.json` |
-| 使用 dsimage 模板：箱包单品报价模板, 箱包单品报价, 箱包报价表, BEAUTY&U风格, bag quote sheet, 风格四 | `templates/BeautyU/风格/01-箱包单品报价模板.json` |
+| 使用 dsimage 模板：默认电商模板, 默认模板, default template, 通用电商主图, 起步套图 | `templates/01-默认电商模板/01-默认电商模板.json` |
+| 使用 dsimage 模板：箱包单品报价模板, 箱包单品报价, 箱包报价表, BEAUTY&U风格, bag quote sheet, 风格四 | `templates/BeautyU/01-箱包单品报价模板/01-箱包单品报价模板.json` |
 
-### 替换模板匹配表
+「使用 dsimage 模板：某某」查这一张表。命中后再读 JSON 的 `lock` 决定按规则画还是换货。用户说「替换模板：某某」仍当点名，并按换货意图匹配。**只读取第 1 名方案用到的情景/模板**；模板在甲方文件夹里才再读该文件夹的 `要求.json`（先核对该模板文件夹名在 `templates` 里）。不要一次性加载全部模板。
 
-| 触发词 | 模板文件 |
-|---|---|
+### 匹配与展示
 
-「使用 dsimage 替换模板：某某」只查**替换模板匹配表**，不要拿风格模板去换品。无匹配 → 默认 `01-hero-image.json`。**只读取匹配到的情景/模板**；模板在甲方文件夹里才再读 `要求.json`。不要一次性加载全部模板。
+出图前必须跑（Windows 用 `python`，macOS/Linux 用 `python3`）：
 
-多图任务通常一次命中多个情景（如详情页 = 信息图 + 细节 + 场景的组合），每张图按其对应情景执行。替换模板按 pack 槽位执行，一张母版换一张品。
+```bash
+python scripts/match_pack.py --query "<用户原话，不要改写>"
+```
+
+脚本按触发词和 keywords 打分，**固定输出 3 名，第 1 个最优**。每一名都带将用的模板（或仅情景）以及 pack 场景清单。把 stdout **原样**给用户看，不要自己重排、不要藏备选。
+
+- 用户点名且命中 → 该模板是第 1 名；仍展示 2、3 名备选。
+- 用户没点名 → 第 1 名是自动匹配结果（全套/详情页偏向默认电商模板；小红书等单情景会排到仅情景）。
+- 用户点名但库里没有 → 脚本第一行会说明，下面仍是最接近的三个。**采用这名单的第 1 名**，不要改走 `01-hero-image.json` 充数。
+- 用户要换货但库里没有 `lock=master` 的模板 → 脚本会说明；不要假装已经在换货。
+
+多图任务通常一次命中多个情景（如详情页 = 信息图 + 细节 + 场景的组合），每张图按其对应情景执行。`lock=master` 按 pack 槽位执行，一张母版换一张品。用户回 2 或 3 则改用该名次，不要混用两套 pack。
 
 **区分任务**（先过「意图引导」，再对号）：
 
-- **用情景或风格模板出图** → 风格路径。
-- **换品 / 用替换模板出图** → 「替换模板」。
-- **制作一个模板** → 读 `CREATE_TEMPLATE.md`。对用户仍说换品母版 vs 风格规则，不要甩 `template_type`。风格缺情景可新建情景；替换不要新建情景。
+- **用情景或 `lock=rules` 的模板出图** → 按规则画。
+- **换货 / 命中 `lock=master`** → 「换货」。
+- **制作一个模板** → 读 `CREATE_TEMPLATE.md`，按那份的顺序做：定 lock → 建空文件夹 → **先拷图** → 再写 JSON → 校验登记。对用户说换货母版 vs 按规则画，不要甩两种模板名。`lock=rules` 至少一张示例（没有则先试跑 H1 再拷）；`lock=master` 齐套母版，没有就不要用这个 lock。`lock=rules` 缺情景可新建情景；`lock=master` 不要新建情景。
 
 **新建或修改情景的规范**：字段规范看 `references/scenes/_SCENE_SPEC.md`；写完跑 `python scripts/check_scenes.py` 校验，并在上方匹配表登记（校验器会检查登记，漏登记会报错）。
 
 ---
 
-## 替换模板
+## 换货（lock=master）
 
 锁的是已画好的母版套图，不是规则。每个型号对着同一套图换货，未点名的文字、图标、版式、背景保持原样。
 
 **资产**
 
+一份模板一个文件夹；JSON 和图放在一起，整夹复制即可带走母版。产品图不进这里。
+
 ```text
 # 零散
-references/templates/NN-中文名.json
-references/templates/NN-中文名/     ← 母版套图，与 JSON 同名
+references/templates/NN-中文名/
+  NN-中文名.json
+  h1.png
+  h2.png
 
 # 有甲方
-references/templates/{甲方}/替换/NN-中文名.json
-references/templates/{甲方}/替换/NN-中文名/
+references/templates/{甲方}/要求.json
+references/templates/{甲方}/NN-中文名/
+  NN-中文名.json
   h1.png
   h2.png
 ```
 
 **出图前**
 
-1. 若在甲方文件夹里，先读 `要求.json`（语言、分辨率、格式、风格）；零散模板跳过。
-2. 读 JSON 的 `pack`：每槽 `example` + `product_ref`（`front` / `back` / `side` / `detail` / `colorway`）。
+1. 若在甲方文件夹里，先读 `要求.json`，确认该模板文件夹名在 `templates` 里（语言、分辨率、格式、风格）；不在列表里就停下。零散模板跳过。
+2. 读 JSON 的 `pack`：每槽 `example` + `product_ref`（`front` / `back` / `side` / `detail` / `colorway`）。对应文件不在该文件夹里就停下，不要出图、不要改走按规则重画。
 3. 按 SKILL「源图文件名」选该品产品图。`product_ref` 对不上（要背面没有背面图）→ 问用户或跳过该槽，禁止用正面硬贴背面页。
 4. `template_meta.category` 有值且新品外形差太远（双肩包母版 vs 登机箱）→ 先问，不要硬换。
 5. 一品多色：非 `colorway` 槽只用主色产品图；其他颜色只出现在 `colorway` 槽。
@@ -306,13 +360,13 @@ Negative: do not change layout, do not invent product features, do not use a dif
 
 **出图后**
 
-对照母版检查：版式、图标数量、未点名字段、产品是否换成新货且外形跟产品参考一致。翻车沉淀到该替换模板的母版图或 `editable_fields` / pitfalls，不要写进情景。
+对照母版检查：版式、图标数量、未点名字段、产品是否换成新货且外形跟产品参考一致。翻车沉淀到该模板的母版图或 `editable_fields` / pitfalls，不要写进情景。
 
 ---
 
 ## 通用 Prompt 规则
 
-以下铁律适用于**风格模板和情景**（具体数值以情景 `composition_rules` / `text_rules` 为准）。**替换模板不要套用本节去重画**，只走「替换模板」换货指令。
+以下铁律适用于 **`lock=rules` 的模板和情景**。具体数值：模板 / 槽位 `overrides` 优先，没写才用情景 `composition_rules` / `text_rules`。**`lock=master` 不要套用本节去重画**，只走「换货」指令。
 
 1. **颜色用 hex 码**，不用形容词："白底"是淡灰，`#FFFFFF` 才是白。
 2. **产品占比和留白必须显式写出数字**，不写模型一定把画面填满。
@@ -331,14 +385,14 @@ Negative: do not change layout, do not invent product features, do not use a dif
 
 1. **选定一个主色**，整套功能图、主图、场景、细节都只用这张主色参考。用户指定优先；否则用文件名/文件夹带「主、主色」或无颜色词的那张；再不行用正面主图。汇报里写明主色是哪张。
 2. **其他颜色不要在套图里反复出现**。不要一张一个色轮着出，不要把配色散到每张生活图/细节图里。
-3. **可以有一张「各色在一起」**：模板已有配色槽（风格如 H9，替换模板 `product_ref` 为 `colorway`）就用那一张；pack 没有配色槽时风格任务可加一张合集。替换模板不要额外发明一页。
+3. **可以有一张「各色在一起」**：模板已有配色槽（`lock=rules` 如 H9，`lock=master` 的 `product_ref` 为 `colorway`）就用那一张；pack 没有配色槽时按规则画可加一张合集。换货不要额外发明一页。
 4. 用户明确要求「每个颜色出一套」时才按色分套，不要混进主色套图里。
 
 ---
 
 ## Campaign Style Lock（多图一致性）
 
-多张图必须先建 Style Lock：这是整套图的视觉合同，原样复制进每张 Prompt 开头，不能改写或缩短。**替换模板除外**：母版套图就是锁，不要另写 Style Lock。用户给了品牌规范就按品牌规范建；没给就用下面的默认锁：
+多张图必须先建 Style Lock：这是整套图的视觉合同，原样复制进每张 Prompt 开头，不能改写或缩短。**`lock=master` 除外**：母版套图就是锁，不要另写 Style Lock。模板已有 `style_lock` 则原样用，不要用情景的光线/色板改写；没给才用下面的默认锁：
 
 ```text
 Campaign Style Lock: consistent premium ecommerce visual system across the entire image set; fixed palette of clean off-white background, deep charcoal text, one product-matched accent color, and one soft secondary accent; neutral-cool studio lighting; modern geometric sans-serif headline placeholders only; consistent rounded rectangular info labels; consistent thin-line icon style; clean high-end product photography mixed with minimal infographic elements; stable product scale and placement; generous whitespace; no color palette changes, no mixed fonts, no random backgrounds, no inconsistent lighting, no mismatched icon styles.
@@ -362,7 +416,7 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 
 ## 多图执行规则
 
-命中替换模板时改走「替换模板」，下面的 Style Lock / 情景骨架不适用。
+命中 `lock=master` 时改走「换货」，下面的 Style Lock / 情景骨架不适用。
 
 1. 先建 Campaign Style Lock 并写入图片包计划。
 2. 每张图独立编号、独立用途、独立 Prompt，写入单独文件（`prompt-H1.txt`），禁止一张 Prompt 生成多屏拼图。文件按下方「落盘」放置，禁止写进源品文件夹、成图文件夹、项目根或 Skill 目录。
@@ -457,7 +511,7 @@ generated-images/
 
 1. 主会话先把全部 Prompt 文件和 `jobs.json` 写进该品 `_prompts/`（见「落盘」），并列出槽位清单（slot、prompt 路径、size、参考图、目标文件名）。
 2. **2 张及以上：立刻派平级子代理**，每槽位一个，同时最多 4 路；多出来的分波排队。1 张由主会话自己出。不要等用户说「开子代理」。
-3. 每个子代理只出自己那个槽位：从 `_prompts/` 读对应 Prompt、按源文件名选参考图、用宿主原生生图、把成图存到该品**成图目录**的 `<slot>.png`（如 `h1.png`），返回绝对路径。替换模板必须同时附上该槽母版图和产品图。沿用原 Prompt，不要改成 SVG/HTML/占位图，不要把 txt 写进成图目录，不要覆盖其他槽位的文件。
+3. 每个子代理只出自己那个槽位：从 `_prompts/` 读对应 Prompt、按源文件名选参考图、用宿主原生生图、把成图存到该品**成图目录**的 `<slot>.png`（如 `h1.png`），返回绝对路径。`lock=master` 必须同时附上该槽母版图和产品图。沿用原 Prompt，不要改成 SVG/HTML/占位图，不要把 txt 写进成图目录，不要覆盖其他槽位的文件。
 4. 用宿主的平级子代理派发（Codex Desktop 子代理、Cursor / Claude Code 的 Task 等）。已经在 Codex 会话里就派 Desktop 子代理，不要再套一层 `codex exec`。某路结束立刻收下路径并关掉，空出位置给下一波。
 5. 部分失败其余照常留下；只重派失败槽位。宿主没有子代理时，主会话按同一目录和文件名把槽位连续出完。
 
@@ -467,24 +521,25 @@ generated-images/
 
 最终输出前确认：
 
-- [ ] 材料含糊时已用白话对齐做法（见「意图引导」），没有把成品套图误当成风格去重画，也没有把情绪板当成换品母版
-- [ ] 开做前已问过还有没有要求（本轮已说清的跳过）；用户说没有则按默认做并写进汇报
-- [ ] 风格/情景任务已读取命中的情景，Prompt 基于情景的 `prompt_template` 和 `composition_rules` 组装
-- [ ] 模板在甲方文件夹里则已读 `要求.json`（语言/分辨率/格式/风格），再读模板 JSON；零散模板只读它自己
-- [ ] 替换模板已读取 JSON + 同名文件夹母版；每槽参考为母版+产品图；未点名字段未改；缺角度未硬贴
-- [ ] 风格多图任务已建 Style Lock 且每张开头一致（替换模板不建 Style Lock）
-- [ ] 风格商品/营销任务已做转化驱动力诊断（替换模板跳过）
+- [ ] 材料含糊时已用白话对齐做法（见「意图引导」），没有把成品套图误当成规则去重画，也没有把情绪板当成换货母版
+- [ ] 开做前已跑 `match_pack.py`，把前 3 名（第 1 个最优，含将用模板和场景）展示给用户；点名不在库里时没有改成白底主图充数；用户说没有则按第 1 名做并写进汇报
+- [ ] `lock=rules` 已按「模板大于情景」组装：情景骨架 + 模板 brand/text_rules/generation + 槽位 overrides；同名字段没有跟情景折中
+- [ ] 只命中情景、没有模板时，才整份按情景执行
+- [ ] 模板在甲方文件夹里则已读 `要求.json`，该模板文件夹名在 `templates` 里，再读模板 JSON；零散模板只读它自己
+- [ ] 所用模板文件夹里有图：`lock=master` 每槽母版存在，每槽参考为母版+产品图，未点名字段未改，缺角度未硬贴；`lock=rules` 至少一张示例，写 Prompt 时看过，没有拿它当母版换货
+- [ ] `lock=rules` 多图任务已建 Style Lock 且每张开头一致（换货不建 Style Lock）
+- [ ] `lock=rules` 商品/营销任务已做转化驱动力诊断（换货跳过）
 - [ ] 颜色全部 hex、占比和留白有数字、否定清单具体
-- [ ] 图内文字短且必要，符合情景 `text_rules`
+- [ ] 图内文字短且必要，符合模板 `text_rules`（没有才用情景）
 - [ ] 一品多色已锁主色，其他颜色只出现在一张配色合集上
 - [ ] 批量品目录已在大文件夹同级建 `{名}-成图`，子文件夹名与源品文件夹一致，没有写进源目录
 - [ ] Prompt / `jobs.json` 已写入 `_prompts/`（单品：`generated-images/_prompts/<slug>/`；批量：`{名}-成图/_prompts/{品}/`），没有写进源品文件夹、成图文件夹或项目根
 - [ ] 走 Codex/宿主原生生图的多图任务已派子代理并行（同时最多 4 路），成图按槽位落在输出目录
-- [ ] 出图后按对应 pitfalls 检查通过（风格/情景用所引情景；替换模板对照母版 + 该模板 pitfalls）
+- [ ] 出图后按对应 pitfalls 检查通过（有模板：先该模板 + 槽位 overrides，再所引情景且不与模板冲突；仅情景：所引情景；换货对照母版 + 该模板 pitfalls）
 - [ ] UGC / 社媒 / 直播场景已应用 `anti_ai_tips`
 - [ ] 文件和输出中没有 API key 或私密凭据
 - [ ] 出图发现问题已按「坑跟谁走」询问用户是否回流沉淀
-- [ ] 一套品出完已按第 9 步收口：定制模板问对照改模板，否则问是否新建；用户说要则已转入对应流程
+- [ ] 一套品出完已按第 9 步收口：定制模板问对照改模板，否则问是否新建；用户说要则已转入 `CREATE_TEMPLATE.md`（先建夹、先拷图、再写 JSON，没有空 JSON 登记）
 
 ---
 
@@ -494,10 +549,10 @@ generated-images/
 
 | 坑的类型 | 判断 | 沉淀到 |
 |---|---|---|
-| 拍法的坑（换个客户也会踩） | 影响这一类图 | 所引情景的 `pitfalls` |
+| 拍法的坑（换个客户也会踩） | 影响这一类图 | 所引情景的 `pitfalls`。模板已经覆盖过的数值不要写回情景 |
 | 品牌的坑（只跟这个甲方有关） | 影响该甲方所有品 | `要求.json` 的 `style` / `brand` / `language` / `generation` |
 | 某一品模板的坑 | 只影响这一套图 | 该槽位的 `overrides` 或该模板 `pitfalls` / `text_rules` |
-| 替换母版的坑 | 影响这一套换货 | 换该槽母版图，或改 `product_ref` / `editable_fields` / 该替换模板 `pitfalls`；不要改成风格 overrides，不要回情景 |
+| 母版换货的坑 | 影响这一套换货 | 换该槽母版图，或改 `product_ref` / `editable_fields` / 该模板 `pitfalls`；不要改成规则 overrides，不要回情景 |
 | 模型本身的坑（跨情景跨品牌） | 影响所有出图 | SKILL.md「常见翻车点」表 |
 
 回流格式：`"症状（→修法）"`；情景 `pitfalls` 上限 3-5 条，满了合并同类。回流后跑 `python scripts/check_scenes.py` 并提交。
@@ -515,9 +570,11 @@ generated-images/
 | 一品多色每张换色 | 锁一个主色出套图，其他颜色只放进一张合集 |
 | 图内文字乱码 | 放大检查，乱码整张重出 |
 | Prompt 写进品文件夹或项目根 | 只写入 `_prompts/`，源品文件夹和成图文件夹只放图 |
-| 替换模板按情景重画 | 只换品；母版是锁；jobs.image = [母版, 产品图] |
+| 有模板却按情景默认出图 | 模板写了的覆盖情景；不要折中，不要改情景迁就这一套 |
+| 有母版却按情景重画 | 只换品；母版是锁；jobs.image = [母版, 产品图] |
 | 未点名却改了母版上的字 | 政策 C：只有 editable_fields 且本轮给了新值才改 |
 | 缺角度用正面硬贴 | 问用户或跳过该槽 |
 | 用户说「按模板整」却直接新画或直接换品 | 走「意图引导」：成品套图+产品图先问；推荐换品；字默认不动 |
+| 点名的模板不在库里却出一张白底主图 | 跑 match_pack.py，把前 3 名给用户看，按第 1 名做 |
 
 场景特化的翻车点见各情景 `pitfalls` 字段，出图后必须对照检查。

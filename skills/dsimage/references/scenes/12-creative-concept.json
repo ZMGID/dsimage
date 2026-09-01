@@ -63,11 +63,10 @@
     "fashion": "editorial art direction, dramatic poses, fabric in motion"
   },
   "examples": [
-    "{product} floating in {dramatic_environment}, {effects: splash/particles/smoke}, {bold colors}, art direction: {style}, ultra-detailed, cinematic lighting, award-winning advertising, 8K",
-    "{product} with dynamic elements frozen in motion, high-speed photography, dramatic lighting, vivid colors, commercial {category}. Bold concept, 8K",
-    "Creative advertising. {product} in {artistic setting}. {colors} palette. Dramatic lighting with {effects}. Art direction: {style}. Award-winning, cinematic, 8K"
+    "{product} floating in {dramatic_environment}, {effects: splash/particles/smoke}, {bold colors}, art direction: {style}, ultra-detailed, cinematic lighting, award-winning advertising",
+    "{product} with dynamic elements frozen in motion, high-speed photography, dramatic lighting, vivid colors, commercial {category}. Bold concept",
+    "Creative advertising. {product} in {artistic setting}. {colors} palette. Dramatic lighting with {effects}. Art direction: {style}. Award-winning, cinematic"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "16:9",
   "composition_rules": {

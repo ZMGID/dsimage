@@ -30,7 +30,7 @@
     "props": "sports equipment as visual anchor, exaggerated scale",
     "background": "minimal dark studio with reflective floor",
     "typography": "bold condensed headline + subtitle",
-    "quality": "8K, Nike/Under Armour campaign quality"
+    "quality": "Nike/Under Armour campaign quality"
   },
   "defaults": {
     "background": "dark studio, reflective black floor",
@@ -74,10 +74,9 @@
     "sports_drink": "splash effects, condensation, vibrant energy colors, hydration theme"
   },
   "examples": [
-    "Sports advertising photo. {product} placed diagonally on reflective dark surface. Dramatic side lighting, speed lines around product. Bold headline text. Dynamic and energetic, 8K, 1080x1350px",
-    "Fitness brand campaign. Athletic model wearing {product}, seated on large dumbbell. Dark studio with reflective floor. Spotlight from above. 'STRENGTH' bold headline. Nike campaign quality, 8K"
+    "Sports advertising photo. {product} placed diagonally on reflective dark surface. Dramatic side lighting, speed lines around product. Bold headline text. Dynamic and energetic, 1080x1350px",
+    "Fitness brand campaign. Athletic model wearing {product}, seated on large dumbbell. Dark studio with reflective floor. Spotlight from above. 'STRENGTH' bold headline. Nike campaign quality"
   ],
-  "anti_ai_tips": "",
   "supports_image_reference": true,
   "default_ratio": "16:9",
   "composition_rules": {
@@ -100,7 +99,7 @@
   "pitfalls": [
     "人物动作僵硬不自然",
     "产品被动态元素盖住",
-    " dynamic 感不足像摆拍"
+    "dynamic 感不足像摆拍"
   ],
   "generation": {
     "resolution": "1k",
