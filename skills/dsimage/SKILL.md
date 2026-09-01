@@ -94,6 +94,8 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 
 用户说「没有 / 先出 / 你看着办 / 1」→ 立即按第 1 名开做。说 2 或 3 → 改用该名次的模板和场景。默认：换货则字和版式全冻；按规则画则缺的参数按假设，汇报里列出。不要因为这一问空等。
 
+**2 个及以上品文件夹**：这一问只问一次。答案写入成图根 `_prompts/批次.json` 的 `only` / `skip` / `notes`，然后按「批量品目录」并发派工人。不要每个品再问一遍。
+
 ---
 
 ## 核心流程
@@ -117,10 +119,10 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 3. 价格、尺寸、卖点、文案等缺了先问一轮；用户不补或说先出图，则按合理假设继续，槽位不跳过。**换货例外**：未点名的字不改、不问卖点文案；只问 `editable_fields` 里本轮要换的值，以及缺的产品角度。产品外形以参考图为准。**源图文件名要参与生图**（见「源图文件名」）：型号、哪张当正面/背面参考，都从文件名读。认证/评分/销量不要写成已核实事实，可用示意占位。
 4. 多图任务（`lock=rules` / 情景）：先建立 **Campaign Style Lock**（见下文），原样放进每张 Prompt 开头。`lock=master` 不要建 Style Lock。一品多色先锁主色（见「一品多色」），其他颜色不要在套图里反复出现。
 5. `lock=rules` 的商品/营销任务：先做**转化驱动力诊断**（见下文）。换货跳过。
-6. 逐张写 Prompt：`lock=rules` = 模板 Style Lock → 情景 `prompt_template` 骨架 → 该槽 `overrides` 覆盖情景默认 → 按需 `variants` / `category_tips` → 通用规则收尾。换货 = 「换货」里的指令，不要套情景骨架。
-7. Generate 模式：按下方**出图通道**选路；用户提供了产品图必须带上参考图。`lock=master` 每槽必须带**母版 + 产品图**两张参考（`jobs.json` 的 `image` 为数组，先母版后产品）。走脚本时多图用 `--batch`；走 Codex/宿主原生生图时多图**积极派子代理并行**（见「多图执行规则」）。用户丢来「大文件夹 + 每子文件夹一个品」时，按「批量品目录」落盘，不要写进源文件夹。Prompt / `jobs.json` 按「落盘」进 `_prompts/`，禁止写进源品文件夹或成图文件夹。**命令参数与 Prompt 字段同一套优先级**（见上方「模板大于情景」）。`--size` 用比例（`1:1`），不要写死 `1024x1024` 或 `2048x2048`。未特别要求 2k 时用甲方或模板默认 `1k`，不要从情景抄 `2k`。接口返回多大就保存多大，禁止本地升采样。
+6. 逐张写 Prompt：`lock=rules` = 模板 Style Lock → 情景 `prompt_template` 骨架 → 该槽 `overrides` 覆盖情景默认 → 按需 `variants` / `category_tips` → 通用规则收尾。换货 = 「换货」里的指令，不要套情景骨架。**2 个及以上品由各品工人写，主会话不写。**
+7. Generate 模式：按下方**出图通道**选路；用户提供了产品图必须带上参考图。`lock=master` 每槽必须带**母版 + 产品图**两张参考（`jobs.json` 的 `image` 为数组，先母版后产品）。走脚本时单品多图用 `--batch`；**2 个及以上品**按「批量品目录」并发调度（工人写 Prompt，有 API 则 `queue_pack.py --run`）。走 Codex/宿主原生生图时多图**积极派子代理并行**（见「多图执行规则」）。用户丢来「大文件夹 + 每子文件夹一个品」时，按「批量品目录」落盘，不要写进源文件夹。Prompt / `jobs.json` 按「落盘」进 `_prompts/`，禁止写进源品文件夹或成图文件夹。**命令参数与 Prompt 字段同一套优先级**（见上方「模板大于情景」）。`--size` 用比例（`1:1`），不要写死 `1024x1024` 或 `2048x2048`。未特别要求 2k 时用甲方或模板默认 `1k`，不要从情景抄 `2k`。接口返回多大就保存多大，禁止本地升采样。
 8. 出图后按对应 pitfalls + 下方 QA 清单检查，返回文件路径和关键假设。换货对照母版查：未点名的字/图标/版式是否被改。
-9. **一套品出完必须收口**（本轮已经在建/改模板则跳过）：
+9. **一套品出完必须收口**（本轮已经在建/改模板则跳过；**2 个及以上品整批出完再问一次**）：
    - 本轮套的是 **`lock=master`** → 问：「母版要不要对照刚出的图换一张？」说要 → 只换该槽母版图或 `product_ref` / `editable_fields`，不要改成 `lock=rules`、不要走 CREATE_TEMPLATE 新建。
    - 本轮套的是**定制模板且 `lock=rules`**（不是「默认电商模板」）→ 问：「这套要不要对照刚出的图改一下这个模板？」说要 → 按「坑跟谁走」改该模板的槽位 `overrides` / `pitfalls`，**不要再走 CREATE_TEMPLATE 新建**。若用户说「以后别的型号要长得一模一样」→ 转 CREATE_TEMPLATE：建新文件夹，**把本轮成图整套拷进去当母版**，写成 `lock=master`。
    - 本轮只用了情景或默认电商模板 → 问：「这类货以后还要反复出的话，要不要用这次的图和版式建一个模板？」说要 / 好 / 建 → **立刻读 `CREATE_TEMPLATE.md`**，先定 `lock`（铺型号、要像素级一致 → `master`，本轮成图拷进模板夹当母版；还没有定稿套图 → `rules`，至少把本轮 H1 拷进去当示例）。本轮成图、Prompt、产品图和已给信息当作检查点 1 的素材。不要只写 JSON 不拷图。
@@ -144,8 +146,8 @@ IMG_API_KEY=your-api-key
 
 **出图通道**（Codex 账号登录和生图 API 可同时存在，不是二选一）：
 
-1. **已配置生图 API**（Skill 目录或项目有 `IMG_*` / 兼容别名）→ 走 `scripts/gen_image.py`。多图套图必须 `--batch`。API 额度/并发通常更高，有 API 时套图优先走脚本。
-2. **未配 API，但当前是 Codex 账号登录**（或宿主有原生生图，如 Codex imagegen）→ 用宿主生图，**不要再追问 API**。单张由主会话出；**2 张及以上立刻派平级子代理并行**（见「Codex 原生生图：子代理并行」）。
+1. **已配置生图 API**（Skill 目录或项目有 `IMG_*` / 兼容别名）→ 走 `scripts/gen_image.py`。一品多图必须 `--batch`。**2 个及以上品**不要每品各开一套 `--batch`（并发会叠乘）；工人只写 `_prompts/`，调度跑 `queue_pack.py --run`（见「批量品目录」）。API 额度/并发通常更高，有 API 时套图优先走脚本。
+2. **未配 API，但当前是 Codex 账号登录**（或宿主有原生生图，如 Codex imagegen）→ 用宿主生图，**不要再追问 API**。单品：单张由主会话出；**2 张及以上立刻派平级子代理并行**（见「Codex 原生生图：子代理并行」）。**2 个及以上品**：主会话不写 Prompt，按「批量品目录」并发派品工人。
 3. **API 和宿主生图都没有** → 只输出 Prompt 包；若用户坚持要出图，读取 `SETUP.md` 第 2 步，列出三个选项让用户选（1 和 2 可同时选），不要只问「是否配置 API」。
 
 走脚本时（Windows 用 `python`，macOS/Linux 用 `python3`，下同）：
@@ -155,8 +157,13 @@ IMG_API_KEY=your-api-key
 python scripts/gen_image.py --prompt "..." --size 1:1 --image data/product.jpg
 python scripts/gen_image.py --prompt-file prompt.txt --output-dir generated-images
 
-# 多图套图：批量清单一次并发生成（多图任务必须用这个，不要逐张串行调用）
+# 多图套图：批量清单一次并发生成（单品多图必须用这个，不要逐张串行调用）
 python scripts/gen_image.py --batch generated-images/_prompts/<slug>/jobs.json
+
+# 2 个及以上品：看队列 → 派品工人 → API 全局出图
+python scripts/queue_pack.py --init --source "<大文件夹>" --template templates/<甲方>/<模板>/<模板>.json --notes "<口头要求>"
+python scripts/queue_pack.py --queue "<成图根>/_prompts/批次.json" --next
+python scripts/queue_pack.py --queue "<成图根>/_prompts/批次.json" --run --skip-existing
 ```
 
 批量清单必须放在该品 `_prompts/` 目录（见「落盘」），相对路径相对清单文件所在目录：
@@ -177,7 +184,8 @@ python scripts/gen_image.py --batch generated-images/_prompts/<slug>/jobs.json
 - 按 `IMG_PROVIDER` / 模型名走对应协议：OpenAI 同步（像素尺寸）；Grok 官方 JSON（`aspect_ratio` + `resolution`，参考图走 `/images/edits` JSON 而非 multipart）；Gemini 官方 `generateContent`（`x-goog-api-key`）；URL 含 `apimart` → 异步轮询
 - **带参考图时**：OpenAI 走 multipart `/images/edits`；Grok 走 JSON `/images/edits`；Gemini 把原图作为 `inline_data` 一并提交。原图真实交给模型，不要只把路径写进 Prompt
 - `--image`：参考图路径，可重复传入。`lock=rules` 通常一张产品图；**`lock=master` 必须先母版后产品图**（`jobs.json` 里 `image` 用数组）
-- **批量模式**：默认并发 8，碰到 429/超时自动降到 4→2→1 只重跑失败槽位；输出按槽位命名（`h1.png`、`h2.png`…）；部分槽位最终失败时其余照常产出、退出码 1；加 `--skip-existing` 重跑同一命令即可只补失败的槽位
+- **批量模式**：默认并发 9，碰到 429/超时自动降到 4→2→1 只重跑失败槽位；输出按槽位命名（`h1.png`、`h2.png`…）；部分槽位最终失败时其余照常产出、退出码 1；加 `--skip-existing` 重跑同一命令即可只补失败的槽位
+- **多品**：`queue_pack.py` 看队列、`--next` 派品工人写 Prompt、`--run` 单独生图。生图默认并发 32（最大 64），429 自动减半。不要每品各开一套 `--batch`
 - 其他参数：`--output-dir`、`--poll-interval`、`--timeout`（同步图生图 300s；异步 1k/2k 默认 180，4k 默认 480）、`--format`、`--quality`、`--n`、`--concurrency`
 
 安装或首次配置时，读取本 Skill 目录下的 `SETUP.md`，按第 2 步列出三个选项让用户选，不要自行默认。
@@ -424,8 +432,10 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 4. 每张 Prompt 开头必须是同一段 Style Lock。
 5. 成图和提示词按「落盘」分开放：成图进品输出文件夹；Prompt 和 `jobs.json` 进同级 `_prompts/`。
 6. **出图必须并行，按通道选工具**：
-   - 走脚本：把 Prompt 和 `jobs.json` 写进该品 `_prompts/`（每槽位 slot / prompt_file / size / image），`output_dir` 指向该品成图文件夹，一次 `python scripts/gen_image.py --batch <该品 _prompts>/jobs.json`；失败槽位修正 Prompt 后加 `--skip-existing` 重跑，只补缺的图。
-   - 走 Codex/宿主原生生图：Prompt 同样写入 `_prompts/` 后**立刻按下方「子代理并行」派发**；失败只重派失败槽位。
+   - **2 个及以上品**：主会话按「批量品目录」并发调度，不要在本对话按品串行。
+   - 走脚本、单品：把 Prompt 和 `jobs.json` 写进该品 `_prompts/`（每槽位 slot / prompt_file / size / image），`output_dir` 指向该品成图文件夹，一次 `python scripts/gen_image.py --batch <该品 _prompts>/jobs.json`；失败槽位修正 Prompt 后加 `--skip-existing` 重跑，只补缺的图。
+   - 走脚本、多品：工人只写各品 `_prompts/`；调度一次 `python scripts/queue_pack.py --queue <成图根>/_prompts/批次.json --run --skip-existing`（生图单独走，默认并发 32）。
+   - 走 Codex/宿主原生生图、单品：Prompt 写入 `_prompts/` 后**立刻按下方「子代理并行」派发**；失败只重派失败槽位。多品则每个品工人自己派槽位，同时最多 2 路。
 7. API 或模型不支持某尺寸时，改用最接近的支持尺寸并说明。
 8. 未配 API 且宿主也不能原生生图时，只输出完整 Prompt 包，不调用脚本；Prompt 仍按「落盘」写入 `_prompts/`，不要摊在项目根。有 Codex 原生生图就用它，不要因为没有 `.env` 就改成只出 Prompt。
 9. 缺参数先问再出图：用户不补则按假设生成并在结果里列出假设，禁止因缺价格/尺寸/卖点而跳槽。认证、评分、销量、评价用示意占位即可，不要写成已核实。型号已从文件名取得时，不要再问货号。
@@ -489,6 +499,7 @@ generated-images/
   双肩包-米/
     h1.png
   _prompts/                ← 提示词工作区，不要写进上面的品文件夹
+    批次.json              ← 整批合同（模板、skip、notes）；进度看磁盘不是看聊天
     双肩包-黑/
       jobs.json
       prompt-H1.txt
@@ -500,20 +511,25 @@ generated-images/
 1. 判定：用户给的路径下面有多个子文件夹、且子文件夹里是图 → 按本规则。用户指定了输出文件夹名则用用户的，否则用 `{大文件夹名}-成图`，建在大文件夹**同级**，不要建在大文件夹里面，不要改源目录里的任何文件。
 2. 每个品文件夹单独出一套图，参考图只用该品文件夹里的图。输出写到成图根目录下**同名**子文件夹，名字与源子文件夹完全一致（含中文、空格、连字符），不要改成英文 slug，不要加 `-pdp`。
 3. 成图按槽位命名（`h1.png`、`h2.png`…）放进该品输出子文件夹。Prompt / `jobs.json` 放进成图根下 `_prompts/{同名品文件夹}/`，不要放进源品文件夹，也不要和 `h1.png` 放一起。已有同名成图文件夹就接着用，只写当前品，不要清空别人的子文件夹。
-4. 多品按品排队（一次一个品）；每个品内部仍按通道并行（`--batch` 或子代理）。用户只点了其中几个子文件夹就只出那几个。
-5. 整批出完再收口一次，不要每个品问一遍要不要建模板。
+4. **多品并发，不要在本对话按品排队。** 主会话只调度，每个品一个新子代理（独立上下文）。口头要求只问一次，写入 `_prompts/批次.json`。用户只点了其中几个子文件夹 → `only`；某个先不做 → `skip`。
+   - 先跑 `python scripts/queue_pack.py --init --source "<源>"`（有命中模板就加 `--template`，有口头要求加 `--notes` / `--skip` / `--only`）。已有批次文件则 `--queue "<成图根>/_prompts/批次.json"` 看状态。
+   - `--next` 给出下一波品名（默认同时 3 路，最多 8）。立刻派平级子代理，**一品一工人**，把脚本打印的工人任务原文放进子代理；把 `{品名}` 换成该工人的文件夹名。工人返回后立刻再 `--next` 补下一波，不要等全部写完才派。
+   - **有 API**：工人只写该品 `_prompts/`（Prompt + `jobs.json`），不要自己 `--batch`。Prompt 波次写完后调度跑 `python scripts/queue_pack.py --queue ... --run --skip-existing`。生图单独走、开大并发（默认 32，写在批次.json 的 `gen_concurrency`，上限 64；429 自动减半）。不要让子 agent 自己调生图。
+   - **宿主生图**：工人写完 Prompt 后自己给本品派槽位子代理，同时最多 2 路。失败再 `--next --retry`。
+   - 压缩丢了记忆：新开对话，只读 `批次.json` 再 `--next` / `--run`，不要靠上一场聊天。
+5. 整批出完再收口一次，不要每个品问一遍要不要建模板。`--next` 显示「全部完成」才收口。
 
 单张图、或只有一个品文件夹且用户没说批量：成图仍用 `generated-images/<slug>-pdp/`，提示词用 `generated-images/_prompts/<slug>/`。
 
 ### Codex 原生生图：子代理并行
 
-内置 `image_gen` / 宿主原生生图一次只出一张。多图套图把并行交给子代理，主会话负责写 Prompt、派工、收图、检查。
+内置 `image_gen` / 宿主原生生图一次只出一张。**2 个及以上品**时主会话不要给每个品写 Prompt，按上方「批量品目录」派品工人；下面只描述**一个品**内部的槽位并行。
 
-1. 主会话先把全部 Prompt 文件和 `jobs.json` 写进该品 `_prompts/`（见「落盘」），并列出槽位清单（slot、prompt 路径、size、参考图、目标文件名）。
-2. **2 张及以上：立刻派平级子代理**，每槽位一个，同时最多 4 路；多出来的分波排队。1 张由主会话自己出。不要等用户说「开子代理」。
+1. 主会话先把全部 Prompt 文件和 `jobs.json` 写进该品 `_prompts/`（见「落盘」），并列出槽位清单（slot、prompt 路径、size、参考图、目标文件名）。批量多品里这一步由该品工人做。
+2. **2 张及以上：立刻派平级子代理**，每槽位一个。单品同时最多 4 路；批量多品里每个品工人同时最多 2 路。多出来的分波排队。1 张由当前会话自己出。不要等用户说「开子代理」。
 3. 每个子代理只出自己那个槽位：从 `_prompts/` 读对应 Prompt、按源文件名选参考图、用宿主原生生图、把成图存到该品**成图目录**的 `<slot>.png`（如 `h1.png`），返回绝对路径。`lock=master` 必须同时附上该槽母版图和产品图。沿用原 Prompt，不要改成 SVG/HTML/占位图，不要把 txt 写进成图目录，不要覆盖其他槽位的文件。
 4. 用宿主的平级子代理派发（Codex Desktop 子代理、Cursor / Claude Code 的 Task 等）。已经在 Codex 会话里就派 Desktop 子代理，不要再套一层 `codex exec`。某路结束立刻收下路径并关掉，空出位置给下一波。
-5. 部分失败其余照常留下；只重派失败槽位。宿主没有子代理时，主会话按同一目录和文件名把槽位连续出完。
+5. 部分失败其余照常留下；只重派失败槽位。宿主没有子代理时，当前会话按同一目录和文件名把槽位连续出完。
 
 ---
 
@@ -533,8 +549,9 @@ generated-images/
 - [ ] 图内文字短且必要，符合模板 `text_rules`（没有才用情景）
 - [ ] 一品多色已锁主色，其他颜色只出现在一张配色合集上
 - [ ] 批量品目录已在大文件夹同级建 `{名}-成图`，子文件夹名与源品文件夹一致，没有写进源目录
+- [ ] 2 个及以上品：已写 `_prompts/批次.json`，主会话只调度，已用 `queue_pack.py --next` 一品一工人并发派发；有 API 则工人只写 Prompt、调度 `--run`，没有每品叠乘 `--batch`；没有在本对话按品串行出图
 - [ ] Prompt / `jobs.json` 已写入 `_prompts/`（单品：`generated-images/_prompts/<slug>/`；批量：`{名}-成图/_prompts/{品}/`），没有写进源品文件夹、成图文件夹或项目根
-- [ ] 走 Codex/宿主原生生图的多图任务已派子代理并行（同时最多 4 路），成图按槽位落在输出目录
+- [ ] 走 Codex/宿主原生生图：单品槽位同时最多 4 路；批量多品每个品工人槽位同时最多 2 路。成图按槽位落在输出目录
 - [ ] 出图后按对应 pitfalls 检查通过（有模板：先该模板 + 槽位 overrides，再所引情景且不与模板冲突；仅情景：所引情景；换货对照母版 + 该模板 pitfalls）
 - [ ] UGC / 社媒 / 直播场景已应用 `anti_ai_tips`
 - [ ] 文件和输出中没有 API key 或私密凭据
@@ -570,6 +587,8 @@ generated-images/
 | 一品多色每张换色 | 锁一个主色出套图，其他颜色只放进一张合集 |
 | 图内文字乱码 | 放大检查，乱码整张重出 |
 | Prompt 写进品文件夹或项目根 | 只写入 `_prompts/`，源品文件夹和成图文件夹只放图 |
+| 多品在同一对话里一个一个做 | 写 `批次.json`，`queue_pack.py --next` 一品一工人并发；有 API 用 `--run` 全局出图 |
+| 多品各开一套 `--batch` 叠乘并发 | 工人只写 jobs.json，调度一次 `--run` |
 | 有模板却按情景默认出图 | 模板写了的覆盖情景；不要折中，不要改情景迁就这一套 |
 | 有母版却按情景重画 | 只换品；母版是锁；jobs.image = [母版, 产品图] |
 | 未点名却改了母版上的字 | 政策 C：只有 editable_fields 且本轮给了新值才改 |

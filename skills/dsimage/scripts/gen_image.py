@@ -2,8 +2,9 @@
 """统一图像生成脚本。
 
 单张模式：--prompt / --prompt-file
-批量模式：--batch jobs.json —— 多图套图推荐用法，一次并发生成全部槽位；
+批量模式：--batch jobs.json —— 一品多图套图，一次并发生成全部槽位；
 失败槽位加 --skip-existing 重跑同一命令即可只补失败的图。
+多品文件夹用 queue_pack.py 调度（品工人并发写 Prompt，--run 把各品槽位丢进同一并发池）。
 jobs.json 的 image 可为字符串或数组（lock=master 换货：[母版, 产品图]）。
 
 官方服务商地址写死在脚本里，只需 IMG_PROVIDER + IMG_API_KEY + IMG_MODEL：
@@ -978,33 +979,50 @@ def _existing_output(output_dir: Path, name_prefix: str, fmt: str) -> Path | Non
     return None
 
 
-def run_batch(args: argparse.Namespace, base_url: str, api_key: str, model: str,
-              mode: str) -> None:
-    output_dir, jobs = load_batch(Path(args.batch), args)
-    log("batch", f"API 模式: {mode} | base_url={base_url} | model={model}")
+def _job_id(job: dict[str, Any]) -> str:
+    return str(job.get("job_id") or job["slot"])
 
+
+def run_job_pool(
+    jobs: list[dict[str, Any]],
+    *,
+    concurrency: int,
+    skip_existing: bool,
+    base_url: str,
+    api_key: str,
+    model: str,
+    mode: str,
+    log_label: str = "batch",
+) -> dict[str, tuple[str, Any]]:
+    """并发生成一组槽位。每项含 slot / prompt / args / output_dir，可选 job_id / label。
+
+    job_id 必须跨品唯一（单品清单用槽位名即可）。429/超时自动 降并发回退。
+    """
     results: dict[str, tuple[str, Any]] = {}
     pending: list[dict[str, Any]] = []
     for job in jobs:
-        slot = job["slot"]
-        existing = _existing_output(output_dir, slot.lower(), job["args"].format)
-        if args.skip_existing and existing is not None:
-            results[slot] = ("skip", [existing])
+        job_id = _job_id(job)
+        output_dir = Path(job["output_dir"])
+        existing = _existing_output(output_dir, job["slot"].lower(), job["args"].format)
+        if skip_existing and existing is not None:
+            results[job_id] = ("skip", [existing])
         else:
             pending.append(job)
 
-    concurrency = max(1, args.concurrency)
-    log("batch", f"共 {len(jobs)} 个槽位，起始并发 {concurrency}，输出目录 {output_dir}")
+    workers_n = max(1, concurrency)
+    log(log_label, f"API 模式: {mode} | base_url={base_url} | model={model}")
+    log(log_label, f"共 {len(jobs)} 个槽位，起始并发 {workers_n}")
 
     def run_wave(wave: list[dict[str, Any]], workers: int) -> dict[str, tuple[str, Any]]:
         wave_results: dict[str, tuple[str, Any]] = {}
 
         def worker(job: dict[str, Any]) -> tuple[str, Any]:
             slot = job["slot"]
+            label = str(job.get("label") or slot)
             try:
                 paths = generate_one(
                     base_url, api_key, model, mode, job["args"],
-                    job["prompt"], output_dir, slot, slot.lower(),
+                    job["prompt"], Path(job["output_dir"]), label, slot.lower(),
                 )
                 return "ok", paths
             except GenError as exc:
@@ -1013,66 +1031,99 @@ def run_batch(args: argparse.Namespace, base_url: str, api_key: str, model: str,
                 return "fail", f"{type(exc).__name__}: {exc}"
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = {pool.submit(worker, job): job["slot"] for job in wave}
+            futures = {pool.submit(worker, job): _job_id(job) for job in wave}
             for future in concurrent.futures.as_completed(futures):
-                slot = futures[future]
-                wave_results[slot] = future.result()
-                status, payload = wave_results[slot]
+                job_id = futures[future]
+                wave_results[job_id] = future.result()
+                status, payload = wave_results[job_id]
                 if status == "ok":
-                    log("batch", f"{slot} 完成")
+                    log(log_label, f"{job_id} 完成")
                 else:
-                    log("batch", f"{slot} 失败：{payload}")
+                    log(log_label, f"{job_id} 失败：{payload}")
         return wave_results
 
     while pending:
-        workers = min(concurrency, len(pending))
-        log("batch", f"本轮 {len(pending)} 个槽位，并发 {workers}")
+        workers = min(workers_n, len(pending))
+        log(log_label, f"本轮 {len(pending)} 个槽位，并发 {workers}")
         wave_results = run_wave(pending, workers)
         next_pending: list[dict[str, Any]] = []
         hit_limit = False
         for job in pending:
-            slot = job["slot"]
-            status, payload = wave_results[slot]
+            job_id = _job_id(job)
+            status, payload = wave_results[job_id]
             if status == "ok":
-                results[slot] = (status, payload)
+                results[job_id] = (status, payload)
             elif is_backoff_error(str(payload)):
                 hit_limit = True
                 next_pending.append(job)
             else:
-                results[slot] = (status, payload)
+                results[job_id] = (status, payload)
         if not next_pending:
             break
         if not hit_limit:
             for job in next_pending:
-                results[job["slot"]] = wave_results[job["slot"]]
+                results[_job_id(job)] = wave_results[_job_id(job)]
             break
-        if concurrency <= 1:
-            log("batch", "并发已降到 1 仍失败，停止回退")
+        if workers_n <= 1:
+            log(log_label, "并发已降到 1 仍失败，停止回退")
             for job in next_pending:
-                results[job["slot"]] = wave_results[job["slot"]]
+                results[_job_id(job)] = wave_results[_job_id(job)]
             break
-        concurrency = max(1, concurrency // 2)
-        log("batch", f"报错回退，并发改为 {concurrency}，15s 后重试 {len(next_pending)} 个槽位")
+        workers_n = max(1, workers_n // 2)
+        log(log_label, f"报错回退，并发改为 {workers_n}，15s 后重试 {len(next_pending)} 个槽位")
         time.sleep(15)
         pending = next_pending
+    return results
 
+
+def print_pool_results(
+    jobs: list[dict[str, Any]],
+    results: dict[str, tuple[str, Any]],
+    *,
+    extra: str = "",
+) -> list[str]:
     counts = {"ok": 0, "skip": 0, "fail": 0}
     failed: list[str] = []
     print("批量结果：")
     for job in jobs:
-        slot = job["slot"]
-        status, payload = results[slot]
+        job_id = _job_id(job)
+        status, payload = results[job_id]
         counts[status] += 1
         if status == "ok":
-            print(f"  {slot}  OK    " + " ".join(str(p) for p in payload))
+            print(f"  {job_id}  OK    " + " ".join(str(p) for p in payload))
         elif status == "skip":
-            print(f"  {slot}  SKIP  已存在 {payload[0]}")
+            print(f"  {job_id}  SKIP  已存在 {payload[0]}")
         else:
-            failed.append(slot)
-            print(f"  {slot}  FAIL  {payload}")
-    print(f"成功 {counts['ok']} / 跳过 {counts['skip']} / 失败 {counts['fail']}，输出目录：{output_dir}")
+            failed.append(job_id)
+            print(f"  {job_id}  FAIL  {payload}")
+    suffix = f"，{extra}" if extra else ""
+    print(f"成功 {counts['ok']} / 跳过 {counts['skip']} / 失败 {counts['fail']}{suffix}")
     if failed:
-        print(f"失败槽位：{'、'.join(failed)}。加 --skip-existing 重跑同一命令即可只补失败的槽位。", file=sys.stderr)
+        print(
+            f"失败槽位：{'、'.join(failed)}。加 --skip-existing 重跑同一命令即可只补失败的槽位。",
+            file=sys.stderr,
+        )
+    return failed
+
+
+def run_batch(args: argparse.Namespace, base_url: str, api_key: str, model: str,
+              mode: str) -> None:
+    output_dir, jobs = load_batch(Path(args.batch), args)
+    for job in jobs:
+        job["output_dir"] = output_dir
+        job["job_id"] = job["slot"]
+        job["label"] = job["slot"]
+    results = run_job_pool(
+        jobs,
+        concurrency=args.concurrency,
+        skip_existing=args.skip_existing,
+        base_url=base_url,
+        api_key=api_key,
+        model=model,
+        mode=mode,
+    )
+    failed = print_pool_results(jobs, results, extra=f"输出目录：{output_dir}")
+    if failed:
         raise SystemExit(1)
 
 
@@ -1086,7 +1137,7 @@ def parse_args() -> argparse.Namespace:
     prompt_group.add_argument("--prompt", help="直接传入图片生成 Prompt。")
     prompt_group.add_argument("--prompt-file", help="从文本文件读取图片生成 Prompt。")
     prompt_group.add_argument("--batch", help="批量清单 JSON 路径（含 output_dir / defaults / jobs 数组），并发生成整套图，输出按槽位命名。")
-    parser.add_argument("--concurrency", type=int, default=8, help="批量模式起始并发数，默认 8；429/超时自动 8→4→2→1 回退。")
+    parser.add_argument("--concurrency", type=int, default=9, help="批量模式起始并发数，默认 9；429/超时自动 9→4→2→1 回退。")
     parser.add_argument("--skip-existing", action="store_true", help="批量模式跳过输出文件已存在的槽位，用于失败后重跑补齐。")
     parser.add_argument("--output-dir", default="generated-images", help="图片输出目录，默认 generated-images。")
     parser.add_argument("--env-file", help="指定 .env 配置文件；不指定时从当前目录向上查找（只认含 IMG_ 配置的），兜底 Skill 目录。")

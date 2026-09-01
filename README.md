@@ -107,7 +107,7 @@ IMG_API_KEY=your-api-key-here
 
 如果你同时丢来「一套已经做好的商品图」和「新产品图」，又没说是换货还是按感觉重画，Agent 会先用白话问清（建议换品、字默认不动），避免做成另一套不像的图。一套出完：已经套了定制模板会问要不要对照刚出的图改模板；否则会问要不要给这类货新建模板。
 
-一个大文件夹、下面每个子文件夹一个品时，成图写到大文件夹**同级**的 `{大文件夹名}-成图/`，里面的子文件夹名和原来的品文件夹一样。Prompt 和 `jobs.json` 放在成图根下的 `_prompts/{品名}/`，不写进源品文件夹，也不和 `h1.png` 混放。单品则是 `generated-images/<slug>-pdp/` 放成图、`generated-images/_prompts/<slug>/` 放提示词。
+一个大文件夹、下面每个子文件夹一个品时，成图写到大文件夹**同级**的 `{大文件夹名}-成图/`，里面的子文件夹名和原来的品文件夹一样。Prompt 和 `jobs.json` 放在成图根下的 `_prompts/{品名}/`，整批规矩写在 `_prompts/批次.json`。**多个品并发派工人**（一条对话里串行做会把上下文做爆），不要在聊天里记谁做完了。单品则是 `generated-images/<slug>-pdp/` 放成图、`generated-images/_prompts/<slug>/` 放提示词。
 
 ```text
 使用 dsimage 来制作，基于这张衣服图做 Amazon 详情页
@@ -152,12 +152,20 @@ python skills/dsimage/scripts/gen_image.py --batch generated-images/_prompts/bac
 
 输出按槽位命名（`h1.png`、`h2.png`…），进 `generated-images/backpack-pdp/`。Prompt 留在 `_prompts/backpack/`，不要放进品文件夹。母版换货把 `image` 写成数组：先母版路径，后产品图。个别槽位失败不影响其余槽位；修正后加 `--skip-existing` 重跑同一命令，只会补生成缺的图。
 
+多个品文件夹时先建批次、再并发写 Prompt，最后一次全局出图（生图单独 `--run`，默认并发 32）：
+
+```bash
+python skills/dsimage/scripts/queue_pack.py --init --source "春季新品" --notes "字不要改"
+python skills/dsimage/scripts/queue_pack.py --queue "春季新品-成图/_prompts/批次.json" --next
+python skills/dsimage/scripts/queue_pack.py --queue "春季新品-成图/_prompts/批次.json" --run --skip-existing
+```
+
 脚本参数：
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
 | `--prompt` / `--prompt-file` / `--batch` | Prompt 来源或批量清单，三选一必填 | — |
-| `--concurrency` | 批量起始并发；429/超时自动 8→4→2→1 回退 | `8` |
+| `--concurrency` | 批量起始并发；429/超时自动 9→4→2→1 回退 | `9` |
 | `--skip-existing` | 批量模式跳过输出已存在的槽位（失败重跑用） | 关 |
 | `--size` | 画幅比例：`1:1`、`2:3`、`16:9` 等 14 种 | `1:1` |
 | `--resolution` | 分辨率档位 `1k` / `2k` / `4k`（4K 仅 6 种宽幅） | `1k` |
@@ -177,7 +185,7 @@ dsimage/
 │   ├── SKILL.md             # 技能定义与通用流程
 │   ├── SETUP.md             # 安装配置指南（Agent 读取）
 │   ├── CREATE_TEMPLATE.md   # 模板创建流程（Agent 读取）
-│   ├── scripts/             # gen_image.py 生图 + match_pack.py 匹配前三 + check_scenes.py 校验 + update_skill.py 原地升级
+│   ├── scripts/             # gen_image.py 生图 + queue_pack.py 多品并发队列 + match_pack.py 匹配前三 + check_scenes.py 校验 + update_skill.py 原地升级
 │   └── references/
 │       ├── scenes/         # 26 个内置情景 + _SCENE_SPEC.md 情景规范
 │       └── templates/

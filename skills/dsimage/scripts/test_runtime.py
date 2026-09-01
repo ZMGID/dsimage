@@ -2,7 +2,10 @@
 """不打真实 API 的运行时单测。"""
 from __future__ import annotations
 
+import argparse
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -12,6 +15,7 @@ if str(ROOT) not in sys.path:
 
 import gen_image  # noqa: E402
 import match_pack  # noqa: E402
+import queue_pack  # noqa: E402
 import update_skill  # noqa: E402
 
 
@@ -190,6 +194,118 @@ class MergeTests(unittest.TestCase):
             self.assertTrue((pkg / "h1.png").is_file())
             self.assertFalse((client / "01-测试.json").is_file())
             self.assertFalse(kind.exists())
+
+
+def _touch_image(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"fake-image")
+
+
+class QueuePackTests(unittest.TestCase):
+    def _batch(self, tmp: Path) -> tuple[Path, Path, dict]:
+        source = tmp / "春季新品"
+        output = tmp / "春季新品-成图"
+        for name in ("双肩包-黑", "双肩包-米", "登机箱"):
+            _touch_image(source / name / "正面.jpg")
+        args = argparse.Namespace(
+            source=str(source),
+            output=str(output),
+            template="templates/BeautyU/01-箱包单品报价模板/01-箱包单品报价模板.json",
+            lock=None,
+            only=[],
+            skip=["登机箱"],
+            workers=3,
+            concurrency=None,
+            notes="字不要改",
+        )
+        brief_path = queue_pack.init_brief(args)
+        brief = queue_pack.load_brief(brief_path)
+        return brief_path, output, brief
+
+    def test_init_and_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            brief_path, output, brief = self._batch(Path(tmp))
+            self.assertTrue(brief_path.is_file())
+            self.assertEqual(brief["notes"], "字不要改")
+            self.assertEqual(brief["gen_concurrency"], 32)
+            self.assertEqual(queue_pack.clamp_gen_concurrency(99), 64)
+            self.assertTrue(brief.get("style_lock"))
+            rows = queue_pack.scan(brief)
+            by_name = {row["name"]: row["status"] for row in rows}
+            self.assertEqual(by_name["双肩包-黑"], "prompt")
+            self.assertEqual(by_name["双肩包-米"], "prompt")
+            self.assertEqual(by_name["登机箱"], "skip")
+            self.assertEqual(
+                queue_pack.next_products(rows, 3, retry=False),
+                sorted(["双肩包-黑", "双肩包-米"]),
+            )
+            self.assertEqual(output, Path(brief["output_dir"]))
+
+    def test_jobs_without_png_is_gen(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _brief_path, output, brief = self._batch(Path(tmp))
+            jobs_dir = output / "_prompts" / "双肩包-黑"
+            jobs_dir.mkdir(parents=True)
+            (jobs_dir / "jobs.json").write_text(
+                json.dumps({
+                    "output_dir": "../../双肩包-黑",
+                    "jobs": [{"slot": "H1", "prompt": "hero"}],
+                }),
+                encoding="utf-8",
+            )
+            rows = queue_pack.scan(brief)
+            by_name = {row["name"]: row["status"] for row in rows}
+            self.assertEqual(by_name["双肩包-黑"], "gen")
+            self.assertEqual(queue_pack.next_products(rows, 3, retry=False), ["双肩包-米"])
+            self.assertEqual(queue_pack.next_products(rows, 3, retry=True), ["双肩包-米", "双肩包-黑"])
+
+    def test_complete_slots_are_done(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _brief_path, output, brief = self._batch(Path(tmp))
+            name = "双肩包-黑"
+            jobs_dir = output / "_prompts" / name
+            jobs_dir.mkdir(parents=True)
+            (jobs_dir / "jobs.json").write_text(
+                json.dumps({
+                    "output_dir": f"../../{name}",
+                    "jobs": [
+                        {"slot": "H1", "prompt": "hero"},
+                        {"slot": "H2", "prompt": "detail"},
+                    ],
+                }),
+                encoding="utf-8",
+            )
+            _touch_image(output / name / "h1.png")
+            _touch_image(output / name / "h2.png")
+            rows = queue_pack.scan(brief)
+            by_name = {row["name"]: row["status"] for row in rows}
+            self.assertEqual(by_name[name], "done")
+
+
+class JobPoolTests(unittest.TestCase):
+    def test_skip_existing_does_not_call_api(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            _touch_image(out / "h1.png")
+            args = argparse.Namespace(format="png")
+            job = {
+                "slot": "H1",
+                "prompt": "should not run",
+                "args": args,
+                "output_dir": out,
+                "job_id": "H1",
+                "label": "H1",
+            }
+            results = gen_image.run_job_pool(
+                [job],
+                concurrency=1,
+                skip_existing=True,
+                base_url="",
+                api_key="",
+                model="",
+                mode="sync",
+            )
+            self.assertEqual(results["H1"][0], "skip")
 
 
 if __name__ == "__main__":
