@@ -61,7 +61,7 @@
 - 可写键：`resolution`（`1k`/`2k`/`4k`，异步模式生效）、`format`（`png`/`jpeg`/`webp`）、`quality`（`low`/`medium`/`high`，仅同步模式生效）
 - 不写该字段 = 用脚本默认（1k / png）；写了一个键就表示该情景有意覆盖默认
 - 画幅 `--size` 不在本字段里，由 `default_ratio` 承担
-- 优先级：用户命令行显式指定 > 情景 `generation` > 脚本默认
+- 优先级：用户命令行显式指定 > 命中模板 JSON / 甲方 `要求.json` > 情景 `generation` > 脚本默认
 - 参考图 `--image`、输出目录 `--output-dir`、模式 `--mode` 是运行时信息，**禁止**写入情景
 
 ### text_rules

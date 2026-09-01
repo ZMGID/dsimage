@@ -50,7 +50,84 @@ def iter_files(root: Path) -> list[Path]:
 
 
 def is_library_json(rel: Path) -> bool:
-    return rel.suffix == ".json" and rel.parts[:2] in {("references", "scenes"), ("references", "templates")}
+    if rel.suffix != ".json":
+        return False
+    if rel.parts[:2] == ("references", "scenes") and len(rel.parts) == 3:
+        return True
+    if rel.parts[:2] != ("references", "templates"):
+        return False
+    if len(rel.parts) == 3:
+        return rel.name not in {"要求.json"}
+    if len(rel.parts) == 4 and rel.name == "要求.json":
+        return True
+    return (
+        len(rel.parts) == 5
+        and rel.parts[3] in {"风格", "替换"}
+    )
+
+
+def _move_json_and_sidecar(src: Path, dest_dir: Path, report: list[str]) -> None:
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_path = dest_dir / src.name
+    if dest_path.exists():
+        report.append(f"{src.name} 目标已有同名，未覆盖：{dest_dir.as_posix()}")
+        return
+    shutil.move(str(src), str(dest_path))
+    sidecar = src.parent / src.stem
+    if sidecar.is_dir():
+        dest_side = dest_dir / src.stem
+        if dest_side.exists():
+            report.append(f"{src.stem}/ 母版目录目标已有，未覆盖")
+        else:
+            shutil.move(str(sidecar), str(dest_side))
+            report.append(f"迁移母版 {src.stem}/ → {dest_dir.as_posix()}")
+    report.append(f"迁移 {src.name} → {dest_dir.as_posix()}")
+
+
+def migrate_flat_templates(dest: Path, report: list[str]) -> None:
+    """旧版 风格模板/替换模板/内置/{风格|替换} → templates 根目录（零散）。"""
+    root = dest / "references" / "templates"
+    if not root.is_dir():
+        return
+    for old_name in ("风格模板", "替换模板"):
+        old_dir = root / old_name
+        if not old_dir.is_dir():
+            continue
+        for path in sorted(old_dir.glob("*.json")):
+            _move_json_and_sidecar(path, root, report)
+        leftovers = [p.name for p in old_dir.iterdir() if p.name not in {".gitkeep", ".DS_Store"}]
+        if leftovers:
+            report.append(f"{old_name}/ 仍有未迁移文件：{', '.join(leftovers)}")
+        else:
+            for extra in old_dir.glob(".gitkeep"):
+                extra.unlink()
+            try:
+                old_dir.rmdir()
+                report.append(f"已删除空目录 {old_name}/")
+            except OSError:
+                report.append(f"{old_name}/ 未清空，未删除")
+    builtin = root / "内置"
+    if builtin.is_dir():
+        for kind in ("风格", "替换"):
+            kind_dir = builtin / kind
+            if not kind_dir.is_dir():
+                continue
+            for path in sorted(kind_dir.glob("*.json")):
+                _move_json_and_sidecar(path, root, report)
+        leftover_json = [p for p in builtin.rglob("*.json") if p.name != "要求.json"]
+        if leftover_json:
+            report.append("内置/ 仍有未迁到根目录的模板，未删除")
+        else:
+            shutil.rmtree(builtin)
+            report.append("已把 内置/ 里的零散模板挪到 templates/ 根目录")
+    for client_dir in sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith("_")):
+        if (root / f"{client_dir.name}.json").is_file():
+            continue
+        old_meta = client_dir / "_甲方.json"
+        new_meta = client_dir / "要求.json"
+        if old_meta.is_file() and not new_meta.exists():
+            shutil.move(str(old_meta), str(new_meta))
+            report.append(f"迁移 {client_dir.name}/_甲方.json → 要求.json")
 
 
 def dump_json(data: dict[str, Any]) -> str:
@@ -141,6 +218,25 @@ def merge_pack(
     return out
 
 
+def merge_client_meta(
+    new: dict[str, Any], old: dict[str, Any], label: str
+) -> tuple[dict[str, Any], list[str]]:
+    notes: list[str] = []
+    out = dict(new)
+    for key, value in old.items():
+        if key not in out:
+            out[key] = value
+            notes.append(f"{label} 保留用户键 {key}")
+        elif key == "notes" and isinstance(value, list) and isinstance(out.get("notes"), list):
+            out["notes"], added = merge_list(out["notes"], value)
+            if added:
+                notes.append(f"{label} notes +{added}")
+        elif key in {"language", "generation", "style", "brand", "name"} and out.get(key) != value:
+            out[key] = value
+            notes.append(f"{label} {key} 保留用户值")
+    return out, notes
+
+
 def merge_library_json(
     new: dict[str, Any], old: dict[str, Any], label: str
 ) -> tuple[dict[str, Any], list[str]]:
@@ -191,8 +287,18 @@ def register_user_files(dest: Path, user_rels: list[Path], report: list[str]) ->
         triggers = data.get("trigger_phrases", []) if data else []
         trigger = ", ".join(str(t) for t in triggers[:4]) or fname
         if rel.parts[:2] == ("references", "templates"):
-            cell = f"`templates/{fname}`"
-            heading = "### 模板匹配表"
+            if rel.name == "要求.json":
+                continue
+            ttype = (data or {}).get("template_type") or "style"
+            heading = "### 替换模板匹配表" if ttype == "replace" else "### 风格模板匹配表"
+            if len(rel.parts) == 3:
+                cell = f"`templates/{fname}`"
+            elif len(rel.parts) == 5 and rel.parts[3] in {"风格", "替换"}:
+                client, kind = rel.parts[2], rel.parts[3]
+                cell = f"`templates/{client}/{kind}/{fname}`"
+                heading = "### 替换模板匹配表" if kind == "替换" else "### 风格模板匹配表"
+            else:
+                continue
         else:
             cell = f"`{fname}`"
             heading = "### 情景匹配表"
@@ -219,6 +325,8 @@ def update(source: Path, dest: Path) -> int:
         report.append("保留 .env（未读取、未改动、未复制）")
     else:
         report.append("已装目录没有 .env（不是被这次更新删掉的）")
+
+    migrate_flat_templates(dest, report)
 
     if source == dest:
         print("已装目录就是新版目录（例如仓库里的 skills/dsimage）。")
@@ -258,7 +366,10 @@ def update(source: Path, dest: Path) -> int:
                     f"与新版「{new_id}」文件名冲突，用户文件未改"
                 )
                 continue
-            merged_data, notes = merge_library_json(new_data, old_data, rel.as_posix())
+            if rel.name == "要求.json":
+                merged_data, notes = merge_client_meta(new_data, old_data, rel.as_posix())
+            else:
+                merged_data, notes = merge_library_json(new_data, old_data, rel.as_posix())
             dest_path.write_text(dump_json(merged_data), encoding="utf-8")
             merged += 1
             if notes:

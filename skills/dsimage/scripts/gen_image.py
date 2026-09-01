@@ -4,6 +4,7 @@
 单张模式：--prompt / --prompt-file
 批量模式：--batch jobs.json —— 多图套图推荐用法，一次并发生成全部槽位；
 失败槽位加 --skip-existing 重跑同一命令即可只补失败的图。
+jobs.json 的 image 可为字符串或数组（替换模板：[母版, 产品图]）。
 
 官方服务商地址写死在脚本里，只需 IMG_PROVIDER + IMG_API_KEY + IMG_MODEL：
   openai → https://api.openai.com/v1          （同步 /images/generations|/edits）
@@ -357,6 +358,16 @@ def read_image_file(image_path: str) -> tuple[bytes, str, str]:
     return data, mime, path.name
 
 
+def ref_images(args: argparse.Namespace) -> list[str]:
+    """统一成路径列表。CLI 可重复 --image；jobs.json 里 image 可以是字符串或数组。"""
+    img = getattr(args, "image", None)
+    if not img:
+        return []
+    if isinstance(img, (list, tuple)):
+        return [str(path) for path in img if path]
+    return [str(img)]
+
+
 # ── HTTP 工具 ──────────────────────────────────────────────
 
 def _post_json(request: urllib.request.Request, timeout: int, what: str) -> dict[str, Any]:
@@ -391,10 +402,12 @@ def http_post(url: str, api_key: str, payload: dict[str, Any], timeout: int = 12
     return _post_json(request, timeout, "接口")
 
 
-def http_post_multipart(url: str, api_key: str, fields: dict[str, str], file_field: str,
-                        filename: str, file_data: bytes, file_mime: str,
+def http_post_multipart(url: str, api_key: str, fields: dict[str, str],
+                        files: list[tuple[str, str, bytes, str]],
                         timeout: int = 300) -> dict[str, Any]:
-    """以 multipart/form-data 提交（OpenAI /images/edits 图生图标准格式）。"""
+    """multipart 提交图生图。files: (field_name, filename, data, mime)，可重复同一字段。"""
+    if not files:
+        fail("图生图缺少参考图文件。")
     boundary = "dsimage-" + uuid.uuid4().hex
     chunks: list[bytes] = []
     for name, value in fields.items():
@@ -402,10 +415,11 @@ def http_post_multipart(url: str, api_key: str, fields: dict[str, str], file_fie
             f"--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n".encode("utf-8")
             + str(value).encode("utf-8") + b"\r\n"
         )
-    chunks.append(
-        f"--{boundary}\r\nContent-Disposition: form-data; name=\"{file_field}\"; filename=\"{filename}\"\r\n"
-        f"Content-Type: {file_mime}\r\n\r\n".encode("utf-8") + file_data + b"\r\n"
-    )
+    for file_field, filename, file_data, file_mime in files:
+        chunks.append(
+            f"--{boundary}\r\nContent-Disposition: form-data; name=\"{file_field}\"; filename=\"{filename}\"\r\n"
+            f"Content-Type: {file_mime}\r\n\r\n".encode("utf-8") + file_data + b"\r\n"
+        )
     chunks.append(f"--{boundary}--\r\n".encode("utf-8"))
     request = urllib.request.Request(
         url, data=b"".join(chunks),
@@ -482,14 +496,18 @@ def build_sync_payload(args: argparse.Namespace, prompt: str, model: str) -> dic
 def run_sync(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
              model: str, output_dir: Path, fmt: str,
              label: str = "sync", name_prefix: str | None = None) -> list[Path]:
-    if args.image:
+    images = ref_images(args)
+    if images:
         endpoint = f"{base_url}/images/edits"
-        file_data, file_mime, filename = read_image_file(args.image)
+        files = []
+        for path in images:
+            data, mime, filename = read_image_file(path)
+            files.append(("image", filename, data, mime))
         fields = {"model": model, "prompt": prompt, "n": str(args.n), "size": sync_size(args.size)}
         if args.quality:
             fields["quality"] = args.quality
-        log(label, f"图生图模式：参考图经 {endpoint} 提交...")
-        result = http_post_multipart(endpoint, api_key, fields, "image", filename, file_data, file_mime)
+        log(label, f"图生图模式：{len(files)} 张参考图经 {endpoint} 提交...")
+        result = http_post_multipart(endpoint, api_key, fields, files)
         return save_sync_images(result, output_dir, fmt, name_prefix)
     payload = build_sync_payload(args, prompt, model)
     endpoint = f"{base_url}/images/generations"
@@ -537,8 +555,11 @@ def build_grok_payload(args: argparse.Namespace, prompt: str, model: str) -> dic
     quality = grok_quality(args.quality)
     if quality:
         payload["quality"] = quality
-    if args.image:
-        payload["image"] = {"url": encode_image_data_uri(args.image), "type": "image_url"}
+    images = ref_images(args)
+    if len(images) == 1:
+        payload["image"] = {"url": encode_image_data_uri(images[0]), "type": "image_url"}
+    elif len(images) > 1:
+        payload["image"] = [{"url": encode_image_data_uri(path), "type": "image_url"} for path in images]
     return payload
 
 
@@ -548,8 +569,9 @@ def run_grok(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
     if args.resolution == "4k":
         log(label, "Grok 官方接口最高 2k，已把 4k 降为 2k。")
     payload = build_grok_payload(args, prompt, model)
-    endpoint = f"{base_url}/images/edits" if args.image else f"{base_url}/images/generations"
-    log(label, f"{'图生图' if args.image else '文生图'}：{endpoint}")
+    images = ref_images(args)
+    endpoint = f"{base_url}/images/edits" if images else f"{base_url}/images/generations"
+    log(label, f"{'图生图' if images else '文生图'}：{endpoint}")
     result = http_post(endpoint, api_key, payload, timeout=max(300, resolve_timeout(args)))
     return save_sync_images(result, output_dir, fmt, name_prefix)
 
@@ -630,10 +652,12 @@ def run_gemini(base_url: str, api_key: str, args: argparse.Namespace, prompt: st
     model_id = model.split("/")[-1]
     endpoint = f"{base_url}/models/{model_id}:generateContent"
     parts: list[dict[str, Any]] = [{"text": prompt}]
-    if args.image:
-        data, mime, _ = read_image_file(args.image)
-        parts.append({"inline_data": {"mime_type": mime, "data": base64.b64encode(data).decode("ascii")}})
-        log(label, f"图生图模式：参考图经 {endpoint} 提交...")
+    images = ref_images(args)
+    if images:
+        for path in images:
+            data, mime, _ = read_image_file(path)
+            parts.append({"inline_data": {"mime_type": mime, "data": base64.b64encode(data).decode("ascii")}})
+        log(label, f"图生图模式：{len(images)} 张参考图经 {endpoint} 提交...")
     else:
         log(label, f"提交生成请求到 {endpoint}...")
     payload: dict[str, Any] = {
@@ -697,8 +721,9 @@ def save_sync_images(result: dict[str, Any], output_dir: Path, fmt: str,
 def build_async_payload(args: argparse.Namespace, prompt: str, model: str) -> dict[str, Any]:
     ratio = size_to_ratio(args.size)
     payload: dict[str, Any] = {"model": model, "prompt": prompt, "n": 1, "size": ratio, "resolution": args.resolution}
-    if args.image:
-        payload["image_urls"] = [encode_image_data_uri(args.image)]
+    images = ref_images(args)
+    if images:
+        payload["image_urls"] = [encode_image_data_uri(path) for path in images]
     return payload
 
 
@@ -853,6 +878,12 @@ def _resolve_path(value: str, base_dir: Path) -> str:
     return str(path if path.is_absolute() else base_dir / path)
 
 
+def _resolve_image(value: Any, base_dir: Path) -> str | list[str]:
+    if isinstance(value, list):
+        return [_resolve_path(str(item), base_dir) for item in value if item]
+    return _resolve_path(str(value), base_dir)
+
+
 def load_batch(manifest_path: Path, args: argparse.Namespace) -> tuple[Path, list[dict[str, Any]]]:
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -898,7 +929,7 @@ def load_batch(manifest_path: Path, args: argparse.Namespace) -> tuple[Path, lis
                 if key in source and source[key] is not None:
                     value = source[key]
                     if key == "image":
-                        value = _resolve_path(str(value), base_dir)
+                        value = _resolve_image(value, base_dir)
                     setattr(job_args, key, value)
         if job_args.format not in VALID_FORMATS:
             fail(f"槽位 {slot} 的 format 非法：{job_args.format}（允许 {'/'.join(VALID_FORMATS)}）")
@@ -1038,7 +1069,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--resolution", default="1k", choices=VALID_RESOLUTIONS, help="异步模式分辨率档位，默认 1k。")
     parser.add_argument("--quality", choices=("low", "medium", "high"), help="同步模式图片质量参数。")
     parser.add_argument("--n", type=int, default=1, help="同步模式生成图片数量，默认 1。")
-    parser.add_argument("--image", help="参考产品图片路径，传入以提升产品一致性。")
+    parser.add_argument("--image", action="append", help="参考图路径，可重复传入。替换模板：先母版后产品图。")
     parser.add_argument("--poll-interval", type=int, default=5, help="异步模式轮询间隔秒数，默认 5。")
     parser.add_argument("--timeout", type=int, help="异步模式轮询超时秒数；默认 1k/2k 为 180，4k 为 480。")
     parser.add_argument("--format", choices=VALID_FORMATS, default="png", help="图片保存格式，默认 png。")
