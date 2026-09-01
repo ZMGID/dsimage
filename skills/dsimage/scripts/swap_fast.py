@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""lock=master 快跑：一句提示词 + 母版/产品图，由脚本填 jobs，不派品工人。
+"""lock=master 快跑：Agent 看图选定白图后，一句提示词 + 母版/产品图由脚本填 jobs。
 
 默认提示词只写在这里。填 jobs、交付压图都从这里走；CLI 入口仍是 queue_pack.py。
+选哪张商品图是 Agent 的事，不要靠文件名猜完就出。
 """
 from __future__ import annotations
 
 import json
 import math
+import random
 import re
+import shutil
 import struct
 import sys
 from pathlib import Path
@@ -38,6 +41,11 @@ REF_TOKENS = {
     "side": ("侧面", "side"),
     "front": ("正面", "front", "主图", "hero"),
 }
+SKU_RE = re.compile(r"[A-Za-z]+-?\d{3,}")
+COLOR_TOKENS = (
+    "海军", "卡其", "黑", "白", "米", "红", "蓝", "绿", "灰", "棕", "粉",
+    "杏", "橘", "紫", "驼",
+)
 SLOT_RE = re.compile(r"^h?(\d+)$", re.I)
 SLOT_IN_NAME = re.compile(r"h(\d+)", re.I)
 BYTES_RE = re.compile(r"^(\d+)(k|kb|m|mb|g|gb)?$", re.I)
@@ -47,6 +55,122 @@ PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 def fail(message: str) -> None:
     queue_pack.fail(message)
+
+
+def default_output_dir(source: Path) -> Path:
+    name = source.name
+    if name.endswith("系列"):
+        return source.parent / f"{name[:-2]}生成"
+    return source.parent / f"{name}生成"
+
+
+def sku_codes(text: str) -> list[str]:
+    return SKU_RE.findall(text)
+
+
+def color_of(stem: str) -> str | None:
+    for token in COLOR_TOKENS:
+        if token in stem:
+            return token
+    return None
+
+
+def pick_colorway(files: list[Path], rng: random.Random) -> list[Path]:
+    if len(files) <= 1:
+        return list(files)
+    groups: dict[str, list[Path]] = {}
+    for path in files:
+        color = color_of(path.stem)
+        if color:
+            groups.setdefault(color, []).append(path)
+    if len(groups) >= 2:
+        return list(groups[rng.choice(sorted(groups))])
+    return list(files)
+
+
+def expand_client_source(
+    source: Path,
+    rng: random.Random | None = None,
+) -> list[dict[str, Any]]:
+    rng = rng or random.Random()
+    folders = queue_pack.list_product_dirs(source)
+    if not folders:
+        fail(f"源目录里没有带图的子文件夹：{source}")
+    items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for folder in folders:
+        images = queue_pack.product_images(folder)
+        buckets: dict[str, list[Path]] = {}
+        unlabeled: list[Path] = []
+        for path in images:
+            codes = sku_codes(path.stem)
+            if codes:
+                buckets.setdefault(codes[0], []).append(path)
+            else:
+                unlabeled.append(path)
+        if len(buckets) >= 2:
+            if unlabeled:
+                names = "、".join(path.name for path in unlabeled)
+                fail(f"{folder.name} 里有带编号的图，也有没编号的图，拆不开：{names}")
+            grouped = buckets
+        elif len(buckets) == 1:
+            sku, files = next(iter(buckets.items()))
+            grouped = {sku: files + unlabeled}
+        else:
+            if len(sku_codes(folder.name)) >= 2:
+                fail(f"{folder.name} 是号段夹，但图片文件名没有商品编号，拆不开")
+            grouped = {folder.name: images}
+        for sku, files in grouped.items():
+            chosen = pick_colorway(files, rng)
+            if not chosen:
+                continue
+            if sku in seen:
+                fail(f"商品编号重复：{sku}")
+            seen.add(sku)
+            items.append({"sku": sku, "from_folder": folder.name, "files": chosen})
+    if not items:
+        fail(f"源目录没有可出的品：{source}")
+    return items
+
+
+def materialize_products(
+    output: Path,
+    items: list[dict[str, Any]],
+    only: list[str] | None = None,
+    skip: set[str] | None = None,
+) -> None:
+    skip = skip or set()
+    wanted = [name for name in (only or []) if name]
+    for item in items:
+        sku = str(item["sku"])
+        if sku in skip or (wanted and sku not in wanted):
+            continue
+        dest = output / sku
+        dest.mkdir(parents=True, exist_ok=True)
+        for src in item["files"]:
+            target = dest / Path(src).name
+            if not target.exists():
+                shutil.copy2(src, target)
+
+
+def resolve_product_names(
+    items: list[dict[str, Any]],
+    names: list[str],
+) -> tuple[list[str], list[str]]:
+    sku_set = {str(item["sku"]) for item in items}
+    by_folder: dict[str, list[str]] = {}
+    for item in items:
+        by_folder.setdefault(str(item["from_folder"]), []).append(str(item["sku"]))
+    resolved: list[str] = []
+    missing: list[str] = []
+    for name in names:
+        if name in sku_set:
+            resolved.append(name)
+        elif name in by_folder:
+            resolved.extend(by_folder[name])
+        else:
+            missing.append(name)
+    return resolved, missing
 
 
 def ratio_from_wh(width: int, height: int) -> str:
@@ -180,18 +304,21 @@ def slot_from_name(name: str, index: int) -> str:
 
 
 def pick_product_image(folder: Path, product_ref: str) -> Path | None:
-    images = queue_pack.product_images(folder)
+    images = queue_pack.ref_images(folder)
+    if not images:
+        images = queue_pack.product_images(folder, skip_slots=True)
+    if not images:
+        return None
+    if len(images) == 1:
+        return images[0]
     classified = [(path, classify_stem(path.name)) for path in images]
     matches = [path for path, kind in classified if kind == product_ref]
     if matches:
         return matches[0]
-    if product_ref == "front":
-        unlabeled = [path for path, kind in classified if kind is None]
-        if unlabeled:
-            return unlabeled[0]
-        if classified:
-            return classified[0][0]
-    return None
+    unlabeled = [path for path, kind in classified if kind is None]
+    if unlabeled:
+        return unlabeled[0]
+    return classified[0][0]
 
 
 def infer_pack(masters_dir: Path) -> list[dict[str, str]]:
@@ -434,7 +561,7 @@ def prompt_file_for(brief: dict[str, Any], slot: str) -> str:
 
 
 def fill_product(brief: dict[str, Any], name: str) -> dict[str, Any]:
-    source = Path(brief["source_dir"]) / name
+    source = queue_pack.product_dir(brief, name)
     masters = Path(brief["masters_dir"])
     pack = brief.get("pack")
     if not isinstance(pack, list) or not pack:
@@ -459,7 +586,7 @@ def fill_product(brief: dict[str, Any], name: str) -> dict[str, Any]:
             continue
         product = pick_product_image(source, pref)
         if product is None:
-            skipped.append({"slot": slot, "reason": f"没有 {pref} 产品图，跳过（不用正面硬贴）"})
+            skipped.append({"slot": slot, "reason": f"没有可用的产品图，跳过"})
             continue
         jobs.append({
             "slot": slot,
@@ -623,7 +750,7 @@ def deliver_brief(brief: dict[str, Any], names: list[str] | None = None) -> list
         folder = output / name
         if not folder.is_dir():
             continue
-        for image in queue_pack.product_images(folder):
+        for image in queue_pack.slot_images(folder):
             result = deliver_image(
                 image,
                 max_px,

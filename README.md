@@ -125,17 +125,16 @@ IMG_API_KEY=your-api-key-here
 
 ### 2. 铺很多套（大文件夹）
 
-一个大文件夹、下面每个子文件夹一个品。源目录只读。成图写到同级 `{大文件夹名}-成图/`，子文件夹名和原来的品文件夹一字不差。Prompt 在成图根 `_prompts/{品名}/`，整批规矩在 `_prompts/批次.json`。
+甲方一个大文件夹：可能一编号一夹，也可能几个编号一夹（文件名带商品号）。**一品基本一张图**，文件名不带颜色。源目录只读。成图默认同级「生成」根（`VE男包系列` → `VE男包生成`），里面**一个编号一个夹**：模板套图 + 从甲方迁来的那张白图。一夹多品按文件名拆开。Prompt 在成图根 `_prompts/{编号}/`，整批规矩在 `_prompts/批次.json`。
 
 ```text
-春季新品/                 ← 你给的源（只读）
-  双肩包-黑/正面.jpg
-  双肩包-米/1.jpg
-春季新品-成图/             ← 同级新建
-  双肩包-黑/h1.png
-  _prompts/
-    批次.json              ← 模板、skip、notes；进度看文件不看聊天
-    双肩包-黑/jobs.json
+VE男包系列/                 ← 甲方源（只读）
+  V26007-V26010/
+  V26026/
+VE男包生成/                 ← 同级默认
+  V26007/h1.png
+  V26007/白图
+  _prompts/批次.json
 ```
 
 真实顺序：
@@ -148,7 +147,7 @@ IMG_API_KEY=your-api-key-here
 
 还没定版不要直接铺 100 个。先按「出一套」做出你签字的那一款，建成带母版的模板，再对文件夹换货。内置「箱包单品报价模板」目前是按规则画（`lock=rules`）；像素级同一套版需要你先有齐套母版图，建成 `lock=master`。
 
-**只换商品、字不动、型号很多**：说「使用 dsimage 快速换货」，给一套样板图 + 大文件夹。Agent 先出一套让你看，你点头后脚本把其余型号跑完，不再一个品写一遍 Prompt。默认一口气出完；要每隔 N 个品停下来检查，说一声。档位、画幅、交付尺寸跟你这轮说的走（没说则跟模板/样板）；比例对不上不会拿宽图压成方。
+**只换商品、字不动、型号很多**：说「使用 dsimage 快速换货」，给一套样板图 + 大文件夹。Agent 看图选出那张商品白图，按模板出一套；你改到满意后再铺开其余型号，不再一个品写一遍 Prompt。默认一口气出完；要每隔 N 个品停下来检查，说一声。档位、画幅、交付尺寸跟你这轮说的走（没说则跟模板/样板）；比例对不上不会拿宽图压成方。
 
 铺很多型号、要高并发生图：安装时选生图 API（可和 Codex 账号同时开）。只靠宿主一张一张出，并发上不去。
 
@@ -199,15 +198,15 @@ python skills/dsimage/scripts/gen_image.py --batch generated-images/_prompts/bac
 多品：先建批次、子代理写 Prompt，再一次全局出图（默认并发 32）：
 
 ```bash
-python skills/dsimage/scripts/queue_pack.py --init --source "春季新品" --notes "字不要改"
-python skills/dsimage/scripts/queue_pack.py --queue "春季新品-成图/_prompts/批次.json" --next
-python skills/dsimage/scripts/queue_pack.py --queue "春季新品-成图/_prompts/批次.json" --run --skip-existing
+python skills/dsimage/scripts/queue_pack.py --init --source "VE男包系列" --notes "字不要改"
+python skills/dsimage/scripts/queue_pack.py --queue "VE男包生成/_prompts/批次.json" --next
+python skills/dsimage/scripts/queue_pack.py --queue "VE男包生成/_prompts/批次.json" --run --skip-existing
 
 # 快速换货
-python skills/dsimage/scripts/queue_pack.py --init --fast --source 春季新品 --masters 样板套图 --category 双肩包
-python skills/dsimage/scripts/queue_pack.py --queue "春季新品-成图/_prompts/批次.json" --pilot 双肩包-黑 --run
-python skills/dsimage/scripts/queue_pack.py --queue "春季新品-成图/_prompts/批次.json" --blast --run --skip-existing
-python skills/dsimage/scripts/queue_pack.py --queue "春季新品-成图/_prompts/批次.json" --deliver
+python skills/dsimage/scripts/queue_pack.py --init --fast --source VE男包系列 --masters 样板套图 --category 双肩包
+python skills/dsimage/scripts/queue_pack.py --queue "VE男包生成/_prompts/批次.json" --pilot V26026 --run
+python skills/dsimage/scripts/queue_pack.py --queue "VE男包生成/_prompts/批次.json" --blast --run --skip-existing
+python skills/dsimage/scripts/queue_pack.py --queue "VE男包生成/_prompts/批次.json" --deliver
 ```
 
 `--next` 打印下一波品名和工人任务原文（主会话拿去派子代理）。`--run` 把各品待出图槽位丢进同一线程池。`--concurrency` 可加大，上限 64。
@@ -241,7 +240,7 @@ dsimage/
 │   ├── SKILL.md             # 技能定义与通用流程（Agent 读）
 │   ├── SETUP.md             # 安装配置指南（Agent 读取）
 │   ├── CREATE_TEMPLATE.md   # 模板创建流程（Agent 读取）
-│   ├── FAST_SWAP.md         # 快速换货（试跑一套后脚本铺开）
+│   ├── FAST_SWAP.md         # 快速换货（Agent 看图做原型，点头后脚本铺开）
 │   ├── scripts/             # gen_image.py 生图 + queue_pack.py 多品队列 + swap_fast.py 快跑填 jobs + match_pack.py 匹配前三 + check_scenes.py 校验 + update_skill.py 原地升级
 │   └── references/
 │       ├── scenes/         # 26 个内置情景 + _SCENE_SPEC.md 情景规范
@@ -260,7 +259,7 @@ dsimage/
 └── .env.example             # API 配置模板
 ```
 
-大文件夹批量时，成图在源目录**同级**的 `{名}-成图/`，不要写进源目录，也不要用 `generated-images/`。
+大文件夹批量时，成图在源目录**同级**的「生成」根（`VE男包系列` → `VE男包生成`），一编号一夹（套图 + 白图），不要写进源目录，也不要用 `generated-images/`。
 
 ## 说明
 

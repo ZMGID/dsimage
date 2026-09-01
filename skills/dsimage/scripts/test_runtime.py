@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import struct
 import sys
 import tempfile
@@ -264,6 +265,8 @@ class QueuePackTests(unittest.TestCase):
                 sorted(["双肩包-黑", "双肩包-米"]),
             )
             self.assertEqual(output, Path(brief["output_dir"]))
+            self.assertEqual(set(brief["products"]), {"双肩包-黑", "双肩包-米", "登机箱"})
+            self.assertTrue((output / "双肩包-黑" / "正面.jpg").is_file())
 
     def test_jobs_without_png_is_gen(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -304,6 +307,63 @@ class QueuePackTests(unittest.TestCase):
             rows = queue_pack.scan(brief)
             by_name = {row["name"]: row["status"] for row in rows}
             self.assertEqual(by_name[name], "done")
+
+    def test_default_output_replaces_series_with_generated(self) -> None:
+        self.assertEqual(
+            swap_fast.default_output_dir(Path("D:/1/VE男包系列")).name,
+            "VE男包生成",
+        )
+        self.assertEqual(
+            swap_fast.default_output_dir(Path("D:/1/春季新品")).name,
+            "春季新品生成",
+        )
+
+    def test_expand_splits_range_folder_by_filename(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "VE男包系列"
+            _touch_image(source / "V26007-V26010" / "V26007.jpg")
+            _touch_image(source / "V26007-V26010" / "V26008正面.jpg")
+            _touch_image(source / "V26025" / "未标题-7.png")
+            items = swap_fast.expand_client_source(source, rng=random.Random(0))
+            by_sku = {item["sku"]: item for item in items}
+            self.assertEqual(set(by_sku), {"V26007", "V26008", "V26025"})
+            self.assertEqual(by_sku["V26007"]["from_folder"], "V26007-V26010")
+            self.assertEqual([path.name for path in by_sku["V26007"]["files"]], ["V26007.jpg"])
+
+    def test_expand_one_untitled_image_uses_folder_sku(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "VE男包系列"
+            _touch_image(source / "V26025" / "未标题-7.png")
+            items = swap_fast.expand_client_source(source, rng=random.Random(0))
+            self.assertEqual(len(items), 1)
+            self.assertEqual(items[0]["sku"], "V26025")
+            self.assertEqual([path.name for path in items[0]["files"]], ["未标题-7.png"])
+
+    def test_init_default_output_and_copies_white_ref(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "VE男包系列"
+            _touch_image(source / "V26007-V26010" / "V26007.jpg")
+            _touch_image(source / "V26007-V26010" / "V26008.jpg")
+            args = argparse.Namespace(
+                source=str(source),
+                output=None,
+                template="templates/BeautyU/01-箱包单品报价模板/01-箱包单品报价模板.json",
+                lock=None,
+                only=[],
+                skip=[],
+                workers=3,
+                concurrency=None,
+                notes="",
+            )
+            brief_path = queue_pack.init_brief(args)
+            brief = queue_pack.load_brief(brief_path)
+            output = Path(brief["output_dir"])
+            self.assertEqual(output.name, "VE男包生成")
+            self.assertEqual(set(brief["products"]), {"V26007", "V26008"})
+            self.assertTrue((output / "V26007" / "V26007.jpg").is_file())
+            self.assertTrue((output / "V26008" / "V26008.jpg").is_file())
+            self.assertFalse((output / "V26007-V26010").exists())
+            self.assertTrue(brief_path.is_file())
 
 
 class FastSwapTests(unittest.TestCase):
@@ -381,20 +441,21 @@ class FastSwapTests(unittest.TestCase):
             self.assertEqual(brief["swap_prompt"], swap_fast.DEFAULT_PROMPT)
             self.assertIn("Replace only the product", brief["swap_prompt"])
 
-    def test_pilot_skips_missing_back(self) -> None:
+    def test_pilot_uses_single_image_for_all_slots(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             brief_path, output, brief = self._fast_batch(Path(tmp))
             report = swap_fast.fill_product(brief, "双肩包-黑")
-            self.assertEqual(report["jobs"], 1)
-            self.assertEqual(report["skipped"][0]["slot"], "H4")
+            self.assertEqual(report["jobs"], 2)
+            self.assertEqual(report["skipped"], [])
             jobs = json.loads((output / "_prompts" / "双肩包-黑" / "jobs.json").read_text(encoding="utf-8"))
-            self.assertEqual(jobs["jobs"][0]["slot"], "H1")
+            by_slot = {job["slot"]: job for job in jobs["jobs"]}
             self.assertEqual(jobs["jobs"][0]["prompt_file"], "../swap_prompt.txt")
             self.assertEqual(jobs["jobs"][0]["resolution"], "1k")
             self.assertEqual(jobs["defaults"]["resolution"], "1k")
-            self.assertEqual(len(jobs["jobs"][0]["image"]), 2)
-            self.assertTrue(jobs["jobs"][0]["image"][0].endswith("h1.png"))
-            self.assertTrue(jobs["jobs"][0]["image"][1].endswith("正面.jpg"))
+            self.assertTrue(by_slot["H1"]["image"][0].endswith("h1.png"))
+            self.assertTrue(by_slot["H1"]["image"][1].endswith("正面.jpg"))
+            self.assertTrue(by_slot["H4"]["image"][0].endswith("h4-背面.png"))
+            self.assertTrue(by_slot["H4"]["image"][1].endswith("正面.jpg"))
             prompt = (output / "_prompts" / "swap_prompt.txt").read_text(encoding="utf-8")
             self.assertIn("Keep layout, text, icons, and background unchanged", prompt)
             rows = queue_pack.scan(queue_pack.load_brief(brief_path))
@@ -424,15 +485,25 @@ class FastSwapTests(unittest.TestCase):
             text = (output / "_prompts" / "swap_prompt.txt").read_text(encoding="utf-8")
             self.assertIn("Replace the bag only", text)
 
-    def test_pick_product_image_does_not_use_front_for_back(self) -> None:
+    def test_pick_product_image_one_file_used_for_every_slot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "品"
+            _touch_image(folder / "未标题-7.png")
+            picked = swap_fast.pick_product_image(folder, "back")
+            self.assertIsNotNone(picked)
+            self.assertEqual(picked.name, "未标题-7.png")
+            _touch_image(folder / "背面.jpg")
+            picked = swap_fast.pick_product_image(folder, "back")
+            self.assertEqual(picked.name, "背面.jpg")
+
+    def test_pick_product_image_falls_back_when_angle_filename_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp) / "品"
             _touch_image(folder / "正面.jpg")
-            self.assertIsNone(swap_fast.pick_product_image(folder, "back"))
-            _touch_image(folder / "背面.jpg")
+            _touch_image(folder / "细节.jpg")
             picked = swap_fast.pick_product_image(folder, "back")
             self.assertIsNotNone(picked)
-            self.assertEqual(picked.name, "背面.jpg")
+            self.assertEqual(picked.name, "正面.jpg")
 
     def test_parse_bytes(self) -> None:
         self.assertEqual(swap_fast.parse_bytes("2MB"), 2 * 1024 * 1024)

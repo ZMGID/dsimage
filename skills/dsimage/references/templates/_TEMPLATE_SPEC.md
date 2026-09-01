@@ -53,7 +53,7 @@ references/templates/
 | `lock=master` | 每槽母版和 JSON 同文件夹；`pack.images[].example` 是文件名 | **必有，齐套。** 缺任何一槽就不能写成 `lock=master`，也不能出图 |
 | `lock=rules` | 至少 1 张示例图（建议 H1 / `h1.png`），对应槽写 `example`。出图用用户产品图，这些图只作版式/调性参考 | **必有。** 没有示例图不准登记。不要拿示例图当母版换货 |
 | 用户产品图 | 留在用户给的路径 / `data/` | 出图时引用，禁止拷进 `templates/` |
-| 成图 | `generated-images/` 或 `{名}-成图/` | 禁止写回 `templates/` |
+| 成图 | `generated-images/`（单品）或同级 `{名}生成/`（批量） | 禁止写回 `templates/` |
 
 不要建 `风格/`、`替换/`。编号接**该目录**（`templates/` 根下的零散包，或某个甲方文件夹）已有最大号。
 
@@ -222,12 +222,12 @@ references/templates/
 - `product_ref`：`front` / `back` / `side` / `detail` / `colorway`
 - 不要写 `scene`，不要写构图类 `overrides`
 - 非 `colorway` 槽只用主色产品图
-- 缺角度 → 问用户或跳过该槽，禁止拿正面硬贴
+- 缺角度：换货长 Prompt 问用户或跳过，禁止拿正面硬贴；快速换货一品一张白图，每槽都用，不要因文件名没有「背面」就跳
 
 ### workflow
 
 - **rules**：读 pack → 建 Campaign Style Lock → 逐张引用情景拼 Prompt → `_prompts/` → 生成 → 检查 → 汇报
-- **master**：读 pack 与母版 → 按 `product_ref` 选产品图 → 缺角度/品类差太远先问 → 单品或要改字用换货 Prompt；数量多且冻字走 `FAST_SWAP.md` → `_prompts/`，`image: [母版, 产品图]` → 对照母版检查 → 汇报
+- **master**：读 pack 与母版 → Agent 看图选定该品白图 → 单品或要改字用换货 Prompt；数量多且冻字走 `FAST_SWAP.md`（看图出原型，点头后再铺）→ `_prompts/`，`image: [母版, 产品图]` → 对照母版检查 → 汇报
 
 ---
 
@@ -295,7 +295,8 @@ references/templates/
   "pitfalls": [
     "有母版却按情景重画",
     "未点名却改了标题/卖点/图标",
-    "缺背面参考仍用正面去换背面页"
+    "缺背面参考仍用正面去换背面页",
+    "快速换货因文件名没有背面而跳槽"
   ]
 }
 ```

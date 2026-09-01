@@ -3,23 +3,24 @@
 
 2 个及以上品文件夹时用这个，不要在一条对话里按品串行。
 
-  python scripts/queue_pack.py --init --source 春季新品 --template templates/BeautyU/01-箱包单品报价模板/01-箱包单品报价模板.json
-  python scripts/queue_pack.py --queue 春季新品-成图/_prompts/批次.json
+  python scripts/queue_pack.py --init --source VE男包系列 --template templates/BeautyU/01-箱包单品报价模板/01-箱包单品报价模板.json
+  python scripts/queue_pack.py --queue VE男包生成/_prompts/批次.json
   python scripts/queue_pack.py --queue ... --next
   python scripts/queue_pack.py --queue ... --run --skip-existing   # 生图单独走，默认并发 32
 
-快跑（lock=master，脚本填 jobs，不派品工人）：
+快跑（lock=master：Agent 看图选白图做原型，点头后脚本填 jobs，不派品工人）：
 
-  python scripts/queue_pack.py --init --fast --source 春季新品 --masters 样板套图 --category 双肩包
-  python scripts/queue_pack.py --queue ... --pilot 双肩包-黑 --run
+  python scripts/queue_pack.py --init --fast --source VE男包系列 --masters 样板套图 --category 双肩包
+  python scripts/queue_pack.py --queue ... --pilot V26026 --run
   python scripts/queue_pack.py --queue ... --blast --run --skip-existing
   python scripts/queue_pack.py --queue ... --deliver
-  # 档位/画布由调用方填：--resolution --output-size / --max-px --max-bytes
+  # 默认同级「生成」；档位/画布由调用方填：--resolution --output-size / --max-px --max-bytes
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -39,6 +40,7 @@ REFERENCES = SKILL_ROOT / "references"
 BRIEF_NAME = "批次.json"
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 SKIP_DIR_NAMES = {"_prompts"}
+SLOT_STEM_RE = re.compile(r"^h\d+$", re.I)
 STATUS_ORDER = ("prompt", "gen", "done", "skip", "empty")
 DEFAULT_GEN_CONCURRENCY = 32
 MAX_GEN_CONCURRENCY = 64
@@ -124,11 +126,46 @@ def list_product_dirs(source_dir: Path) -> list[Path]:
     return products
 
 
-def product_images(folder: Path) -> list[Path]:
+def product_images(folder: Path, *, skip_slots: bool = False) -> list[Path]:
+    if not folder.is_dir():
+        return []
+    files: list[Path] = []
+    for path in folder.iterdir():
+        if not path.is_file() or path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        if skip_slots and SLOT_STEM_RE.match(path.stem):
+            continue
+        files.append(path)
+    return sorted(files)
+
+
+def ref_images(folder: Path) -> list[Path]:
+    return product_images(folder, skip_slots=True)
+
+
+def slot_images(folder: Path) -> list[Path]:
+    if not folder.is_dir():
+        return []
     return sorted(
-        p for p in folder.iterdir()
-        if p.is_file() and p.suffix.lower() in IMAGE_SUFFIXES
+        path for path in folder.iterdir()
+        if path.is_file()
+        and path.suffix.lower() in IMAGE_SUFFIXES
+        and SLOT_STEM_RE.match(path.stem)
     )
+
+
+def product_dir(brief: dict[str, Any], name: str) -> Path:
+    dest = Path(brief["output_dir"]) / name
+    if ref_images(dest):
+        return dest
+    return Path(brief["source_dir"]) / name
+
+
+def product_names_of(brief: dict[str, Any]) -> list[str]:
+    listed = [str(name) for name in (brief.get("products") or []) if str(name).strip()]
+    if listed:
+        return listed
+    return [path.name for path in list_product_dirs(Path(brief["source_dir"]))]
 
 
 def slots_from_jobs(jobs_path: Path) -> list[str]:
@@ -156,8 +193,8 @@ def classify_product(name: str, brief: dict[str, Any]) -> str:
         return "skip"
     source_dir = Path(brief["source_dir"])
     output_dir = Path(brief["output_dir"])
-    src = source_dir / name
-    if not product_images(src):
+    src = product_dir(brief, name)
+    if not ref_images(src) and not product_images(source_dir / name):
         return "empty"
     jobs_path = output_dir / "_prompts" / name / "jobs.json"
     if not jobs_path.is_file():
@@ -208,10 +245,11 @@ def resolve_gen_concurrency(args: argparse.Namespace, brief: dict[str, Any] | No
 
 def scan(brief: dict[str, Any]) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
-    for folder in list_product_dirs(Path(brief["source_dir"])):
-        status = classify_product(folder.name, brief)
-        rows.append({"name": folder.name, "status": status})
-    named = {row["name"] for row in rows}
+    named: set[str] = set()
+    for name in product_names_of(brief):
+        status = classify_product(name, brief)
+        rows.append({"name": name, "status": status})
+        named.add(name)
     only = [str(x) for x in (brief.get("only") or []) if str(x).strip()]
     for name in only:
         if name not in named:
@@ -242,7 +280,7 @@ def format_status(brief_path: Path, brief: dict[str, Any], rows: list[dict[str, 
         f"模板：{brief.get('template') or '（未写）'}  lock={brief.get('lock') or 'rules'}"
         + (f"  run={brief.get('run')}" if brief.get("run") == "fast" else ""),
         (
-            "快跑：脚本填 jobs，不要派品工人"
+            "快跑：Agent 看图选白图；点头后脚本填 jobs，不要派品工人"
             if brief.get("run") == "fast"
             else f"品工人同时最多 {brief['product_workers']} 路（写 Prompt）"
         ),
@@ -324,10 +362,10 @@ def format_worker_brief(
         f"批次文件：{brief_path}",
         f"规矩只认这份批次.json（notes：{notes}）。不要问里面已经有的要求。",
         f"模板：{template}  lock={lock}",
-        f"源文件夹：{source / '{品名}'}",
+        f"甲方源（只读）：{source}",
         f"Prompt / jobs.json → {output / '_prompts' / '{品名}'}/",
-        f"成图 → {output / '{品名}'}/  只放 h1.png 这类槽位图",
-        "参考图只用该品源文件夹里的图。源图文件名按 SKILL「源图文件名」对槽。",
+        f"成图 → {output / '{品名}'}/  套图 h1.png… + 已迁白图",
+        "参考图用该品成图夹里迁来的产品图。源图文件名按 SKILL「源图文件名」对槽。不要改甲方源夹。",
     ]
     if style_lock:
         lines.append("Campaign Style Lock 用批次.json 的 style_lock 原文，不要改写。")
@@ -363,10 +401,12 @@ def write_brief(path: Path, payload: dict[str, Any]) -> None:
 
 
 def init_brief(args: argparse.Namespace) -> Path:
+    import swap_fast
+
     source = Path(args.source).resolve()
     if not source.is_dir():
         fail(f"源目录不存在：{source}")
-    output = Path(args.output).resolve() if args.output else source.parent / f"{source.name}-成图"
+    output = Path(args.output).resolve() if args.output else swap_fast.default_output_dir(source)
     template_path = resolve_template(args.template, Path.cwd())
     if args.template and template_path is None:
         fail(f"找不到模板：{args.template}")
@@ -375,13 +415,17 @@ def init_brief(args: argparse.Namespace) -> Path:
         lock = args.lock
     only = [x for x in (args.only or []) if x.strip()]
     skip = [x for x in (args.skip or []) if x.strip()]
+    expanded = swap_fast.expand_client_source(source)
+    only, missing_only = swap_fast.resolve_product_names(expanded, only)
+    if missing_only:
+        fail("only 里没有这些商品：" + "、".join(missing_only))
+    skip, missing_skip = swap_fast.resolve_product_names(expanded, skip)
+    if missing_skip:
+        fail("skip 里没有这些商品：" + "、".join(missing_skip))
     products = list_product_dirs(source)
-    if only:
-        missing = [name for name in only if not (source / name).is_dir()]
-        if missing:
-            fail("only 里没有这些子文件夹：" + "、".join(missing))
-    elif len(products) < 2 and not skip and not getattr(args, "fast", False):
+    if not only and len(products) < 2 and len(expanded) < 2 and not skip and not getattr(args, "fast", False):
         print("提示：源目录下品文件夹不足 2 个。批量并发按「2 个及以上」才走这条路。", file=sys.stderr)
+    swap_fast.materialize_products(output, expanded, only=only, skip=set(skip))
     payload = {
         "source_dir": str(source),
         "output_dir": str(output),
@@ -389,13 +433,19 @@ def init_brief(args: argparse.Namespace) -> Path:
         "lock": lock,
         "only": only,
         "skip": skip,
+        "products": [item["sku"] for item in expanded],
         "product_workers": max(1, min(8, args.workers)),
         "gen_concurrency": resolve_gen_concurrency(args),
         "notes": args.notes or "",
         "style_lock": style_lock,
     }
     if getattr(args, "fast", False):
-        payload.update(build_fast_payload(args, source, template_path, lock))
+        payload.update(
+            build_fast_payload(
+                args, source, template_path, lock,
+                expanded=expanded, only=only, skip=skip,
+            )
+        )
     brief_path = output / "_prompts" / BRIEF_NAME
     write_brief(brief_path, payload)
     output.mkdir(parents=True, exist_ok=True)
@@ -407,6 +457,10 @@ def build_fast_payload(
     source: Path,
     template_path: Path | None,
     lock: str,
+    *,
+    expanded: list[dict[str, Any]],
+    only: list[str],
+    skip: list[str],
 ) -> dict[str, Any]:
     import swap_fast
 
@@ -450,14 +504,17 @@ def build_fast_payload(
         )
         swap_fast.require_pack_ratio(pack, deliver["ratio"], str(label))
     prompt = str(getattr(args, "swap_prompt", None) or swap_fast.DEFAULT_PROMPT).strip()
-    products = [p.name for p in list_product_dirs(source)]
-    only = [x for x in (getattr(args, "only", None) or []) if str(x).strip()]
-    skip = {x for x in (getattr(args, "skip", None) or []) if str(x).strip()}
-    named = [name for name in products if name not in skip]
+    skip_set = set(skip)
+    named = [str(item["sku"]) for item in expanded if item["sku"] not in skip_set]
     if only:
         named = [name for name in named if name in only]
     pilot = str(getattr(args, "pilot", None) or "").strip()
-    if not pilot and named:
+    if pilot:
+        resolved, missing = swap_fast.resolve_product_names(expanded, [pilot])
+        if missing:
+            fail(f"试跑品不在源目录：{pilot}")
+        pilot = resolved[0]
+    elif named:
         pilot = named[0]
     if pilot and named and pilot not in named:
         fail(f"试跑品不在源目录：{pilot}")
@@ -667,10 +724,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--init", action="store_true", help="扫描源目录，写入成图根/_prompts/批次.json")
     parser.add_argument("--source", help="--init 用的源大文件夹")
-    parser.add_argument("--output", help="成图根目录；默认 {源目录名}-成图，与源同级")
+    parser.add_argument("--output", help="成图根目录；默认把「系列」换成「生成」，与源同级")
     parser.add_argument("--template", help="模板 JSON 路径（相对 references/ 或绝对路径）")
     parser.add_argument("--lock", choices=("rules", "master"), help="覆盖模板里的 lock")
-    parser.add_argument("--fast", action="store_true", help="快跑：脚本填 jobs，不派品工人。需要母版")
+    parser.add_argument("--fast", action="store_true", help="快跑：Agent 选白图做原型；点头后脚本填 jobs。需要母版")
     parser.add_argument("--masters", help="快跑母版文件夹（h1.png…）。有 lock=master 模板可不写")
     parser.add_argument("--category", help="快跑品类（如 双肩包），只记录在批次里")
     parser.add_argument("--max-px", dest="max_px", type=int, help="交付长边像素上限；保持比例，不变形")
@@ -763,7 +820,7 @@ def persist_brief(brief_path: Path, brief: dict[str, Any]) -> None:
         "product_workers", "gen_concurrency", "notes", "style_lock",
         "run", "masters_dir", "pack", "swap_prompt", "swap_slots",
         "prompt_locked", "pilot", "category", "generation", "deliver",
-        "inspect_every",
+        "inspect_every", "products",
     )
     payload = {key: brief[key] for key in keys if key in brief}
     write_brief(brief_path, payload)
