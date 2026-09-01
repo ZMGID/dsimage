@@ -12,6 +12,8 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 1. **Brief / Prompt 模式**：只输出视觉简报和可执行图片 Prompt。
 2. **Generate 模式**：当用户明确要求"生图、生成图片、出图、render image"时，先输出最终 Prompt，再调用生图。
 
+对人只谈三件事：**出一套**（单品）→ **铺很多套**（大文件夹，主会话调度、子代理写 Prompt、生图单独 `--run`）→ **收成模板**（先拷图再写 JSON）。开口带「使用 dsimage」。2 个及以上品文件夹不要在本对话按品串行，见「批量品目录」。
+
 不要暴露、索要、写入、提交或回显真实 API key。生图 API 不是必须的：Codex 账号登录即可用原生生图；需要更高额度/并发时可再配 API，两者可同时开，不是二选一。
 
 ---

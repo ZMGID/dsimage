@@ -5,6 +5,7 @@
 > **只有一种模板。** `lock=rules` 按规范画；`lock=master` 锁母版只换货。
 > **一份模板 = 一个文件夹**，JSON 和图放一起。没有真图不要编一张充数。
 > 顺序：定 lock → 建空文件夹 → **先把图拷进去** → 再写 JSON → 校验登记。不要先交一份没图的 JSON。
+> `lock=master` 试换通过后，多个型号文件夹走 SKILL「批量品目录」（`queue_pack.py`），不要一条对话串行。
 > 前置必读：`references/templates/_TEMPLATE_SPEC.md`。`lock=rules` 才需要 `references/scenes/`。
 
 ## 第 0 步：定 lock
@@ -176,6 +177,6 @@
 1. 把 JSON 写入已建的模板夹（与母版图同夹）。有甲方则把该文件夹名写入 `要求.json` 的 `templates`。**缺任何一槽母版不准登记**，不要编假图。
 2. `python scripts/check_scenes.py` 必须通过。
 3. 在 SKILL.md **模板匹配表**登记。
-4. 询问是否拿一个新品号试换 1 张。
+4. 询问是否拿一个新品号试换 1 张。试换通过后，多个型号文件夹按 SKILL「批量品目录」走 `queue_pack.py`（子代理写 Prompt，生图单独 `--run`），不要一条对话里一个型号做完再接下一个。
 
 **收尾**：以后翻车换该槽母版或改 `editable_fields`，不要改 `lock`、不要新建情景。

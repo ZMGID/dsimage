@@ -10,7 +10,7 @@ Dsimage 是一个电商视觉创作 Skill，装进 Claude Code / Codex / OpenCla
 使用 dsimage 模板：某某，按这套样图换货，把这个型号换进去
 ```
 
-它就会按模板出一套图。模板只有一种：JSON 里的 `lock` 决定按品牌规则生成（`rules`），还是对着已有母版套图只换产品（`master`）。换货时未点名的字和版式不动，适合同一系列很多型号。
+它就会按模板出一套图。模板只有一种：JSON 里的 `lock` 决定按品牌规则生成（`rules`），还是对着已有母版套图只换产品（`master`）。换货时未点名的字和版式不动，适合同一系列很多型号。多个型号用「大文件夹 + 每子文件夹一个品」：子代理并发写 Prompt，生图单独跑，不要在一条聊天里一个一个做。
 
 它和"再要一个 Prompt"的生图玩法有三个区别：
 
@@ -41,6 +41,7 @@ mkdir -p .claude/skills && cp -r skills/dsimage .claude/skills/
 |------|--------------------------|----------------------|
 | Claude Code | `<项目>/.claude/skills/` | `~/.claude/skills/` |
 | Codex CLI | `<项目>/.codex/skills/` | `~/.codex/skills/` |
+| Cursor | `<项目>/.cursor/skills/` | `~/.cursor/skills/` |
 | OpenClaw | `<工作区>/skills/` | `~/.openclaw/skills/` |
 
 OpenClaw 也可以在克隆出的仓库目录内用命令安装：`openclaw skills install ./skills/dsimage --as dsimage`。
@@ -100,14 +101,9 @@ IMG_API_KEY=your-api-key-here
 
 ## 使用
 
-装好之后就三件事。开口最好带上「使用 dsimage」，套模板写成「使用 dsimage 模板：某某模板」。
+装好之后对人就三件事：**出一套、铺很多套、收成模板。** 开口带上「使用 dsimage」才会走这套技能。套模板写成「使用 dsimage 模板：某某」。
 
-**1. 出图**  
-把产品图丢过来，能给的信息一起给（品名、价格、尺寸、卖点、颜色），再说一句要什么，就可以开始。开口之后会先展示准备用的**模板和场景**（自动匹配，最优排第一，一共三个）。回 1 / 2 / 3 换方案，或者说没有要求就按第 1 个开做。原图文件名会参与生图：一般就是型号，正面/背面等也会用来选参考图。缺的会先问一轮，你说先出也行。
-
-如果你同时丢来「一套已经做好的商品图」和「新产品图」，又没说是换货还是按感觉重画，Agent 会先用白话问清（建议换品、字默认不动），避免做成另一套不像的图。一套出完：已经套了定制模板会问要不要对照刚出的图改模板；否则会问要不要给这类货新建模板。
-
-一个大文件夹、下面每个子文件夹一个品时，成图写到大文件夹**同级**的 `{大文件夹名}-成图/`，里面的子文件夹名和原来的品文件夹一样。Prompt 和 `jobs.json` 放在成图根下的 `_prompts/{品名}/`，整批规矩写在 `_prompts/批次.json`。**多个品并发派工人**（一条对话里串行做会把上下文做爆），不要在聊天里记谁做完了。单品则是 `generated-images/<slug>-pdp/` 放成图、`generated-images/_prompts/<slug>/` 放提示词。
+你不用记 `lock` 这种字段。Agent 只跟你确认结果：和样板同一套版只换货，还是按这种感觉重新画。同时丢来「一套已做好的主图」+「新产品图」时，它会先问一句（推荐换货，字默认不动）。
 
 ```text
 使用 dsimage 来制作，基于这张衣服图做 Amazon 详情页
@@ -117,13 +113,58 @@ IMG_API_KEY=your-api-key-here
 使用 dsimage 模板：箱包单品报价模板，把这个文件夹里每个子文件夹出一套
 ```
 
-**2. 同类品做模板**  
-同一类货、同一套版式要反复出，就说「使用 dsimage，按这些参考图 / PDF 做一个模板」。还没有定稿套图 → 按规则画（`lock=rules`，文件夹里至少放一张示例图）；已经有一套成品图、后面只换型号 → 把那套图拷进模板文件夹当母版（`lock=master`）。**一份模板一个文件夹**，JSON 和图放一起，整夹才能分享。同一甲方多个品才再套一层甲方文件夹：`要求.json` 的 `templates` 列出这些模板目录名，语言、分辨率、格式、风格写在 `要求.json`，不要再抄进各模板。下次直接套。
+### 1. 出一套（单品）
 
-**3. 模板会越用越好**  
-哪里不对直接说，比如「H5 不该是生活图」「字糊了」「少了拉杆带」。也可以把甲方成品图丢过来，让它对照着改模板。改的是这个品牌模板，下次同类品会跟着变好。
+1. 把产品图丢过来，能给的信息一起给（品名、价格、尺寸、卖点、颜色），再说一句要什么。
+2. Agent 先展示准备用的 **3 个方案**（第 1 个最优）。回 `1` / `2` / `3` 换方案，或说「没有 / 先出」按第 1 个做。
+3. 缺参数会问一轮；你说先出也行。原图文件名会参与生图：一般就是型号，`正面` / `背面` 用来选参考图。
+4. Prompt 写到 `generated-images/_prompts/<品名>/`，成图写到 `generated-images/<品名>-pdp/`（`h1.png`…）。
+5. **有生图 API**：一次 `gen_image.py --batch`，默认 **9 路并发**（9 张槽位一次铺开）。**没 API、有宿主生图**：槽位子代理并行，单品最多 4 路。
+6. 一套出完：已经套了定制模板会问要不要对照改模板；否则会问要不要给这类货新建模板。
 
-也可以不经过对话，直接调生图脚本（Windows 用 `python`，macOS/Linux 用 `python3`）：
+### 2. 铺很多套（大文件夹）
+
+一个大文件夹、下面每个子文件夹一个品。源目录只读。成图写到同级 `{大文件夹名}-成图/`，子文件夹名和原来的品文件夹一字不差。Prompt 在成图根 `_prompts/{品名}/`，整批规矩在 `_prompts/批次.json`。
+
+```text
+春季新品/                 ← 你给的源（只读）
+  双肩包-黑/正面.jpg
+  双肩包-米/1.jpg
+春季新品-成图/             ← 同级新建
+  双肩包-黑/h1.png
+  _prompts/
+    批次.json              ← 模板、skip、notes；进度看文件不看聊天
+    双肩包-黑/jobs.json
+```
+
+真实顺序：
+
+1. 匹配方案 + **口头要求只问一次**（只要哪几款、哪个先不做、字动不动），写入 `批次.json`。
+2. 主会话只调度。`--next` 一次派最多 3 个子代理，**每个子代理只做一个品、只写 Prompt**。不要在一条对话里一个品做完再接下一个（上下文会被压缩忘掉你的要求）。
+3. Prompt 写齐后，生图单独走 `queue_pack.py --run`（默认并发 **32**，上限 64；429 自动减半）。不要 3 个子代理各自再开一套 `--batch`。
+4. 对话被压缩了就新开一条，读 `批次.json` 再 `--next` / `--run`。
+5. 整批出完再收口一次，不要每个品问一遍要不要建模板。
+
+还没定版不要直接铺 100 个。先按「出一套」做出你签字的那一款，建成带母版的模板，再对文件夹换货。内置「箱包单品报价模板」目前是按规则画（`lock=rules`）；像素级同一套版需要你先有齐套母版图，建成 `lock=master`。
+
+铺很多型号、要高并发生图：安装时选生图 API（可和 Codex 账号同时开）。只靠宿主一张一张出，并发上不去。
+
+### 3. 同类品做模板
+
+同一类货、同一套版式要反复出，就说「使用 dsimage，按这些参考图 / PDF 做一个模板」。
+
+- 还没有定稿套图 → 按规则画（`lock=rules`，文件夹里**至少一张示例图**，建议 `h1.png`）
+- 已经有一套成品图、后面只换型号 → 把那套图拷进模板文件夹当母版（`lock=master`，每槽一张）
+
+**一份模板一个文件夹**，JSON 和图放一起，整夹才能分享。没有真图不要登记。同一甲方多个品才再套一层甲方文件夹：`要求.json` 的 `templates` 列出这些模板目录名。
+
+哪里不对直接说，比如「H5 不该是生活图」「字糊了」「少了拉杆带」。改的是这个品牌模板，下次同类品会跟着变好。
+
+### 直接调脚本
+
+Windows 用 `python`，macOS/Linux 用 `python3`。
+
+单张：
 
 ```bash
 python skills/dsimage/scripts/gen_image.py \
@@ -131,13 +172,13 @@ python skills/dsimage/scripts/gen_image.py \
   --size 1:1 --image data/product.jpg
 ```
 
-多图套图用**批量模式**一次并发生成（比逐张串行快得多）：
+单品多图（默认并发 9）：
 
 ```bash
 python skills/dsimage/scripts/gen_image.py --batch generated-images/_prompts/backpack/jobs.json
 ```
 
-`jobs.json` 必须放在该品 `_prompts/` 目录（相对路径相对清单文件所在目录）：
+`jobs.json` 必须放在该品 `_prompts/`（相对路径相对清单文件所在目录）：
 
 ```json
 {
@@ -150,9 +191,9 @@ python skills/dsimage/scripts/gen_image.py --batch generated-images/_prompts/bac
 }
 ```
 
-输出按槽位命名（`h1.png`、`h2.png`…），进 `generated-images/backpack-pdp/`。Prompt 留在 `_prompts/backpack/`，不要放进品文件夹。母版换货把 `image` 写成数组：先母版路径，后产品图。个别槽位失败不影响其余槽位；修正后加 `--skip-existing` 重跑同一命令，只会补生成缺的图。
+输出按槽位命名（`h1.png`、`h2.png`…）。母版换货把 `image` 写成数组：先母版路径，后产品图。失败加 `--skip-existing` 重跑，只补缺的图。
 
-多个品文件夹时先建批次、再并发写 Prompt，最后一次全局出图（生图单独 `--run`，默认并发 32）：
+多品：先建批次、子代理写 Prompt，再一次全局出图（默认并发 32）：
 
 ```bash
 python skills/dsimage/scripts/queue_pack.py --init --source "春季新品" --notes "字不要改"
@@ -160,13 +201,15 @@ python skills/dsimage/scripts/queue_pack.py --queue "春季新品-成图/_prompt
 python skills/dsimage/scripts/queue_pack.py --queue "春季新品-成图/_prompts/批次.json" --run --skip-existing
 ```
 
-脚本参数：
+`--next` 打印下一波品名和工人任务原文（主会话拿去派子代理）。`--run` 把各品待出图槽位丢进同一线程池。`--concurrency` 可加大，上限 64。
+
+`gen_image.py` 参数：
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
 | `--prompt` / `--prompt-file` / `--batch` | Prompt 来源或批量清单，三选一必填 | — |
-| `--concurrency` | 批量起始并发；429/超时自动 9→4→2→1 回退 | `9` |
-| `--skip-existing` | 批量模式跳过输出已存在的槽位（失败重跑用） | 关 |
+| `--concurrency` | 单品批量起始并发；429/超时自动 9→4→2→1 | `9` |
+| `--skip-existing` | 跳过输出已存在的槽位（失败重跑用） | 关 |
 | `--size` | 画幅比例：`1:1`、`2:3`、`16:9` 等 14 种 | `1:1` |
 | `--resolution` | 分辨率档位 `1k` / `2k` / `4k`（4K 仅 6 种宽幅） | `1k` |
 | `--image` | 参考图路径，可重复。母版换货：先母版后产品图 | 无 |
@@ -177,37 +220,45 @@ python skills/dsimage/scripts/queue_pack.py --queue "春季新品-成图/_prompt
 
 异步模式另有 `--poll-interval`（默认 5 秒）、`--timeout`（1k/2k 默认 180 秒，4k 默认 480 秒）；同步模式支持 `--quality`（low/medium/high）和 `--n`（生成数量）。
 
+`queue_pack.py` 常用参数：`--init --source` 建 `批次.json`；`--queue` 看状态；`--next` 派品工人；`--run` 生图；`--skip` / `--only` / `--notes` 写入批次；`--workers` 品工人路数（默认 3）；`--concurrency` 覆盖生图并发。
+
+---
+
 ## 项目结构
 
 ```
 dsimage/
 ├── skills/dsimage/          # Skill 本体
-│   ├── SKILL.md             # 技能定义与通用流程
+│   ├── SKILL.md             # 技能定义与通用流程（Agent 读）
 │   ├── SETUP.md             # 安装配置指南（Agent 读取）
 │   ├── CREATE_TEMPLATE.md   # 模板创建流程（Agent 读取）
-│   ├── scripts/             # gen_image.py 生图 + queue_pack.py 多品并发队列 + match_pack.py 匹配前三 + check_scenes.py 校验 + update_skill.py 原地升级
+│   ├── scripts/             # gen_image.py 生图 + queue_pack.py 多品队列 + match_pack.py 匹配前三 + check_scenes.py 校验 + update_skill.py 原地升级
 │   └── references/
 │       ├── scenes/         # 26 个内置情景 + _SCENE_SPEC.md 情景规范
 │       └── templates/
 │           ├── _TEMPLATE_SPEC.md
-│           ├── 01-默认电商模板/          # 整夹复制即可分享/移动；至少一张示例图
+│           ├── 01-默认电商模板/          # 整夹复制即可分享；lock=rules 至少一张示例图
 │           │   └── 01-默认电商模板.json
 │           └── BeautyU/                 # 同一甲方多个品才建；整夹带走 要求.json + 各模板
 │               ├── 要求.json            # templates 列出下面的文件夹名
 │               └── 01-箱包单品报价模板/
-│                   └── 01-箱包单品报价模板.json  # 图和 JSON 放一起；rules 至少一张示例
+│                   └── 01-箱包单品报价模板.json
 ├── data/                    # 产品原图目录（自建，放入你的产品图）
-├── generated-images/        # 生图输出（运行时自动创建，不入库）
+├── generated-images/        # 单品输出（运行时自动创建，不入库）
 │   ├── <slug>-pdp/          # 该品成图（h1.png…）
-│   └── _prompts/<slug>/     # 该品 Prompt + jobs.json，不进成图文件夹
+│   └── _prompts/<slug>/     # 该品 Prompt + jobs.json
 └── .env.example             # API 配置模板
 ```
+
+大文件夹批量时，成图在源目录**同级**的 `{名}-成图/`，不要写进源目录，也不要用 `generated-images/`。
 
 ## 说明
 
 - 本项目不内置任何 API 密钥；`.env` 已被 gitignore，请勿把 key 提交进仓库或在对话中回显
 - 缺价格、尺寸、卖点时先问用户；不补则按假设出图并列出假设。认证/评分/销量用示意占位，不要写成已核实
-- 直接生图可以走 Codex 账号登录的原生生图，也可以走 OpenAI / Grok / Gemini 官方接口或其他兼容网关；两者可同时开。已配 API 时套图优先走脚本批量。官方三家不用填 URL。不同服务商对尺寸/分辨率/参考图的支持范围不同
+- 模板文件夹必须带图：`lock=rules` 至少一张示例；`lock=master` 每槽一张母版。没有真图不要登记
+- 直接生图可以走 Codex 账号登录的原生生图，也可以走 OpenAI / Grok / Gemini 官方接口或其他兼容网关；两者可同时开。已配 API 时套图优先走脚本。官方三家不用填 URL。不同服务商对尺寸/分辨率/参考图的支持范围不同
+- Agent 流程以 `skills/dsimage/SKILL.md` 为准；安装以 `SETUP.md` 为准；建模板以 `CREATE_TEMPLATE.md` 为准
 
 ## 许可
 
