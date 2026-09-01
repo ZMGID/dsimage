@@ -1,6 +1,6 @@
 ---
 name: dsimage
-description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets using 26 shooting scenes, with Campaign Style Lock for visual consistency. Generates via Codex built-in imagegen or a configured OpenAI-compatible image API. Also builds reusable client templates from brand materials. A template has one lock: rules (generate from brand rules) or master (swap the product onto a locked page set). Use when the user says 使用 dsimage / 使用dsimage / dsimage, or asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or 制作模板 / 创建模板 / 使用 dsimage 模板 / 替换模板 / 换品 / 换货.
+description: E-commerce visual creation skill. Turns product photos plus a one-line request into complete, conversion-optimized image sets using 26 shooting scenes, with Campaign Style Lock for visual consistency. Generates via Codex built-in imagegen or a configured OpenAI-compatible image API. Also builds reusable client templates from brand materials. A template has one lock: rules (generate from brand rules) or master (swap the product onto a locked page set). Use when the user says 使用 dsimage / 使用dsimage / dsimage, or asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / listing images / product photos / PDP / A+ content / social or ad creatives, or 制作模板 / 创建模板 / 使用 dsimage 模板 / 替换模板 / 换品 / 换货 / 快速换货 / 同类快换 / 快速替换.
 ---
 
 # dsimage Skill
@@ -12,7 +12,7 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 1. **Brief / Prompt 模式**：只输出视觉简报和可执行图片 Prompt。
 2. **Generate 模式**：当用户明确要求"生图、生成图片、出图、render image"时，先输出最终 Prompt，再调用生图。
 
-对人只谈三件事：**出一套**（单品）→ **铺很多套**（大文件夹，主会话调度、子代理写 Prompt、生图单独 `--run`）→ **收成模板**（先拷图再写 JSON）。开口带「使用 dsimage」。2 个及以上品文件夹不要在本对话按品串行，见「批量品目录」。
+对人只谈三件事：**出一套**（单品）→ **铺很多套**（大文件夹；只换商品走「快速换货」，按规则画才派子代理写 Prompt）→ **收成模板**（先拷图再写 JSON）。开口带「使用 dsimage」。2 个及以上品文件夹不要在本对话按品串行，见「批量品目录」。
 
 不要暴露、索要、写入、提交或回显真实 API key。生图 API 不是必须的：Codex 账号登录即可用原生生图；需要更高额度/并发时可再配 API，两者可同时开，不是二选一。
 
@@ -33,7 +33,8 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 
 已经够清楚就直接做，不要为问而问：
 
-- 已点名「替换模板：某某 / 只换产品 / 版式别动 / 一模一样 / 各型号统一」→ 换货（找 `lock=master` 的模板；库里没有则说明，不要假装在换）
+- 已点名「快速换货 / 同类快换 / 快速替换」且给了样板套图 + 产品图 → 读 `FAST_SWAP.md`（脚本填 jobs，先试一套再铺开）。抽检默认关。档位、比例、交付尺寸由你按本轮原话 + 母版 + 模板/甲方填，不要抄技能里的数字；生图比例必须对上目标画布，禁止变形压。
+- 已点名「替换模板：某某 / 只换产品 / 版式别动 / 一模一样 / 各型号统一」→ 换货（找 `lock=master` 的模板；库里没有则说明，不要假装在换）。数量多、不改字 → `FAST_SWAP.md`
 - 已点名「用某某模板 / 按这个调性、感觉、规范来 / 参考这个配色」且材料是 PDF、色板、情绪板，不是成套成品主图 → 按规则画
 - 只有产品图，没有「标准套图 / 成品主图 / 样板页」→ 按规则画（默认电商模板或情景）。可提一句：以后要铺很多型号、要长得一样，可以把定稿套图做成带母版的模板
 - 已命中已登记的模板，且 JSON 里 `lock=master` → 换货
@@ -53,7 +54,7 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 ```
 
 **2. 一个大文件夹、每个子文件夹一个型号，同时给了一套样板图**  
-这不是「每个型号各自按规则新画一套」（那样每款版式会对不齐）。正确做法是：**同一套样板当母版，每个型号单独换一次货**——H1 还是那张版式，只是袋子换成该型号。源文件夹有几个型号子文件夹，就出几套成图，版式同一套。用户只点了其中几个子文件夹就只做那几个。问一句：是不是每个型号都套这套样板、只换货。
+这不是「每个型号各自按规则新画一套」（那样每款版式会对不齐）。正确做法是：**同一套样板当母版，每个型号单独换一次货**。数量多、只换货、不改字 → 读 `FAST_SWAP.md`。问一句：是不是每个型号都套这套样板、只换货、字不动。
 
 **3. 「做成和这个一样 / 不要走样 / 统一版式」**  
 就是换品。再确认字要不要换成新货号/价格；没说则整页冻住。
@@ -96,13 +97,13 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 
 用户说「没有 / 先出 / 你看着办 / 1」→ 立即按第 1 名开做。说 2 或 3 → 改用该名次的模板和场景。默认：换货则字和版式全冻；按规则画则缺的参数按假设，汇报里列出。不要因为这一问空等。
 
-**2 个及以上品文件夹**：这一问只问一次。答案写入成图根 `_prompts/批次.json` 的 `only` / `skip` / `notes`，然后按「批量品目录」并发派工人。不要每个品再问一遍。
+**2 个及以上品文件夹**：这一问只问一次。答案写入成图根 `_prompts/批次.json` 的 `only` / `skip` / `notes`。只换货、不改字 → `FAST_SWAP.md`（脚本填 jobs）。按规则画 → 「批量品目录」并发派工人。不要每个品再问一遍。
 
 ---
 
 ## 核心流程
 
-**本 Skill 只规定通用流程。动手前先走「意图引导」：材料或措辞含糊时，用白话问清是换货还是按规则画。** 命中 `lock=master` 时走「换货」，不要按情景重画。
+**本 Skill 只规定通用流程。动手前先走「意图引导」：材料或措辞含糊时，用白话问清是换货还是按规则画。** 开口带「快速换货 / 同类快换 / 快速替换」→ **立刻读 `FAST_SWAP.md`**。命中 `lock=master` 且数量多、不改字 → 同样读 `FAST_SWAP.md`。不要派品工人写 Prompt。其余 `lock=master` 走「换货」，不要按情景重画。
 
 **模板大于情景。** 命中 `lock=rules` 的模板时，情景只提供拍法骨架和缺省数值。模板里写了的，一律用模板，不要跟情景折中，也不要为迁就这一套图去改情景。只命中情景、没有模板时，才以情景为准。
 
@@ -116,13 +117,13 @@ description: E-commerce visual creation skill. Turns product photos plus a one-l
 
 同名字段直接覆盖，不要平均、不要各用一半。槽位 `overrides` 只作用于该槽。
 
-1. 先走「意图引导」，再跑匹配。开口带「替换模板 / 按样图换货 / 只换产品」→ 按换货意图匹配；「使用 dsimage 模板：某某」按模板名匹配，再看该 JSON 的 `lock`。**每次出图前**执行 `python scripts/match_pack.py --query "<用户原话>"`（见「匹配与展示」），把前 3 名原样给用户看，第 1 个最优。采用第 1 名的模板和它列出的场景。点名不在库里时脚本会说明，**按它给出的前 3 名走，不要改成白底主图充数。** 展示排名时一并问还有没有要求（本轮已说清则只展示排名、按第 1 个做）。
+1. 先走「意图引导」，再跑匹配。开口带「快速换货 / 同类快换 / 快速替换」→ 读 `FAST_SWAP.md`。开口带「替换模板 / 按样图换货 / 只换产品」→ 按换货意图匹配；数量多且不改字同样读 `FAST_SWAP.md`。「使用 dsimage 模板：某某」按模板名匹配，再看该 JSON 的 `lock`。**每次出图前**执行 `python scripts/match_pack.py --query "<用户原话>"`（见「匹配与展示」），把前 3 名原样给用户看，第 1 个最优。采用第 1 名的模板和它列出的场景。点名不在库里时脚本会说明，**按它给出的前 3 名走，不要改成白底主图充数。** 展示排名时一并问还有没有要求（本轮已说清则只展示排名、按第 1 个做）。快速换货不要问货号/改价（字全冻）。
 2. **`lock=rules`**：模板在甲方文件夹里时，先读 `要求.json`，确认该模板文件夹名在 `templates` 里，再读模板 JSON；不在列表里就停下，不要拿这份要求套别的文件。零散模板只读它自己。打开该文件夹里的示例图，对照版式和调性再写 Prompt。然后读该槽引用的情景。Prompt = 情景 `prompt_template` 骨架 → 模板 `style_lock` / brand / `text_rules`（brand / 语言 / generation 模板没写则用 `要求.json`）→ 该槽 `overrides` 覆盖情景默认。情景与模板同名字段用模板的；情景 `pitfalls` / `anti_ai_tips` 仍要查，和模板冲突时听模板。只命中情景、没有模板时，才整份按情景执行。生图参考图用用户产品图，不要把示例图塞进 `--image` 当母版。**`lock=master`**：读取该模板 JSON + 同文件夹里的母版套图，走「换货」节；有甲方则同样先核对 `要求.json` 的 `templates`。缺母版就停下。不要加载情景、不要建 Style Lock 去重画。
 3. 价格、尺寸、卖点、文案等缺了先问一轮；用户不补或说先出图，则按合理假设继续，槽位不跳过。**换货例外**：未点名的字不改、不问卖点文案；只问 `editable_fields` 里本轮要换的值，以及缺的产品角度。产品外形以参考图为准。**源图文件名要参与生图**（见「源图文件名」）：型号、哪张当正面/背面参考，都从文件名读。认证/评分/销量不要写成已核实事实，可用示意占位。
 4. 多图任务（`lock=rules` / 情景）：先建立 **Campaign Style Lock**（见下文），原样放进每张 Prompt 开头。`lock=master` 不要建 Style Lock。一品多色先锁主色（见「一品多色」），其他颜色不要在套图里反复出现。
 5. `lock=rules` 的商品/营销任务：先做**转化驱动力诊断**（见下文）。换货跳过。
 6. 逐张写 Prompt：`lock=rules` = 模板 Style Lock → 情景 `prompt_template` 骨架 → 该槽 `overrides` 覆盖情景默认 → 按需 `variants` / `category_tips` → 通用规则收尾。换货 = 「换货」里的指令，不要套情景骨架。**2 个及以上品由各品工人写，主会话不写。**
-7. Generate 模式：按下方**出图通道**选路；用户提供了产品图必须带上参考图。`lock=master` 每槽必须带**母版 + 产品图**两张参考（`jobs.json` 的 `image` 为数组，先母版后产品）。走脚本时单品多图用 `--batch`；**2 个及以上品**按「批量品目录」并发调度（工人写 Prompt，有 API 则 `queue_pack.py --run`）。走 Codex/宿主原生生图时多图**积极派子代理并行**（见「多图执行规则」）。用户丢来「大文件夹 + 每子文件夹一个品」时，按「批量品目录」落盘，不要写进源文件夹。Prompt / `jobs.json` 按「落盘」进 `_prompts/`，禁止写进源品文件夹或成图文件夹。**命令参数与 Prompt 字段同一套优先级**（见上方「模板大于情景」）。`--size` 用比例（`1:1`），不要写死 `1024x1024` 或 `2048x2048`。未特别要求 2k 时用甲方或模板默认 `1k`，不要从情景抄 `2k`。接口返回多大就保存多大，禁止本地升采样。
+7. Generate 模式：按下方**出图通道**选路；用户提供了产品图必须带上参考图。`lock=master` 每槽必须带**母版 + 产品图**两张参考（`jobs.json` 的 `image` 为数组，先母版后产品）。走脚本时单品多图用 `--batch`；**2 个及以上品**按「批量品目录」并发调度（工人写 Prompt，有 API 则 `queue_pack.py --run`）。走 Codex/宿主原生生图时多图**积极派子代理并行**（见「多图执行规则」）。用户丢来「大文件夹 + 每子文件夹一个品」时，按「批量品目录」落盘，不要写进源文件夹。Prompt / `jobs.json` 按「落盘」进 `_prompts/`，禁止写进源品文件夹或成图文件夹。**命令参数与 Prompt 字段同一套优先级**（见上方「模板大于情景」）。`--size` 用该槽比例（母版像素 / 用户画布 / 模板），不要写像素档。`--resolution` 用户点了用用户的，否则甲方或模板，都没有才 `1k`，不要从情景抄 `2k`。接口返回多大就保存多大，禁止本地升采样。
 8. 出图后按对应 pitfalls + 下方 QA 清单检查，返回文件路径和关键假设。换货对照母版查：未点名的字/图标/版式是否被改。
 9. **一套品出完必须收口**（本轮已经在建/改模板则跳过；**2 个及以上品整批出完再问一次**）：
    - 本轮套的是 **`lock=master`** → 问：「母版要不要对照刚出的图换一张？」说要 → 只换该槽母版图或 `product_ref` / `editable_fields`，不要改成 `lock=rules`、不要走 CREATE_TEMPLATE 新建。
@@ -166,6 +167,13 @@ python scripts/gen_image.py --batch generated-images/_prompts/<slug>/jobs.json
 python scripts/queue_pack.py --init --source "<大文件夹>" --template templates/<甲方>/<模板>/<模板>.json --notes "<口头要求>"
 python scripts/queue_pack.py --queue "<成图根>/_prompts/批次.json" --next
 python scripts/queue_pack.py --queue "<成图根>/_prompts/批次.json" --run --skip-existing
+
+# 快速换货：脚本填 jobs，先试一套再铺开（不要 --next）
+python scripts/queue_pack.py --init --fast --source "<大文件夹>" --masters "<样板文件夹>" --category "<品类>"
+# 按本轮填：--resolution <1k|2k|4k> ；--output-size <宽x高> 或 --max-px <长边> --max-bytes <体积> ；--inspect-every <N>
+python scripts/queue_pack.py --queue "<成图根>/_prompts/批次.json" --pilot "<品名>" --run
+python scripts/queue_pack.py --queue "<成图根>/_prompts/批次.json" --blast --run --skip-existing
+python scripts/queue_pack.py --queue "<成图根>/_prompts/批次.json" --deliver
 ```
 
 批量清单必须放在该品 `_prompts/` 目录（见「落盘」），相对路径相对清单文件所在目录：
@@ -310,7 +318,8 @@ python scripts/match_pack.py --query "<用户原话，不要改写>"
 **区分任务**（先过「意图引导」，再对号）：
 
 - **用情景或 `lock=rules` 的模板出图** → 按规则画。
-- **换货 / 命中 `lock=master`** → 「换货」。
+- **换货 / 命中 `lock=master`** → 「换货」。数量多、不改字 → `FAST_SWAP.md`。
+- **快速换货 / 同类快换** → `FAST_SWAP.md`。
 - **制作一个模板** → 读 `CREATE_TEMPLATE.md`，按那份的顺序做：定 lock → 建空文件夹 → **先拷图** → 再写 JSON → 校验登记。对用户说换货母版 vs 按规则画，不要甩两种模板名。`lock=rules` 至少一张示例（没有则先试跑 H1 再拷）；`lock=master` 齐套母版，没有就不要用这个 lock。`lock=rules` 缺情景可新建情景；`lock=master` 不要新建情景。
 
 **新建或修改情景的规范**：字段规范看 `references/scenes/_SCENE_SPEC.md`；写完跑 `python scripts/check_scenes.py` 校验，并在上方匹配表登记（校验器会检查登记，漏登记会报错）。
@@ -319,7 +328,9 @@ python scripts/match_pack.py --query "<用户原话，不要改写>"
 
 ## 换货（lock=master）
 
-锁的是已画好的母版套图，不是规则。每个型号对着同一套图换货，未点名的文字、图标、版式、背景保持原样。
+数量多、只换货、不改字、同类 → **读 `FAST_SWAP.md`**，不要用下面这段长 Prompt，不要派品工人。
+
+锁的是已画好的母版套图，不是规则。每个型号对着同一套图换货，未点名的文字、图标、版式、背景保持原样。本节用于单品，或要改 `editable_fields` 里点名的字。
 
 **资产**
 
@@ -434,7 +445,7 @@ Campaign Style Lock: consistent premium ecommerce visual system across the entir
 4. 每张 Prompt 开头必须是同一段 Style Lock。
 5. 成图和提示词按「落盘」分开放：成图进品输出文件夹；Prompt 和 `jobs.json` 进同级 `_prompts/`。
 6. **出图必须并行，按通道选工具**：
-   - **2 个及以上品**：主会话按「批量品目录」并发调度，不要在本对话按品串行。
+   - **2 个及以上品**：`run=fast` 读 `FAST_SWAP.md`。否则主会话按「批量品目录」并发调度，不要在本对话按品串行。
    - 走脚本、单品：把 Prompt 和 `jobs.json` 写进该品 `_prompts/`（每槽位 slot / prompt_file / size / image），`output_dir` 指向该品成图文件夹，一次 `python scripts/gen_image.py --batch <该品 _prompts>/jobs.json`；失败槽位修正 Prompt 后加 `--skip-existing` 重跑，只补缺的图。
    - 走脚本、多品：工人只写各品 `_prompts/`；调度一次 `python scripts/queue_pack.py --queue <成图根>/_prompts/批次.json --run --skip-existing`（生图单独走，默认并发 32）。
    - 走 Codex/宿主原生生图、单品：Prompt 写入 `_prompts/` 后**立刻按下方「子代理并行」派发**；失败只重派失败槽位。多品则每个品工人自己派槽位，同时最多 2 路。
@@ -513,7 +524,7 @@ generated-images/
 1. 判定：用户给的路径下面有多个子文件夹、且子文件夹里是图 → 按本规则。用户指定了输出文件夹名则用用户的，否则用 `{大文件夹名}-成图`，建在大文件夹**同级**，不要建在大文件夹里面，不要改源目录里的任何文件。
 2. 每个品文件夹单独出一套图，参考图只用该品文件夹里的图。输出写到成图根目录下**同名**子文件夹，名字与源子文件夹完全一致（含中文、空格、连字符），不要改成英文 slug，不要加 `-pdp`。
 3. 成图按槽位命名（`h1.png`、`h2.png`…）放进该品输出子文件夹。Prompt / `jobs.json` 放进成图根下 `_prompts/{同名品文件夹}/`，不要放进源品文件夹，也不要和 `h1.png` 放一起。已有同名成图文件夹就接着用，只写当前品，不要清空别人的子文件夹。
-4. **多品并发，不要在本对话按品排队。** 主会话只调度，每个品一个新子代理（独立上下文）。口头要求只问一次，写入 `_prompts/批次.json`。用户只点了其中几个子文件夹 → `only`；某个先不做 → `skip`。
+4. **多品并发，不要在本对话按品排队。** `run=fast`（快速换货）→ 读 `FAST_SWAP.md`：`--pilot` 试一套，用户点头后 `--blast --run`，不要 `--next` 派工人。按规则画时：主会话只调度，每个品一个新子代理（独立上下文）。口头要求只问一次，写入 `_prompts/批次.json`。用户只点了其中几个子文件夹 → `only`；某个先不做 → `skip`。
    - 先跑 `python scripts/queue_pack.py --init --source "<源>"`（有命中模板就加 `--template`，有口头要求加 `--notes` / `--skip` / `--only`）。已有批次文件则 `--queue "<成图根>/_prompts/批次.json"` 看状态。
    - `--next` 给出下一波品名（默认同时 3 路，最多 8）。立刻派平级子代理，**一品一工人**，把脚本打印的工人任务原文放进子代理；把 `{品名}` 换成该工人的文件夹名。工人返回后立刻再 `--next` 补下一波，不要等全部写完才派。
    - **有 API**：工人只写该品 `_prompts/`（Prompt + `jobs.json`），不要自己 `--batch`。Prompt 波次写完后调度跑 `python scripts/queue_pack.py --queue ... --run --skip-existing`。生图单独走、开大并发（默认 32，写在批次.json 的 `gen_concurrency`，上限 64；429 自动减半）。不要让子 agent 自己调生图。
@@ -539,6 +550,7 @@ generated-images/
 
 最终输出前确认：
 
+- [ ] 快速换货已按 `FAST_SWAP.md`：先试跑整套再铺开；jobs 由脚本填写；没有给每个品写 Prompt；出完才问要不要检查
 - [ ] 材料含糊时已用白话对齐做法（见「意图引导」），没有把成品套图误当成规则去重画，也没有把情绪板当成换货母版
 - [ ] 开做前已跑 `match_pack.py`，把前 3 名（第 1 个最优，含将用模板和场景）展示给用户；点名不在库里时没有改成白底主图充数；用户说没有则按第 1 名做并写进汇报
 - [ ] `lock=rules` 已按「模板大于情景」组装：情景骨架 + 模板 brand/text_rules/generation + 槽位 overrides；同名字段没有跟情景折中
@@ -551,7 +563,7 @@ generated-images/
 - [ ] 图内文字短且必要，符合模板 `text_rules`（没有才用情景）
 - [ ] 一品多色已锁主色，其他颜色只出现在一张配色合集上
 - [ ] 批量品目录已在大文件夹同级建 `{名}-成图`，子文件夹名与源品文件夹一致，没有写进源目录
-- [ ] 2 个及以上品：已写 `_prompts/批次.json`，主会话只调度，已用 `queue_pack.py --next` 一品一工人并发派发；有 API 则工人只写 Prompt、调度 `--run`，没有每品叠乘 `--batch`；没有在本对话按品串行出图
+- [ ] 2 个及以上品：快速换货已 `--pilot` 再 `--blast`；按规则画则已写 `_prompts/批次.json`，主会话只调度，已用 `queue_pack.py --next` 一品一工人并发派发；有 API 则工人只写 Prompt、调度 `--run`，没有每品叠乘 `--batch`；没有在本对话按品串行出图
 - [ ] Prompt / `jobs.json` 已写入 `_prompts/`（单品：`generated-images/_prompts/<slug>/`；批量：`{名}-成图/_prompts/{品}/`），没有写进源品文件夹、成图文件夹或项目根
 - [ ] 走 Codex/宿主原生生图：单品槽位同时最多 4 路；批量多品每个品工人槽位同时最多 2 路。成图按槽位落在输出目录
 - [ ] 出图后按对应 pitfalls 检查通过（有模板：先该模板 + 槽位 overrides，再所引情景且不与模板冲突；仅情景：所引情景；换货对照母版 + 该模板 pitfalls）
@@ -592,6 +604,7 @@ generated-images/
 | 多品在同一对话里一个一个做 | 写 `批次.json`，`queue_pack.py --next` 一品一工人并发；有 API 用 `--run` 全局出图 |
 | 多品各开一套 `--batch` 叠乘并发 | 工人只写 jobs.json，调度一次 `--run` |
 | 有模板却按情景默认出图 | 模板写了的覆盖情景；不要折中，不要改情景迁就这一套 |
+| 快速换货却派品工人写长 Prompt | 读 FAST_SWAP.md；脚本填 jobs；先试一套再 --blast |
 | 有母版却按情景重画 | 只换品；母版是锁；jobs.image = [母版, 产品图] |
 | 未点名却改了母版上的字 | 政策 C：只有 editable_fields 且本轮给了新值才改 |
 | 缺角度用正面硬贴 | 问用户或跳过该槽 |

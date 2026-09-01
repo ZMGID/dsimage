@@ -64,9 +64,33 @@ def check_generation(fname: str, d: dict) -> None:
         value = gen.get(key)
         if value is not None and value not in allowed:
             fail(fname, f"generation.{key} 非法值：{value}（允许 {'/'.join(sorted(allowed))}）")
-    unknown = set(gen) - {"resolution", "format", "quality"}
+    unknown = set(gen) - {"resolution", "format", "quality", "deliver"}
     if unknown:
         fail(fname, f"generation 含未知键：{sorted(unknown)}")
+    deliver = gen.get("deliver")
+    if deliver is None:
+        return
+    if not isinstance(deliver, dict):
+        fail(fname, "generation.deliver 应为对象")
+        return
+    extra = set(deliver) - {"max_px", "max_bytes", "width", "height", "ratio"}
+    if extra:
+        fail(fname, f"generation.deliver 含未知键：{sorted(extra)}")
+    for key in ("max_px", "max_bytes", "width", "height"):
+        if key not in deliver:
+            continue
+        try:
+            number = int(deliver[key])
+        except (TypeError, ValueError):
+            fail(fname, f"generation.deliver.{key} 应为正整数")
+            continue
+        if number <= 0:
+            fail(fname, f"generation.deliver.{key} 必须大于 0")
+    if ("width" in deliver) != ("height" in deliver):
+        fail(fname, "generation.deliver 的 width 和 height 必须成对出现")
+    ratio = deliver.get("ratio")
+    if ratio is not None and not (isinstance(ratio, str) and ":" in ratio):
+        fail(fname, "generation.deliver.ratio 应为比例字符串，如 1:1")
 
 
 def resolve_lock(fname: str, d: dict) -> str:

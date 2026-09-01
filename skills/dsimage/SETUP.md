@@ -20,7 +20,7 @@
 | OpenClaw | `<工作区>/skills/` | `~/.openclaw/skills/` |
 
 3. 目标位置已有 `SKILL.md`（或 `.env`）时，这是已安装目录：**转入第 7 节原地更新**。禁止改名备份后整目录覆盖，禁止重新收集 API。
-4. 生图脚本只需 Python 3.10+ 标准库，无第三方依赖，无需 pip install。
+4. 生图脚本只需 Python 3.10+ 标准库，无第三方依赖，无需 pip install。交付压图（`queue_pack.py --deliver`）可选：`pip install pillow`。
 
 ## 2. 让用户选择出图方式
 

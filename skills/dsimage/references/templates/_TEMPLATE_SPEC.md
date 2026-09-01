@@ -26,7 +26,7 @@
 - 执行流程（workflow）属于模板层，情景里没有流程
 - 品牌专用规则写进模板（或甲方 `要求.json`），不要改情景去迁就某一个甲方
 - 优先级：用户本轮 > 模板 JSON > 甲方 `要求.json` > 情景缺省 > SKILL / 脚本默认
-- `generation` 默认写在 `要求.json`（`1k`），单品不一样才在模板里覆盖；不要抄情景里的 `2k`；`--size` 用比例；接口返回多大就保存多大，禁止本地升采样
+- `generation` 默认写在 `要求.json`（`1k`），单品不一样才在模板里覆盖；不要抄情景里的 `2k`；`--size` 用比例，且必须和母版/目标画布一致，禁止用别的比例生成再变形压；接口返回多大就保存多大，禁止本地升采样。可选 `generation.deliver`：`max_px`（长边上限，保持比例）、`width`/`height`（精确画布，比例必须对得上）、`max_bytes`（体积上限，整数）。快跑出完后 `--deliver` 按这个压；交付像素不是生图档。
 
 ## 文件约定
 
@@ -76,7 +76,7 @@ references/templates/
 | ★ `name` | 必填 | 展示名，可含 `&` |
 | ★ `templates` | 必填 | 本文件夹内模板目录名（不要带 `.json`），必须与磁盘上的目录一一对应 |
 | ★ `language` | 必填 | 图内文字语言 |
-| ★ `generation` | 必填 | `{"resolution": "1k", "format": "png", "quality": "high"}` |
+| ★ `generation` | 必填 | `{"resolution": "1k", "format": "png", "quality": "high"}`。可选 `deliver`: `max_px` / `max_bytes`，或精确画布 `width` + `height` + `ratio` |
 | ★ `style` | 必填 | 一两句说清调性、字体、叙事 |
 | ○ `brand` | 推荐 | hex 色板；`lock=rules` 且模板没写 brand 时从这里补 |
 | ○ `notes` | 可选 | 这些模板都要遵守的杂项 |
@@ -227,7 +227,7 @@ references/templates/
 ### workflow
 
 - **rules**：读 pack → 建 Campaign Style Lock → 逐张引用情景拼 Prompt → `_prompts/` → 生成 → 检查 → 汇报
-- **master**：读 pack 与母版 → 按 `product_ref` 选产品图 → 缺角度/品类差太远先问 → Prompt 只写换品 + 点名字段 → `_prompts/`，`image: [母版, 产品图]` → 对照母版检查 → 汇报
+- **master**：读 pack 与母版 → 按 `product_ref` 选产品图 → 缺角度/品类差太远先问 → 单品或要改字用换货 Prompt；数量多且冻字走 `FAST_SWAP.md` → `_prompts/`，`image: [母版, 产品图]` → 对照母版检查 → 汇报
 
 ---
 

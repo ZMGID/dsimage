@@ -31,7 +31,9 @@ STARTER_HINTS = (
 MASTER_HINTS = (
     "替换模板", "只换产品", "只换货", "换品", "版式别动",
     "按样图换货", "一模一样", "各型号统一", "母版换货",
+    "快速换货", "同类快换", "快速替换",
 )
+FAST_HINTS = ("快速换货", "同类快换", "快速替换")
 LOCK_ALIASES = {"rules": "rules", "master": "master", "style": "rules", "replace": "master"}
 NAMED_MASTER = re.compile(r"替换模板\s*[：:]\s*([^\s，,。；;]+)")
 NAMED_TEMPLATE = re.compile(r"(?<!替换)模板\s*[：:]\s*([^\s，,。；;]+)")
@@ -285,6 +287,8 @@ def rank_plans(query: str, *, top_n: int = 3) -> dict[str, Any]:
         notes.append(f"你点的模板「{named}」不在库里。下面是最接近的三个，不会改成白底主图充数。")
     if want_master and not any(p["kind"] == "master" for p in ranked):
         notes.append("库里没有带母版的模板。下面是按规则画的备选；要换货需要先有母版套图。")
+    if any(hint in query for hint in FAST_HINTS):
+        notes.append("快速换货：有样板文件夹就用 --masters，不要改走默认电商模板。读 FAST_SWAP.md，试跑一套后由脚本铺开。")
 
     return {"query": query, "named": named, "named_hit": named_hit, "notes": notes, "plans": ranked}
 
