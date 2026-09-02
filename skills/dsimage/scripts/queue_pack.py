@@ -8,13 +8,13 @@
   python scripts/queue_pack.py --queue ... --next
   python scripts/queue_pack.py --queue ... --run --skip-existing   # 生图单独走，默认并发 32
 
-快跑（lock=master：Agent 看图选白图做原型，点头后脚本填 jobs，不派品工人）：
+替换模板（lock=master 或 --masters：Agent 看图选白图做原型，点头后脚本填 jobs，不派品工人）：
 
-  python scripts/queue_pack.py --init --fast --source VE男包系列 --masters 样板套图 --category 双肩包
+  python scripts/queue_pack.py --init --source VE男包系列 --template <lock=master 的模板 JSON>
   python scripts/queue_pack.py --queue ... --pilot V26026 --run
   python scripts/queue_pack.py --queue ... --blast --run --skip-existing
   python scripts/queue_pack.py --queue ... --deliver
-  # 默认同级「生成」；档位/画布由调用方填：--resolution --output-size / --max-px --max-bytes
+  # 库里没有母版模板时才加 --masters；档位/画布由调用方填：--resolution --output-size / --max-px --max-bytes
 """
 from __future__ import annotations
 
@@ -277,17 +277,16 @@ def format_status(brief_path: Path, brief: dict[str, Any], rows: list[dict[str, 
         f"批次：{brief_path}",
         f"源：{brief['source_dir']}",
         f"成图：{brief['output_dir']}",
-        f"模板：{brief.get('template') or '（未写）'}  lock={brief.get('lock') or 'rules'}"
-        + (f"  run={brief.get('run')}" if brief.get("run") == "fast" else ""),
+        f"模板：{brief.get('template') or '（未写）'}  lock={brief.get('lock') or 'rules'}",
         (
-            "快跑：Agent 看图选白图；点头后脚本填 jobs，不要派品工人"
-            if brief.get("run") == "fast"
+            "替换模板：Agent 看图选白图；点头后脚本填 jobs，不要派品工人"
+            if is_fast(brief)
             else f"品工人同时最多 {brief['product_workers']} 路（写 Prompt）"
         ),
         f"生图并发 {brief['gen_concurrency']}（--run 单独走）",
         "",
     ]
-    if brief.get("run") == "fast":
+    if is_fast(brief):
         if brief.get("category"):
             lines.insert(-1, f"品类：{brief['category']}")
         deliver = brief.get("deliver") if isinstance(brief.get("deliver"), dict) else {}
@@ -423,7 +422,8 @@ def init_brief(args: argparse.Namespace) -> Path:
     if missing_skip:
         fail("skip 里没有这些商品：" + "、".join(missing_skip))
     products = list_product_dirs(source)
-    if not only and len(products) < 2 and len(expanded) < 2 and not skip and not getattr(args, "fast", False):
+    swap = want_swap(args, lock)
+    if not only and len(products) < 2 and len(expanded) < 2 and not skip and not swap:
         print("提示：源目录下品文件夹不足 2 个。批量并发按「2 个及以上」才走这条路。", file=sys.stderr)
     swap_fast.materialize_products(output, expanded, only=only, skip=set(skip))
     payload = {
@@ -439,7 +439,7 @@ def init_brief(args: argparse.Namespace) -> Path:
         "notes": args.notes or "",
         "style_lock": style_lock,
     }
-    if getattr(args, "fast", False):
+    if swap:
         payload.update(
             build_fast_payload(
                 args, source, template_path, lock,
@@ -466,7 +466,7 @@ def build_fast_payload(
 
     masters_raw = getattr(args, "masters", None)
     if not masters_raw and template_path is None:
-        fail("快跑需要 --template（lock=master）或 --masters 母版文件夹")
+        fail("换货需要 --template（lock=master）或 --masters 母版文件夹")
     if lock == "master" and template_path is not None:
         pack = swap_fast.pack_from_template(template_path)
         masters = Path(masters_raw).resolve() if masters_raw else template_path.parent.resolve()
@@ -483,7 +483,7 @@ def build_fast_payload(
         pack = swap_fast.infer_pack(masters)
         lock = "master"
     else:
-        fail("这份模板是按规则画的。快跑要母版图：换成 lock=master 的模板，或加 --masters")
+        fail("这份模板是按规则画的。换货要母版图：换成 lock=master 的模板，或加 --masters")
     gen = swap_fast.apply_generation_overrides(
         swap_fast.generation_from_template(template_path),
         resolution=getattr(args, "resolution", None),
@@ -538,8 +538,16 @@ def build_fast_payload(
     return payload
 
 
+def want_swap(args: argparse.Namespace, lock: str) -> bool:
+    if getattr(args, "fast", False) or getattr(args, "masters", None):
+        return True
+    return lock == "master"
+
+
 def is_fast(brief: dict[str, Any]) -> bool:
-    return str(brief.get("run") or "") == "fast"
+    if str(brief.get("run") or "") == "fast":
+        return True
+    return str(brief.get("lock") or "") == "master" and isinstance(brief.get("pack"), list)
 
 
 def format_fast_next(brief_path: Path, brief: dict[str, Any], rows: list[dict[str, str]]) -> str:
@@ -547,7 +555,7 @@ def format_fast_next(brief_path: Path, brief: dict[str, Any], rows: list[dict[st
     prompt = str(brief.get("swap_prompt") or "").strip()
     first_line = prompt.splitlines()[0] if prompt else ""
     lines = [
-        "快跑。不要派品工人写 Prompt。",
+        "替换模板。不要派品工人写 Prompt。",
         f"提示词：{first_line}",
         f"试跑品：{brief.get('pilot') or '（未写）'}",
         f"提示词已锁：{'是' if brief.get('prompt_locked') else '否'}",
@@ -679,7 +687,7 @@ def run_queue(brief: dict[str, Any], rows: list[dict[str, str]],
     names = wave_names(brief, rows, args)
     jobs = collect_run_jobs(brief, rows, args)
     if not jobs:
-        print("没有待出图的槽位。快跑用 --pilot / --blast 填 jobs；普通批次用 --next 派工人。")
+        print("没有待出图的槽位。换货用 --pilot / --blast 填 jobs；按规则画用 --next 派工人。")
         return
     every = inspect_every_of(brief)
     if every and names and not getattr(args, "product", None):
@@ -720,16 +728,16 @@ def run_queue(brief: dict[str, Any], rows: list[dict[str, str]],
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="多品并发队列。状态看磁盘；普通批次 --next 派品工人；快跑 --pilot / --blast 填 jobs；--run 出图。"
+        description="多品并发队列。状态看磁盘；按规则画 --next 派品工人；换货 --pilot / --blast 填 jobs；--run 出图。"
     )
     parser.add_argument("--init", action="store_true", help="扫描源目录，写入成图根/_prompts/批次.json")
     parser.add_argument("--source", help="--init 用的源大文件夹")
     parser.add_argument("--output", help="成图根目录；默认把「系列」换成「生成」，与源同级")
     parser.add_argument("--template", help="模板 JSON 路径（相对 references/ 或绝对路径）")
     parser.add_argument("--lock", choices=("rules", "master"), help="覆盖模板里的 lock")
-    parser.add_argument("--fast", action="store_true", help="快跑：Agent 选白图做原型；点头后脚本填 jobs。需要母版")
-    parser.add_argument("--masters", help="快跑母版文件夹（h1.png…）。有 lock=master 模板可不写")
-    parser.add_argument("--category", help="快跑品类（如 双肩包），只记录在批次里")
+    parser.add_argument("--fast", action="store_true", help="兼容旧旗。lock=master 或 --masters 时会自动走换货")
+    parser.add_argument("--masters", help="母版文件夹（h1.png…）。有 lock=master 模板可不写")
+    parser.add_argument("--category", help="品类（如 双肩包），只记录在批次里")
     parser.add_argument("--max-px", dest="max_px", type=int, help="交付长边像素上限；保持比例，不变形")
     parser.add_argument("--output-size", dest="output_size", help="交付画布，宽x高；按这个比例生图再缩小，对不上就拒绝，不变形压")
     parser.add_argument("--max-bytes", dest="max_bytes", help="交付体积上限，例如 2MB")
@@ -737,8 +745,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--format", dest="gen_format", help="生图格式 png / jpeg / webp")
     parser.add_argument("--quality", help="生图质量 low / medium / high")
     parser.add_argument("--inspect-every", dest="inspect_every", type=int, default=None,
-                        help="快跑：每 N 个品停下来检查；默认 0 不停")
-    parser.add_argument("--swap-prompt", dest="swap_prompt", help="快跑提示词；不写用脚本默认句")
+                        help="换货：每 N 个品停下来检查；默认 0 不停")
+    parser.add_argument("--swap-prompt", dest="swap_prompt", help="换货提示词；不写用脚本默认句")
     parser.add_argument("--only", action="append", default=[], help="只做这些品文件夹名，可重复")
     parser.add_argument("--skip", action="append", default=[], help="跳过这些品文件夹名，可重复")
     parser.add_argument("--workers", type=int, default=3, help="品工人同时几路，默认 3，最大 8")
@@ -747,11 +755,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--next", action="store_true", help="打印下一波待写 Prompt 的品 + 工人任务原文")
     parser.add_argument("-n", "--count", type=int, help="--next 派几个；默认用批次里的 product_workers")
     parser.add_argument("--retry", action="store_true", help="--next 时也派待出图的品（宿主补图 / 失败重做）")
-    parser.add_argument("--pilot", metavar="NAME", help="快跑：试跑这一个品（init 时记下；queue 时填 jobs）")
-    parser.add_argument("--blast", action="store_true", help="快跑：按已锁提示词给剩余型号填 jobs")
-    parser.add_argument("--set-prompt", dest="set_prompt", help="快跑：改共用提示词并解锁，需再试跑")
-    parser.add_argument("--set-slot-prompt", nargs=2, metavar=("SLOT", "TEXT"), help="快跑：覆盖某一槽提示词")
-    parser.add_argument("--deliver", action="store_true", help="快跑：按批次 deliver 压已完成成图")
+    parser.add_argument("--pilot", metavar="NAME", help="换货：试跑这一个品（init 时记下；queue 时填 jobs）")
+    parser.add_argument("--blast", action="store_true", help="换货：按已锁提示词给剩余型号填 jobs")
+    parser.add_argument("--set-prompt", dest="set_prompt", help="换货：改共用提示词并解锁，需再试跑")
+    parser.add_argument("--set-slot-prompt", nargs=2, metavar=("SLOT", "TEXT"), help="换货：覆盖某一槽提示词")
+    parser.add_argument("--deliver", action="store_true", help="换货：按批次 deliver 压已完成成图")
     parser.add_argument("--run", action="store_true", help="把所有待出图槽位丢进全局并发池（有 API 时用）")
     parser.add_argument("--product", action="append", default=[], help="--run 只出这些品")
     parser.add_argument("--concurrency", type=int, default=None, help="生图全局槽位并发；默认用批次.json 的 gen_concurrency（32），最大 64；429 自动减半")
@@ -764,7 +772,7 @@ def parse_args() -> argparse.Namespace:
     if args.init and not args.source:
         parser.error("--init 需要 --source")
     if args.fast and not args.init:
-        parser.error("--fast 只和 --init 一起用（之后用 --pilot / --blast）")
+        parser.error("--fast 只和 --init 一起用（之后用 --pilot / --blast）；lock=master 不必再加 --fast")
     if not args.init and not args.queue:
         parser.error("请提供 --queue 批次.json，或用 --init --source 新建")
     return args
@@ -857,7 +865,7 @@ def main() -> None:
 
     if args.set_prompt or args.set_slot_prompt:
         if not is_fast(brief):
-            fail("--set-prompt 只用于快跑批次")
+            fail("--set-prompt 只用于换货批次")
         if args.set_prompt:
             apply_set_prompt(brief, args.set_prompt)
         if args.set_slot_prompt:
@@ -872,11 +880,11 @@ def main() -> None:
         if not args.blast:
             args.product = [args.pilot]
     elif args.pilot and not is_fast(brief):
-        fail("--pilot 只用于快跑批次")
+        fail("--pilot 只用于换货批次")
 
     if args.blast:
         if not is_fast(brief):
-            fail("--blast 只用于快跑批次")
+            fail("--blast 只用于换货批次")
         import swap_fast
 
         rows_now = scan(brief)
@@ -889,7 +897,7 @@ def main() -> None:
 
     if args.deliver:
         if not is_fast(brief):
-            fail("--deliver 只用于快跑批次")
+            fail("--deliver 只用于换货批次")
         import swap_fast
 
         changed = swap_fast.deliver_brief(brief, args.product or None)

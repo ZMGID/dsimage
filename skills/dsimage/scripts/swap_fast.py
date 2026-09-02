@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""lock=master 快跑：Agent 看图选定白图后，一句提示词 + 母版/产品图由脚本填 jobs。
+"""lock=master 换货：Agent 看图选定白图后，一句提示词 + 母版/产品图由脚本填 jobs。
 
 默认提示词只写在这里。填 jobs、交付压图都从这里走；CLI 入口仍是 queue_pack.py。
 选哪张商品图是 Agent 的事，不要靠文件名猜完就出。
@@ -352,7 +352,7 @@ def pack_from_template(path: Path) -> list[dict[str, Any]]:
         fail(f"无法读取模板：{path}")
     lock, _style = queue_pack.read_style_lock(path)
     if lock != "master":
-        fail(f"快跑需要 lock=master 的模板，这份是 {lock}：{path}")
+        fail(f"换货需要 lock=master 的模板，这份是 {lock}：{path}")
     pack = data.get("pack") if isinstance(data.get("pack"), dict) else {}
     images = pack.get("images") if isinstance(pack, dict) else []
     if not isinstance(images, list) or not images:
@@ -565,7 +565,7 @@ def fill_product(brief: dict[str, Any], name: str) -> dict[str, Any]:
     masters = Path(brief["masters_dir"])
     pack = brief.get("pack")
     if not isinstance(pack, list) or not pack:
-        fail("批次.json 没有 pack，先 --init --fast")
+        fail("批次.json 没有 pack，先 --init（lock=master 模板或 --masters）")
     if not source.is_dir():
         fail(f"源品文件夹不存在：{source}")
     jobs: list[dict[str, Any]] = []

@@ -37,6 +37,71 @@ class SizeTests(unittest.TestCase):
         self.assertEqual(gen_image.sync_size("1:1"), "1024x1024")
 
 
+class CheckTests(unittest.TestCase):
+    def _probe(self) -> Path:
+        folder = Path(tempfile.mkdtemp())
+        path = folder / "probe.png"
+        path.write_bytes(gen_image.PROBE_PNG)
+        self.addCleanup(lambda: __import__("shutil").rmtree(folder, ignore_errors=True))
+        return path
+
+    def test_sync_gateway_maps_size_and_edits(self) -> None:
+        text = "\n".join(gen_image.build_check_report(
+            "custom", "https://gateway.example/v1", "foo", "sync", self._probe(),
+        ))
+        self.assertIn("--image：支持", text)
+        self.assertIn("/images/edits", text)
+        self.assertIn("1024x1024", text)
+        self.assertIn("1536x1024", text)
+        self.assertIn("通道已收好", text)
+
+    def test_grok_attaches_data_uri(self) -> None:
+        text = "\n".join(gen_image.build_check_report(
+            "grok", "https://api.x.ai/v1", "grok-imagine-image-2.0", "grok", self._probe(),
+        ))
+        self.assertIn("data URI", text)
+        self.assertIn("/images/edits", text)
+        self.assertIn("aspect_ratio=1:1", text)
+        self.assertIn("images 数组", text)
+        self.assertIn("User-Agent", text)
+
+
+class GrokPayloadTests(unittest.TestCase):
+    def _png(self, folder: Path, name: str) -> str:
+        path = folder / name
+        path.write_bytes(gen_image.PROBE_PNG)
+        return str(path)
+
+    def test_one_ref_uses_image_object(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = argparse.Namespace(
+                size="1:1", resolution="1k", quality=None, n=1,
+                image=[self._png(Path(tmp), "a.png")],
+            )
+            payload = gen_image.build_grok_payload(args, "edit this", "grok-imagine-image-2.0")
+            self.assertIn("image", payload)
+            self.assertNotIn("images", payload)
+            self.assertIsInstance(payload["image"], dict)
+            self.assertTrue(payload["image"]["url"].startswith("data:image/"))
+
+    def test_two_refs_uses_images_array_and_tags(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            args = argparse.Namespace(
+                size="1:1", resolution="1k", quality=None, n=1,
+                image=[self._png(folder, "master.png"), self._png(folder, "product.png")],
+            )
+            payload = gen_image.build_grok_payload(
+                args,
+                "Replace only the product in the first image with the product from the second image.",
+                "grok-imagine-image-2.0",
+            )
+            self.assertNotIn("image", payload)
+            self.assertEqual(len(payload["images"]), 2)
+            self.assertIn("<IMAGE_0>", payload["prompt"])
+            self.assertIn("<IMAGE_1>", payload["prompt"])
+
+
 class ProviderTests(unittest.TestCase):
     def test_detect_from_explicit(self) -> None:
         self.assertEqual(gen_image.detect_provider("", "", "grok"), "grok")
@@ -99,9 +164,9 @@ class MatchPackTests(unittest.TestCase):
         result = match_pack.rank_plans("使用 dsimage 替换模板：某某，把这个型号换进去")
         self.assertTrue(any("母版" in n for n in result["notes"]))
 
-    def test_fast_swap_points_to_masters(self) -> None:
+    def test_swap_points_to_masters(self) -> None:
         result = match_pack.rank_plans("使用 dsimage 快速换货，把这个文件夹里的书包换进样板")
-        self.assertTrue(any("FAST_SWAP" in n or "快速换货" in n for n in result["notes"]))
+        self.assertTrue(any("--masters" in n or "--pilot" in n or "替换模板" in n for n in result["notes"]))
         self.assertTrue(any("母版" in n for n in result["notes"]))
 
     def test_amazon_set_uses_starter(self) -> None:
@@ -440,6 +505,65 @@ class FastSwapTests(unittest.TestCase):
             self.assertEqual(slots["H4"]["product_ref"], "back")
             self.assertEqual(brief["swap_prompt"], swap_fast.DEFAULT_PROMPT)
             self.assertIn("Replace only the product", brief["swap_prompt"])
+
+    def test_init_masters_without_fast_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _brief_path, _output, brief = self._fast_batch(Path(tmp), fast=False)
+            self.assertEqual(brief["run"], "fast")
+            self.assertEqual(brief["lock"], "master")
+
+    def test_init_master_template_without_fast_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "春季新品"
+            output = root / "春季新品生成"
+            tpl = root / "tpl"
+            _touch_image(tpl / "h1.png")
+            (tpl / "master.json").write_text(
+                json.dumps(
+                    {
+                        "id": "样板",
+                        "name": "样板",
+                        "lock": "master",
+                        "pack": {
+                            "images": [
+                                {
+                                    "slot": "H1",
+                                    "purpose": "主图",
+                                    "example": "h1.png",
+                                    "product_ref": "front",
+                                    "ratio": "1:1",
+                                }
+                            ]
+                        },
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            _touch_image(source / "双肩包-黑" / "正面.jpg")
+            args = argparse.Namespace(
+                source=str(source),
+                output=str(output),
+                template=str(tpl / "master.json"),
+                lock=None,
+                only=[],
+                skip=[],
+                workers=3,
+                concurrency=None,
+                notes="",
+                fast=False,
+                masters=None,
+                category="",
+                max_px=None,
+                max_bytes=None,
+                swap_prompt=None,
+                pilot=None,
+            )
+            brief = queue_pack.load_brief(queue_pack.init_brief(args))
+            self.assertEqual(brief["run"], "fast")
+            self.assertEqual(brief["lock"], "master")
+            self.assertEqual(brief["pack"][0]["slot"], "H1")
 
     def test_pilot_uses_single_image_for_all_slots(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

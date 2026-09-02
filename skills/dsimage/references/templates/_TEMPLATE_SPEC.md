@@ -26,7 +26,7 @@
 - 执行流程（workflow）属于模板层，情景里没有流程
 - 品牌专用规则写进模板（或甲方 `要求.json`），不要改情景去迁就某一个甲方
 - 优先级：用户本轮 > 模板 JSON > 甲方 `要求.json` > 情景缺省 > SKILL / 脚本默认
-- `generation` 默认写在 `要求.json`（`1k`），单品不一样才在模板里覆盖；不要抄情景里的 `2k`；`--size` 用比例，且必须和母版/目标画布一致，禁止用别的比例生成再变形压；接口返回多大就保存多大，禁止本地升采样。可选 `generation.deliver`：`max_px`（长边上限，保持比例）、`width`/`height`（精确画布，比例必须对得上）、`max_bytes`（体积上限，整数）。快跑出完后 `--deliver` 按这个压；交付像素不是生图档。
+- `generation` 默认写在 `要求.json`（`1k`），单品不一样才在模板里覆盖；不要抄情景里的 `2k`；`--size` 用比例，且必须和母版/目标画布一致，禁止用别的比例生成再变形压；接口返回多大就保存多大，禁止本地升采样。可选 `generation.deliver`：`max_px`（长边上限，保持比例）、`width`/`height`（精确画布，比例必须对得上）、`max_bytes`（体积上限，整数）。换货出完后 `--deliver` 按这个压；交付像素不是生图档。
 
 ## 文件约定
 
@@ -222,12 +222,12 @@ references/templates/
 - `product_ref`：`front` / `back` / `side` / `detail` / `colorway`
 - 不要写 `scene`，不要写构图类 `overrides`
 - 非 `colorway` 槽只用主色产品图
-- 缺角度：换货长 Prompt 问用户或跳过，禁止拿正面硬贴；快速换货一品一张白图，每槽都用，不要因文件名没有「背面」就跳
+- 缺角度：一品一张白图，每槽都用，不要因文件名没有「背面」就跳；用户点名要改字才改
 
 ### workflow
 
 - **rules**：读 pack → 建 Campaign Style Lock → 逐张引用情景拼 Prompt → `_prompts/` → 生成 → 检查 → 汇报
-- **master**：读 pack 与母版 → Agent 看图选定该品白图 → 单品或要改字用换货 Prompt；数量多且冻字走 `FAST_SWAP.md`（看图出原型，点头后再铺）→ `_prompts/`，`image: [母版, 产品图]` → 对照母版检查 → 汇报
+- **master**：读 pack 与母版 → Agent 看图选定该品白图 → `--pilot` 出一套，点头后再 `--blast` → `_prompts/`，`image: [母版, 产品图]` → 对照母版检查 → 汇报
 
 ---
 
@@ -284,7 +284,7 @@ references/templates/
   },
   "workflow": [
     "读取 pack 与本文件夹母版套图，禁止改走按规则重画",
-    "按 product_ref 选产品图；缺角度或品类差太远先问，不要硬贴",
+    "Agent 看图选定该品白图，一品一张每槽都用；品类差太远先问",
     "每张 Prompt 只写换品 + 本轮点名的字段；未点名不改字",
     "Prompt/jobs.json 写入 _prompts/；image 为 [母版, 产品图]",
     "对照母版检查版式与未点名字段",
@@ -296,7 +296,7 @@ references/templates/
     "有母版却按情景重画",
     "未点名却改了标题/卖点/图标",
     "缺背面参考仍用正面去换背面页",
-    "快速换货因文件名没有背面而跳槽"
+    "因文件名没有背面而跳槽"
   ]
 }
 ```

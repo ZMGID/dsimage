@@ -9,7 +9,7 @@ jobs.json 的 image 可为字符串或数组（lock=master 换货：[母版, 产
 
 官方服务商地址写死在脚本里，只需 IMG_PROVIDER + IMG_API_KEY + IMG_MODEL：
   openai → https://api.openai.com/v1          （同步 /images/generations|/edits）
-  grok   → https://api.x.ai/v1                （JSON，aspect_ratio + resolution）
+  grok   → https://api.x.ai/v1                （JSON，aspect_ratio + resolution；单图 image，多图 images）
   gemini → https://generativelanguage.googleapis.com/v1beta  （generateContent）
 其他兼容网关才填 IMG_BASE_URL；URL 含 apimart → 异步轮询。
 
@@ -26,7 +26,9 @@ import http.client
 import ipaddress
 import json
 import os
+import re
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
@@ -107,6 +109,9 @@ PIXEL_TO_RATIO: dict[str, str] = {
 }
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+PROBE_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+)
 MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 BLOCKED_DOWNLOAD_HOSTS = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
 
@@ -584,10 +589,39 @@ def grok_quality(quality: str | None) -> str | None:
     return "medium" if quality == "high" else quality
 
 
+def grok_image_part(path: str) -> dict[str, str]:
+    return {"url": encode_image_data_uri(path), "type": "image_url"}
+
+
+GROK_ORDINALS = (
+    ("the first image", "<IMAGE_0>"),
+    ("the second image", "<IMAGE_1>"),
+    ("the third image", "<IMAGE_2>"),
+    ("the fourth image", "<IMAGE_3>"),
+    ("the fifth image", "<IMAGE_4>"),
+)
+
+
+def grok_tagged_prompt(prompt: str, count: int) -> str:
+    """xAI 多图必须用 images 数组，prompt 里用 <IMAGE_0>… 点名。"""
+    if count <= 1 or "<IMAGE_0>" in prompt:
+        return prompt
+    text = prompt
+    for phrase, tag in GROK_ORDINALS[:count]:
+        text = re.sub(re.escape(phrase), tag, text, flags=re.I)
+    if "<IMAGE_0>" not in text:
+        tags = " ".join(f"<IMAGE_{i}>" for i in range(count))
+        text = f"{text}\nUse reference images in order: {tags}."
+    return text
+
+
 def build_grok_payload(args: argparse.Namespace, prompt: str, model: str) -> dict[str, Any]:
+    images = ref_images(args)
+    if len(images) > 5:
+        fail("Grok 图生图最多 5 张参考图")
     payload: dict[str, Any] = {
         "model": model,
-        "prompt": prompt,
+        "prompt": grok_tagged_prompt(prompt, len(images)),
         "n": args.n,
         "aspect_ratio": grok_ratio(args.size),
         "resolution": grok_resolution(args.resolution),
@@ -596,11 +630,10 @@ def build_grok_payload(args: argparse.Namespace, prompt: str, model: str) -> dic
     quality = grok_quality(args.quality)
     if quality:
         payload["quality"] = quality
-    images = ref_images(args)
     if len(images) == 1:
-        payload["image"] = {"url": encode_image_data_uri(images[0]), "type": "image_url"}
+        payload["image"] = grok_image_part(images[0])
     elif len(images) > 1:
-        payload["image"] = [{"url": encode_image_data_uri(path), "type": "image_url"} for path in images]
+        payload["images"] = [grok_image_part(path) for path in images]
     return payload
 
 
@@ -1127,6 +1160,123 @@ def run_batch(args: argparse.Namespace, base_url: str, api_key: str, model: str,
         raise SystemExit(1)
 
 
+# ── 配置检查（SETUP 时把通道收明白）──────────────────────
+
+def _probe_args(image: str) -> argparse.Namespace:
+    return argparse.Namespace(
+        size="1:1",
+        resolution="1k",
+        quality=None,
+        n=1,
+        image=[image],
+        format="png",
+        timeout=None,
+        poll_interval=5,
+    )
+
+
+def build_check_report(
+    provider: str,
+    base_url: str,
+    model: str,
+    mode: str,
+    probe: Path,
+) -> list[str]:
+    ns = _probe_args(str(probe))
+    images = ref_images(ns)
+    if len(images) != 1:
+        fail("--image 试装失败：没有读到参考图")
+    data, mime, filename = read_image_file(images[0])
+    if not data:
+        fail("--image 试装失败：参考图是空文件")
+
+    lines = [
+        f"provider={provider}  mode={mode}  model={model}",
+        f"base_url={base_url}",
+        "--image：支持，可重复；jobs.json 的 image 可为字符串或数组。出图直接带参考图。",
+    ]
+    if mode == "grok":
+        payload = build_grok_payload(ns, "probe", model)
+        attached = payload.get("image")
+        if not isinstance(attached, dict):
+            fail("Grok 单图试装失败：应走 image 对象，不要 images 数组")
+        uri = str(attached.get("url") or "")
+        if not uri.startswith("data:image/"):
+            fail("Grok 参考图不是 data URI，没有真正上送文件")
+        if "images" in payload:
+            fail("Grok 单图试装失败：image 和 images 不能同时传")
+        ns2 = _probe_args(str(probe))
+        ns2.image = [str(probe), str(probe)]
+        multi = build_grok_payload(
+            ns2,
+            "Replace only the product in the first image with the product from the second image.",
+            model,
+        )
+        if "image" in multi or not isinstance(multi.get("images"), list) or len(multi["images"]) != 2:
+            fail("Grok 多图试装失败：应走 images 数组，不要同时带 image")
+        if "<IMAGE_0>" not in str(multi.get("prompt")) or "<IMAGE_1>" not in str(multi.get("prompt")):
+            fail("Grok 多图试装失败：prompt 没有 <IMAGE_0> / <IMAGE_1>")
+        lines.append(f"参考图：Grok JSON POST {base_url}/images/edits；单图 image 对象（data URI），多图 images 数组（互斥）")
+        lines.append("请求已带浏览器 User-Agent。出图用 gen_image.py / queue_pack.py --run。")
+        lines.append(
+            f"--size 仍传比例。1:1 → aspect_ratio={grok_ratio('1:1')}  "
+            f"resolution={grok_resolution('1k')}；16:9 → {grok_ratio('16:9')}"
+        )
+    elif mode == "gemini":
+        lines.append(
+            f"参考图：Gemini generateContent inline_data（{filename} {mime} {len(data)} bytes）"
+        )
+        lines.append(
+            f"--size 仍传比例。1:1 → aspectRatio={gemini_ratio('1:1')}；"
+            f"16:9 → {gemini_ratio('16:9')}"
+        )
+    elif mode == "async":
+        payload = build_async_payload(ns, "probe", model)
+        urls = payload.get("image_urls") or []
+        if not urls or not str(urls[0]).startswith("data:image/"):
+            fail("异步图生图试装失败：payload 没有 image_urls data URI")
+        lines.append(f"参考图：异步 POST {base_url}/images/generations，image_urls 已带上 data URI")
+        lines.append(f"--size 仍传比例。1:1 → {payload.get('size')}；16:9 → {size_to_ratio('16:9')}")
+    else:
+        lines.append(f"参考图：sync multipart POST {base_url}/images/edits 字段 image（已读入 {filename}）")
+        lines.append(
+            f"--size 仍传比例，脚本翻译成像素。1:1 → {sync_size('1:1')}；"
+            f"16:9 → {sync_size('16:9')}。不要自己改成 1024x1024 再传。"
+        )
+    lines.append("通道已收好。出图按 SKILL 替换模板的命令加 --run。")
+    return lines
+
+
+def run_check(args: argparse.Namespace) -> None:
+    env_file = Path(args.env_file) if args.env_file else find_default_env_file()
+    load_env_file(env_file)
+    if env_file is None:
+        fail("没有找到 .env。先按 SETUP 写入 IMG_PROVIDER / IMG_MODEL / IMG_API_KEY。")
+    print("配置检查（不打接口）")
+    print("配置文件：已读取（不回显内容）")
+    provider, base_url, model, api_key = resolve_runtime()
+    mode = detect_mode(provider, base_url, args.mode)
+    with tempfile.TemporaryDirectory() as tmp:
+        probe = Path(tmp) / "probe.png"
+        probe.write_bytes(PROBE_PNG)
+        for line in build_check_report(provider, base_url, model, mode, probe):
+            print(line)
+        if not args.live:
+            print("要通过接口试一张图生图，加 --live（会扣费）。")
+            return
+        out_dir = Path(args.output_dir) / "_check"
+        live_args = _probe_args(str(probe))
+        log(mode, "配置实测：打一张带参考图的试图（会扣费）")
+        paths = generate_with_retry(
+            base_url, api_key, model, mode, live_args,
+            "a single red apple on pure white background, studio lighting",
+            out_dir, mode,
+        )
+        print("试图完成：")
+        for path in paths:
+            print(path)
+
+
 # ── CLI ──────────────────────────────────────────────
 
 def parse_args() -> argparse.Namespace:
@@ -1137,12 +1287,14 @@ def parse_args() -> argparse.Namespace:
     prompt_group.add_argument("--prompt", help="直接传入图片生成 Prompt。")
     prompt_group.add_argument("--prompt-file", help="从文本文件读取图片生成 Prompt。")
     prompt_group.add_argument("--batch", help="批量清单 JSON 路径（含 output_dir / defaults / jobs 数组），并发生成整套图，输出按槽位命名。")
+    parser.add_argument("--check", action="store_true", help="配置时把通道收明白：--image、参考图上送、本模式 --size。不打接口。")
+    parser.add_argument("--live", action="store_true", help="与 --check 一起：再打一张带参考图的试图（会扣费）。")
     parser.add_argument("--concurrency", type=int, default=9, help="批量模式起始并发数，默认 9；429/超时自动 9→4→2→1 回退。")
     parser.add_argument("--skip-existing", action="store_true", help="批量模式跳过输出文件已存在的槽位，用于失败后重跑补齐。")
     parser.add_argument("--output-dir", default="generated-images", help="图片输出目录，默认 generated-images。")
     parser.add_argument("--env-file", help="指定 .env 配置文件；不指定时从当前目录向上查找（只认含 IMG_ 配置的），兜底 Skill 目录。")
     parser.add_argument("--mode", choices=API_MODES, help="API 模式。默认按 IMG_PROVIDER / 官方地址 / 模型名检测（gemini、grok、apimart→async、其余→sync）。")
-    parser.add_argument("--size", default="1:1", help="图片尺寸。异步模式用比例格式（1:1、16:9 等），同步模式用像素格式（1024x1024 等）。默认 1:1。")
+    parser.add_argument("--size", default="1:1", help="传比例（1:1、16:9）。脚本按模式翻译；sync 会变成像素。不要先改成 1024x1024。")
     parser.add_argument("--resolution", default="1k", choices=VALID_RESOLUTIONS, help="异步模式分辨率档位，默认 1k。")
     parser.add_argument("--quality", choices=("low", "medium", "high"), help="同步模式图片质量参数。")
     parser.add_argument("--n", type=int, default=1, help="同步模式生成图片数量，默认 1。")
@@ -1151,14 +1303,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout", type=int, help="异步模式轮询超时秒数；默认 1k/2k 为 180，4k 为 480。")
     parser.add_argument("--format", choices=VALID_FORMATS, default="png", help="图片保存格式，默认 png。")
     args = parser.parse_args()
-    if not (args.prompt or args.prompt_file or args.batch):
-        parser.error("必须提供 --prompt、--prompt-file 或 --batch 之一。")
+    if args.live and not args.check:
+        parser.error("--live 只能和 --check 一起用")
+    if args.check and (args.prompt or args.prompt_file or args.batch):
+        parser.error("--check 不要带 --prompt / --prompt-file / --batch")
+    if not args.check and not (args.prompt or args.prompt_file or args.batch):
+        parser.error("必须提供 --prompt、--prompt-file、--batch 或 --check 之一。")
     return args
 
 
 def main() -> None:
     args = parse_args()
     try:
+        if args.check:
+            run_check(args)
+            return
         env_file = Path(args.env_file) if args.env_file else find_default_env_file()
         load_env_file(env_file)
         _provider, base_url, model, api_key = resolve_runtime()

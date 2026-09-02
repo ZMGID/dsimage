@@ -63,7 +63,7 @@ Agent 会按指南执行：安装 Skill → **列出三个选项让你选（1 �
 2. 配置生图 API（额度/并发通常更高，适合整套批量；可与 1 一起选）
 3. 什么都不配置（只输出 Prompt）
 
-选了 2 之后选服务商（OpenAI / Grok / Gemini 地址已写死，不用填 URL）→ 只填 API key → 从内置名单选模型 → 写入 `.env`，并可生成测试图验证。
+选了 2 之后选服务商（OpenAI / Grok / Gemini 地址已写死，不用填 URL）→ 只填 API key → 从内置名单选模型 → 写入 `.env` → `gen_image.py --check` 把通道收明白（`--image`、参考图上送、`--size`；Grok 一张 `image`、两张 `images`）。可选 `--check --live` 打一张带参考图的试图。之后出套图按技能里的命令加 `--run`。
 
 也可以让 AI 交互式引导配置：让它读 `skills/dsimage/SETUP.md` 执行即可。
 
@@ -109,7 +109,7 @@ IMG_API_KEY=your-api-key-here
 使用 dsimage 来制作，基于这张衣服图做 Amazon 详情页
 使用 dsimage 模板：箱包单品报价模板，基于这张图出全套
 使用 dsimage 模板：某某，按这套样图换货，把这个型号换进去
-使用 dsimage 快速换货，母版是这套样板图，把这个文件夹里每个型号只换商品
+使用 dsimage 替换模板，母版是这套样板图，把这个文件夹里每个型号只换商品
 使用 dsimage，用这张产品图出 3 张小红书图，要真实拍照感
 使用 dsimage 模板：箱包单品报价模板，把这个文件夹里每个子文件夹出一套
 ```
@@ -140,14 +140,14 @@ VE男包生成/                 ← 同级默认
 真实顺序：
 
 1. 匹配方案 + **口头要求只问一次**（只要哪几款、哪个先不做、字动不动），写入 `批次.json`。
-2. 主会话只调度。`--next` 一次派最多 3 个子代理，**每个子代理只做一个品、只写 Prompt**。不要在一条对话里一个品做完再接下一个（上下文会被压缩忘掉你的要求）。
-3. Prompt 写齐后，生图单独走 `queue_pack.py --run`（默认并发 **32**，上限 64；429 自动减半）。不要 3 个子代理各自再开一套 `--batch`。
-4. 对话被压缩了就新开一条，读 `批次.json` 再 `--next` / `--run`。
+2. **替换模板**（和样板同一套版、只换商品）：Agent 看图选出那张商品白图，先出一套；你改到满意后再铺开其余型号，不再一个品写一遍 Prompt。
+3. **按规则画**：主会话只调度。`--next` 一次派最多 3 个子代理，**每个子代理只做一个品、只写 Prompt**。不要在一条对话里一个品做完再接下一个。Prompt 写齐后，生图单独走 `queue_pack.py --run`（默认并发 **32**，上限 64；429 自动减半）。
+4. 对话被压缩了就新开一条，读 `批次.json` 再接着做。
 5. 整批出完再收口一次，不要每个品问一遍要不要建模板。
 
 还没定版不要直接铺 100 个。先按「出一套」做出你签字的那一款，建成带母版的模板，再对文件夹换货。内置「箱包单品报价模板」目前是按规则画（`lock=rules`）；像素级同一套版需要你先有齐套母版图，建成 `lock=master`。
 
-**只换商品、字不动、型号很多**：说「使用 dsimage 快速换货」，给一套样板图 + 大文件夹。Agent 看图选出那张商品白图，按模板出一套；你改到满意后再铺开其余型号，不再一个品写一遍 Prompt。默认一口气出完；要每隔 N 个品停下来检查，说一声。档位、画幅、交付尺寸跟你这轮说的走（没说则跟模板/样板）；比例对不上不会拿宽图压成方。
+**只换商品、字不动、型号很多**：说「使用 dsimage 替换模板」，给一套样板图 + 大文件夹。Agent 看图选出那张商品白图，按模板出一套；你改到满意后再铺开其余型号。默认一口气出完；要每隔 N 个品停下来检查，说一声。档位、画幅、交付尺寸跟你这轮说的走（没说则跟模板/样板）；比例对不上不会拿宽图压成方。
 
 铺很多型号、要高并发生图：安装时选生图 API（可和 Codex 账号同时开）。只靠宿主一张一张出，并发上不去。
 
@@ -195,15 +195,15 @@ python skills/dsimage/scripts/gen_image.py --batch generated-images/_prompts/bac
 
 输出按槽位命名（`h1.png`、`h2.png`…）。母版换货把 `image` 写成数组：先母版路径，后产品图。失败加 `--skip-existing` 重跑，只补缺的图。
 
-多品：先建批次、子代理写 Prompt，再一次全局出图（默认并发 32）：
+多品：按规则画先建批次、子代理写 Prompt，再一次全局出图（默认并发 32）。替换模板看图选白图，`--pilot` 出一套再 `--blast`：
 
 ```bash
 python skills/dsimage/scripts/queue_pack.py --init --source "VE男包系列" --notes "字不要改"
 python skills/dsimage/scripts/queue_pack.py --queue "VE男包生成/_prompts/批次.json" --next
 python skills/dsimage/scripts/queue_pack.py --queue "VE男包生成/_prompts/批次.json" --run --skip-existing
 
-# 快速换货
-python skills/dsimage/scripts/queue_pack.py --init --fast --source VE男包系列 --masters 样板套图 --category 双肩包
+# 替换模板（lock=master 或 --masters）
+python skills/dsimage/scripts/queue_pack.py --init --source VE男包系列 --template "<母版模板 JSON>" --masters 样板套图 --category 双肩包
 python skills/dsimage/scripts/queue_pack.py --queue "VE男包生成/_prompts/批次.json" --pilot V26026 --run
 python skills/dsimage/scripts/queue_pack.py --queue "VE男包生成/_prompts/批次.json" --blast --run --skip-existing
 python skills/dsimage/scripts/queue_pack.py --queue "VE男包生成/_prompts/批次.json" --deliver
@@ -228,7 +228,7 @@ python skills/dsimage/scripts/queue_pack.py --queue "VE男包生成/_prompts/批
 
 异步模式另有 `--poll-interval`（默认 5 秒）、`--timeout`（1k/2k 默认 180 秒，4k 默认 480 秒）；同步模式支持 `--quality`（low/medium/high）和 `--n`（生成数量）。
 
-`queue_pack.py` 常用参数：`--init --source` 建 `批次.json`；`--queue` 看状态；`--next` 派品工人；`--run` 生图；`--skip` / `--only` / `--notes` 写入批次；`--workers` 品工人路数（默认 3）；`--concurrency` 覆盖生图并发。快跑加 `--fast` / `--masters` / `--pilot` / `--blast` / `--deliver`；`--resolution`、`--output-size` / `--max-px` / `--max-bytes`、`--inspect-every` 按当轮填，不要当固定默认值抄。
+`queue_pack.py` 常用参数：`--init --source` 建 `批次.json`；`--queue` 看状态；`--next` 派品工人（按规则画）；`--run` 生图；`--skip` / `--only` / `--notes` 写入批次；`--workers` 品工人路数（默认 3）；`--concurrency` 覆盖生图并发。替换模板用 `--template`（`lock=master`）或 `--masters`，再 `--pilot` / `--blast` / `--deliver`；`--resolution`、`--output-size` / `--max-px` / `--max-bytes`、`--inspect-every` 按当轮填，不要当固定默认值抄。
 
 ---
 
@@ -240,8 +240,7 @@ dsimage/
 │   ├── SKILL.md             # 技能定义与通用流程（Agent 读）
 │   ├── SETUP.md             # 安装配置指南（Agent 读取）
 │   ├── CREATE_TEMPLATE.md   # 模板创建流程（Agent 读取）
-│   ├── FAST_SWAP.md         # 快速换货（Agent 看图做原型，点头后脚本铺开）
-│   ├── scripts/             # gen_image.py 生图 + queue_pack.py 多品队列 + swap_fast.py 快跑填 jobs + match_pack.py 匹配前三 + check_scenes.py 校验 + update_skill.py 原地升级
+│   ├── scripts/             # gen_image.py 生图 + queue_pack.py 多品队列 + swap_fast.py 换货填 jobs + match_pack.py 匹配前三 + check_scenes.py 校验 + update_skill.py 原地升级
 │   └── references/
 │       ├── scenes/         # 26 个内置情景 + _SCENE_SPEC.md 情景规范
 │       └── templates/
@@ -267,7 +266,7 @@ dsimage/
 - 缺价格、尺寸、卖点时先问用户；不补则按假设出图并列出假设。认证/评分/销量用示意占位，不要写成已核实
 - 模板文件夹必须带图：`lock=rules` 至少一张示例；`lock=master` 每槽一张母版。没有真图不要登记
 - 直接生图可以走 Codex 账号登录的原生生图，也可以走 OpenAI / Grok / Gemini 官方接口或其他兼容网关；两者可同时开。已配 API 时套图优先走脚本。官方三家不用填 URL。不同服务商对尺寸/分辨率/参考图的支持范围不同
-- Agent 流程以 `skills/dsimage/SKILL.md` 为准；安装以 `SETUP.md` 为准；建模板以 `CREATE_TEMPLATE.md` 为准；快速换货以 `FAST_SWAP.md` 为准
+- Agent 流程以 `skills/dsimage/SKILL.md` 为准；安装以 `SETUP.md` 为准；建模板以 `CREATE_TEMPLATE.md` 为准
 
 ## 许可
 
