@@ -389,6 +389,20 @@ class SmartRunTests(TempTemplatesMixin, unittest.TestCase):
         with self.assertRaises(core.DsError):
             core.read_prompts(self.batch, "杯子", require_complete=True)
 
+    def test_brief_by_kind(self) -> None:
+        self.tpl["product_kinds"] = {"mug": "杯", "bottle": "瓶"}
+        self.tpl["slots"][0]["brief_by_kind"] = {"bottle": "瓶子要竖着拍", "nope": "x"}
+        self.assertTrue(any("brief_by_kind" in p for p in core.check_template(self.tpl)))
+        del self.tpl["slots"][0]["brief_by_kind"]["nope"]
+        self.assertEqual(core.check_template(self.tpl), [])
+        product = self.batch["products"][0]
+        product["kind"] = "bottle"
+        brief = core.write_smart_packet(self.batch, self.tpl, product).read_text(encoding="utf-8")
+        self.assertIn("本品类（bottle）：瓶子要竖着拍", brief)
+        product["kind"] = "mug"
+        brief = core.write_smart_packet(self.batch, self.tpl, product).read_text(encoding="utf-8")
+        self.assertNotIn("瓶子要竖着拍", brief)
+
     def test_freeze(self) -> None:
         work = core.work_dir(self.batch, "杯子")
         core.write_json(work / core.PROMPTS_FILE, {"H1": "hero prompt", "H2": "detail prompt"})

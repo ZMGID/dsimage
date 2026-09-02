@@ -14,7 +14,11 @@ python scripts/dsimage.py run "<成图根>"
 
 ## 写 prompt
 
-读 `brief.md`。它里面有：全套约束（品类、语言、画幅）、风格锁、产品图路径、每槽的 brief 和参考图顺序、模板备注。然后：
+读 `brief.md`。用默认模板（`默认电商套图`）时额外盯三件事：每页背景都要有东西（台面 / 墙 / 场景），不能纯白纯灰；H5 和 H7 是两个不同的人、不同动作、不同场地，prompt 里把人写具体；所有文字 pt-BR，规格数字没给就不编。
+
+用 `童装套图` 时：先 `set --kind`（outerwear / hoodie_set / summer_set / trousers / dress / sleepwear），brief 里「本品类」那行才会给对应的场景、标题、部位、双状态；写 prompt 前先列一张 H1–H9 动作台账（人物 / 动作 / 机位 / 裁切 / 场景），任意两页不能同时重复剪影 + 机位 + 背景；颜色只用品夹里看得到或用户确认的；背面有印花的品别信派生，向用户要真背面图。
+
+`brief.md` 里有：全套约束（品类、语言、画幅）、风格锁、产品图路径、每槽的 brief 和参考图顺序、模板备注。然后：
 
 1. 打开产品图，看清楚它是什么、什么颜色、什么材质、有什么结构/卖点。
 2. 每槽一条完整英文 prompt，开头原样贴风格锁，然后写这一页的构图、产品怎么摆、光、底、文字（按模板语言，短）、否定项。构图数值和角度短语可以翻 `knowledge/shots.md` 抄。
@@ -44,5 +48,6 @@ python scripts/dsimage.py template freeze "<成图根>" <SKU> <新模板名>
 
 - `style`：必填，每条 prompt 开头原样带。
 - `slots[].brief`：必填，这一页要表达什么、放什么信息，不写具体 prompt。
+- `slots[].brief_by_kind`：可选，配合 `product_kinds`，按品类追加一行到 brief 里（童装模板用它区分外套 / 裙装 / 睡衣的场景和标题）。
 - `slots[].example`：可选，只是给你看版式，不进生图。
 - `slots[].refs` 默认 `["@product.front"]`。背面页可以写 `["@product.front", "@product.back"]`，品没背面图时和 replace 一样先派生（`derive` 子命令先看）。

@@ -82,7 +82,7 @@ skills/dsimage/
   SETUP.md              安装 / 配 API / 更新
   guides/               replace.md  smart.md  design.md  gen.md  make_template.md
   knowledge/shots.md    26 类电商图拍法速查
-  templates/            胜利鹰女款商务背包/  胜利鹰男款商务背包/
+  templates/            默认电商套图/  童装套图/（smart）  胜利鹰女款商务背包/  胜利鹰男款商务背包/（replace）
   scripts/              dsimage.py  core.py  gen_image.py  test_dsimage.py
 ```
 
@@ -90,6 +90,6 @@ skills/dsimage/
 
 - 不内置 API key；`.env` 已 gitignore。
 - 分辨率只有 1k / 2k / 4k，接口给多大存多大。交付尺寸走 `deliver`。
-- 内置两份模板是实战打磨过的 pt-BR 商务双肩包套图，可直接用，也可当写模板的范本。
+- 内置四份模板：`默认电商套图`（smart，不点名模板时用：9 张 + 白图，pt-BR，每页有背景，800×800 ≤2MB）；`童装套图`（smart，六个童装子品类合成一份，用 `set --kind` 区分）；两份胜利鹰商务双肩包（replace，实战打磨过，可当写模板的范本）。
 
 MIT

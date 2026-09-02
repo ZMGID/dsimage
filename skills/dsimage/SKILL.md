@@ -15,18 +15,21 @@ Skill 目录有 `.env` 就能出图；没有 → 先读 `SETUP.md`。不要回�
 |---|---|---|
 | 点名了库里的 replace 模板，或「按这套样图把这些品换进去」（样图 + 产品夹） | **replace**：脚本直出，你只选白图、看图、改模板 | `guides/replace.md` |
 | 点名了库里的 smart 模板，或「按这个模板/风格，每个品单独写」 | **smart**：脚本给 brief，你按品写 prompts.json，再出 | `guides/smart.md` |
-| 只有产品图，没模板没样图，要**一套** | **design**：先问清需求，建 smart 模板，再走 smart | `guides/design.md` |
+| 只有产品图，没点名模板，要**一套**，没提特殊要求 | **默认模板** `默认电商套图`（smart，9 张 + 白图，pt-BR，有背景，800×800 ≤2MB）：直接 init，走 smart | `guides/smart.md` |
+| 品是**童装**（外套 / 卫衣套装 / 夏季套装 / 裤 / 裙 / 睡衣），没点名别的模板 | **`童装套图`**（smart，pt-BR，800×800）：init 后每个品 `set --kind` 标子品类，走 smart | `guides/smart.md` |
+| 只有产品图，但提了平台 / 语言 / 风格 / 张数等要求，默认模板对不上 | **design**：先问清需求，建 smart 模板，再走 smart | `guides/design.md` |
 | 只要**一张或几张图**：出张图、改这张图、换背景、做张海报 | **gen**：不建模板不建批次，写 prompt 直接出 | `guides/gen.md` |
 | 「做个模板」「把这套样图收成模板」 | 建模板 | `guides/make_template.md` |
 | 安装 / 配 API / 更新 | | `SETUP.md` |
 
 不确定是 replace 还是 smart：有成品套图 + 只想换货 → replace；只有风格参考或想每个品单独发挥 → smart。问一句，不要自己猜。
 一套还是几张：用户说「套图 / 详情页 / 主图全套 / 这些品都做」→ 套；说「一张 / 这张 / 改一下 / 海报」→ gen。5 张以上或以后还会来同类品，建议转 design 建模板。
+默认模板还是 design：默认模板是 pt-BR、9 张、有背景、800×800。用户要的语言 / 张数 / 平台跟这个不一样 → design；只是风格微调（换色板、换台面）→ 还用默认模板，写 prompt 时调。
 先 `template list` 看库里有什么；用户点名的不在库里就说没有，不要拿别的顶替。
 
 ## 开工前跟用户确认（一次问完）
 
-1. 用哪个模板（或没有模板 → design）。
+1. 用哪个模板（没点名 → 默认电商套图，童装 → 童装套图；要求对不上 → design）。
 2. 源在哪：甲方大文件夹 / 单品夹 / 一张图。成图放哪（不说就默认源夹同级 `XX生成`）。
 3. 先出哪个品看效果（不说就第一个）。
 4. 这轮有没有要覆盖模板的（语言、画幅、分辩率、交付尺寸、字动不动）。没说 = 按模板。
@@ -79,6 +82,6 @@ skills/dsimage/
   SKILL.md  SETUP.md
   guides/      replace.md  smart.md  design.md  gen.md  make_template.md
   knowledge/   shots.md            26 类电商图的拍法速查（写 prompt 时翻）
-  templates/   <模板名>/template.json + h1.png… + assets/
+  templates/   默认电商套图/  童装套图/（smart）  胜利鹰女款商务背包/  胜利鹰男款商务背包/（replace）
   scripts/     dsimage.py（CLI） core.py  gen_image.py（API）  test_dsimage.py
 ```

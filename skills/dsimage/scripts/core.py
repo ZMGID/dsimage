@@ -369,8 +369,16 @@ def check_template(tpl: dict[str, Any]) -> list[str]:
         else:
             if not str(slot.get("brief") or "").strip():
                 errors.append(f"{sid} 缺 brief（smart 模板每槽写要表达什么）")
+            by_kind = slot.get("brief_by_kind")
+            if by_kind is not None:
+                if not isinstance(by_kind, dict):
+                    errors.append(f"{sid} brief_by_kind 应为对象")
+                else:
+                    for key in by_kind:
+                        if key not in kind_keys:
+                            errors.append(f"{sid} brief_by_kind 的键 {key!r} 不在 product_kinds 里")
     if kind_keys and slots:
-        used = {k for s in slots for field in ("prompt_by_kind", "refs_by_kind")
+        used = {k for s in slots for field in ("prompt_by_kind", "refs_by_kind", "brief_by_kind")
                 if isinstance(s.get(field), dict) for k in s[field]}
         unused = kind_keys - used - {default_kind(tpl)}
         if unused:
@@ -853,15 +861,19 @@ def write_smart_packet(batch: dict[str, Any], tpl: dict[str, Any], product: dict
     if extra:
         lines.append("- 其他：" + "；".join(extra))
     lines += ["", "## 槽位"]
+    kind = product_kind(tpl, product)
     for slot in tpl["slots"]:
         sid = str(slot["id"])
-        refs = slot_refs(tpl, slot, product_kind(tpl, product))
+        refs = slot_refs(tpl, slot, kind)
         lines += [
             "",
             f"### {sid} · {slot.get('purpose') or ''}",
             str(slot.get("brief") or "").strip(),
-            f"- 参考图顺序：{' , '.join(refs)}",
         ]
+        by_kind = slot.get("brief_by_kind") if isinstance(slot.get("brief_by_kind"), dict) else {}
+        if kind and str(by_kind.get(kind) or "").strip():
+            lines.append(f"- 本品类（{kind}）：{str(by_kind[kind]).strip()}")
+        lines.append(f"- 参考图顺序：{' , '.join(refs)}")
         if slot.get("example"):
             lines.append(f"- 版式示例（看，不当母版）：{tpl['_dir'] / str(slot['example'])}")
     notes = tpl.get("notes") or []

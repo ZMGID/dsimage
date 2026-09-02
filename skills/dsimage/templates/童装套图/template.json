@@ -1,0 +1,137 @@
+{
+  "name": "童装套图",
+  "mode": "smart",
+  "category": "童装（外套 / 卫衣运动套装 / 夏季套装 / 裤装 / 女童裙装 / 睡衣家居服）",
+  "language": "巴西葡萄牙语（pt-BR）。图内所有可见文字用 pt-BR，出完逐字核对拼写和重音；品牌名 / 型号原样保留；禁止英语、西语。",
+  "output": {
+    "ratio": "1:1",
+    "resolution": "1k",
+    "format": "png",
+    "quality": "high",
+    "deliver": {
+      "width": 800,
+      "height": 800,
+      "max_bytes": "2MB"
+    }
+  },
+  "style": "Campaign Style Lock (kidswear, pt-BR market): one consistent visual system across all nine images. Fixed palette: #F7F5F1 warm off-white base, #2D2D2D text, #FFFFFF only for white-background extras; plus ONE accent color sampled from the actual garment's dominant color, used for icons, labels and to tint a very light background variant - the same accent hex on every image. Typography: one modern geometric sans-serif family (Montserrat / Poppins feel), bold headlines max 6 pt-BR words on max two lines, medium sub-lines, thin-line icons, rounded label tags; text never covers the garment. Every image has a designed, layered background appropriate for children (park, school path, playground, kids' bedroom, garden, bright street): foreground, mid-ground, soft far-ground - never a flat color, plain gradient, empty studio or single plinth (except the white-background extras). Child models are age-appropriate for the garment size, natural, bright, no adult styling, no night/club scenes. The garment is the hero (55-65% of frame in single-subject pages) and must match the reference exactly: cut, color, print, seams, pockets, hood, zipper, ribbing, hem, hardware - no invented structure. Pose ledger: across H1-H9 no two pages may share the same body silhouette, action, camera angle and background combination; the same child may appear, the pose may not. Soft daylight or bright clean interior light, no HDR glow, no harsh flash. No price, rating, sales count, certification, fabric-composition claims, fake logo or watermark.",
+  "text_policy": "pt-BR only. Headline ≤6 words (≤2 lines); sub-line ≤1 line; feature labels ≤4 per image, ≤5 words each, in the accent color; detail labels 1 short phrase per inset; color names only as confirmed by the user or visible in reference. Forbidden: price, rating, sales, certification, composition percentages, performance grades, any unconfirmed selling point.",
+  "product_kinds": {
+    "generic": "未分类童装（默认，先 set --kind 换成下面某一类；实在不属于任何一类才留这个）",
+    "outerwear": "保暖外套：棉服 / 羽绒 / 夹克 / 秋冬外套",
+    "hoodie_set": "卫衣运动套装：连帽卫衣 + 运动裤，成套",
+    "summer_set": "夏季套装：T 恤 + 短裤 / 短袖两件套",
+    "trousers": "裤装：牛仔裤 / 长裤 / 单条裤子",
+    "dress": "女童裙装：连衣裙 / 半裙",
+    "sleepwear": "睡衣家居服：睡衣套装 / 居家服"
+  },
+  "derive": {
+    "back": {
+      "prompt": "Generate a clean product photo of the BACK of the exact garment in the first image, laid flat or on an invisible mannequin, straight rear view, centered, on a plain light neutral background. Same fabric, color, cut, seams, waistband / hem / hood / collar as the front; the back is plain unless the front view proves a print or detail continues around. No model, no text, no props.",
+      "refs": ["@product.front"]
+    }
+  },
+  "slots": [
+    {
+      "id": "H1",
+      "purpose": "首屏主图 · 主推色 + 葡语标题",
+      "brief": "单一主推色，孩子穿着商品在一个**有前景 / 中景 / 远景层次的真实场景**里做一个自然动作（H1 独占，后面不再用）。主体占 55-65%。顶部短标题区放 pt-BR 标题（本品类默认标题见下，用户给了品名可换），不放价格、不放 CTA、不放卖点列表。禁止纯色 / 渐变 / 空影棚 / 单一底座。",
+      "brief_by_kind": {
+        "outerwear": "场景：明亮城市公园、秋冬街道或校园通道，近景路面、中景人物、远景建筑或绿植，用商品色呼应环境；没依据不要画雪。标题：JAQUETA INFANTIL EM DESTAQUE",
+        "hoodie_set": "场景：儿童运动场、校园步道或现代游乐空间，保留地面线条、器械或建筑景深。标题：ESTILO PARA BRINCAR",
+        "summer_set": "场景：明亮夏日公园、游乐场或阳光校园庭院，柔和绿植 + 步道 + 远景，不堆道具。标题：LOOK INFANTIL PARA O DIA A DIA",
+        "trousers": "场景：现代城市步道、儿童活动区或简洁校园街景，路面 / 护栏 / 建筑景深，动作要突出裤装（迈步、跨坐）。标题：CALÇA INFANTIL EM DESTAQUE",
+        "dress": "场景：明亮花园步道、精致街区或儿童友好的室内庆典空间，前景花草或家具、中景人物、柔焦远景；禁止成人化夜景。标题：UM LOOK QUE ENCANTA",
+        "sleepwear": "场景：明亮整洁的儿童卧室或游戏角，地毯 / 床边柜 / 玩具架形成前中远景，道具不遮商品；禁止成人卧室。标题：CONFORTO EM CADA DETALHE",
+        "generic": "场景按商品季节和用途选公园 / 校园 / 室内，同样要三层景深。标题：MODA INFANTIL EM DESTAQUE"
+      }
+    },
+    {
+      "id": "H2",
+      "purpose": "核心卖点 · 左标签右主体",
+      "brief": "左侧竖排 3-4 个卖点：细线图标 + ≤5 词 pt-BR 短标签，颜色用商品强调色；右侧商品或模特占 58-65%。模特姿势换成侧身或手部与衣服互动（拉拉链、整理帽子），不重复 H1 剪影。卖点只写参考图里看得见的结构（本品类关注部位见下）。",
+      "brief_by_kind": {
+        "outerwear": "部位：领口、帽子、拉链、袖口、内里、口袋",
+        "hoodie_set": "部位：帽型、拉链、罗纹袖口、裤腰、口袋、成套关系",
+        "summer_set": "部位：领口、印花、面料表面、裤腰、口袋",
+        "trousers": "部位：腰头、纽扣、口袋、车线、裤脚、背面",
+        "dress": "部位：领口、袖型、腰线、裙摆、背面、真实装饰",
+        "sleepwear": "部位：面料纹理、领口、袖口、裤腰、口袋、整套组合",
+        "generic": "部位：从参考图上能看到的领口 / 袖口 / 口袋 / 印花 / 腰头里挑 3-4 个"
+      }
+    },
+    {
+      "id": "H3",
+      "purpose": "面料 / 材质纹理特写",
+      "brief": "材质微距占 55-60%（织纹、绒面、印花颗粒、缝线），旁边放一个完整商品作形状参照，标题在上方留白区。只描述参考图里看得见的纹理和工艺，不写成分和功能等级。背景保留纹理感的宏观底，不用场景。"
+    },
+    {
+      "id": "H4",
+      "purpose": "结构细节 · 三个放大框",
+      "brief": "主体占 55-62%，优先商品单独展示（平铺或隐形模特）；要用模特就换一个 H1/H2 没用过的 3/4 姿势和机位。配 3 个圆形局部放大框 + 细引导线，每框一个 pt-BR 短标签，指向真实存在的部位（同 H2 的部位表）。不发明结构。",
+      "brief_by_kind": {
+        "outerwear": "放大：帽子内里 / 拉链头 / 袖口罗纹 或 口袋",
+        "hoodie_set": "放大：帽绳与帽型 / 罗纹袖口 / 裤腰抽绳",
+        "summer_set": "放大：领口 / 印花 / 裤腰",
+        "trousers": "放大：腰头与纽扣 / 口袋车线 / 裤脚",
+        "dress": "放大：领口或袖型 / 腰线 / 裙摆或装饰",
+        "sleepwear": "放大：面料纹理 / 领口或袖口 / 裤腰",
+        "generic": "放大：参考图上最清楚的三个结构部位"
+      }
+    },
+    {
+      "id": "H5",
+      "purpose": "全部确认色款展示",
+      "brief": "颜色从品夹里的图和用户确认拿，不虚构色款。按真实色款数排 2×2、2×3 或「主色大场景 + 小色款卡」。模特展示时**每个色款用不同的自然动作、机位、裁切**，配协调但不相同的轻场景卡片，不复制同一剪影；不用模特时用不同的已确认商品角度。各格主体大小和光线一致。只有一个颜色 → 改成同色多角度网格。"
+    },
+    {
+      "id": "H6",
+      "purpose": "正面与背面",
+      "refs": ["@product.front", "@product.back"],
+      "brief": "正面左、背面右，大小和基线一致，商品单独（平铺或隐形模特），底部 pt-BR 标签 FRENTE / COSTAS。背面用第二张参考图（真背面或派生图）；**商品背面有印花、图案或特殊结构的，先向用户要真背面图，不要信派生**。可用证据型分屏底，不用场景。"
+    },
+    {
+      "id": "H7",
+      "purpose": "儿童实穿生活场景",
+      "brief": "单一主体占 55-65%，做一个全套里唯一的生活动作（跑、坐读、递东西、玩耍…），左上或右上留 pt-BR 短标题区，背景不抢商品。场景按品类（见下），不虚构极端气候和成人空间。",
+      "brief_by_kind": {
+        "outerwear": "明亮简洁的儿童日常冬季或城市生活场景，不画雪地",
+        "hoodie_set": "明亮干净的公园、校园或日常活动场景，商品清楚",
+        "summer_set": "明亮清爽的户外、公园或室内日常场景，少道具",
+        "trousers": "简洁城市、校园或日常行走场景，裤装轮廓不被遮挡",
+        "dress": "柔和明亮的室内、花园或度假场景，背景简洁裙装突出",
+        "sleepwear": "明亮整洁的儿童卧室或居家场景，床品不杂乱",
+        "generic": "与 H1 不同的一个日常场景"
+      }
+    },
+    {
+      "id": "H8",
+      "purpose": "同一商品两种确认状态",
+      "brief": "左右两个等宽圆角卡片：同一主体、同机位、同尺寸，只变状态（见下）。这个姿势只在 H8 用。状态必须是参考图能证明的，不发明。",
+      "brief_by_kind": {
+        "outerwear": "外套打开 / 闭合，或帽子戴起 / 放下",
+        "hoodie_set": "帽子戴起 / 放下，上衣打开 / 闭合，或成套 / 分开",
+        "summer_set": "整套穿着 vs 已确认的单件搭配；非套装则同一模特两种自然姿态",
+        "trousers": "站立 vs 坐姿或迈步，结构颜色不变",
+        "dress": "静态正面 vs 轻微转身裙摆动态，裙长版型不变",
+        "sleepwear": "站立 vs 坐姿，或上衣打开 / 闭合",
+        "generic": "两种能从参考图确认的穿着状态"
+      }
+    },
+    {
+      "id": "H9",
+      "purpose": "色款收尾 · 选择",
+      "brief": "顶部 pt-BR 互动标题（如 ESCOLHA A SUA COR），全部确认色款并列或扇形展开，编排和动作都不重复 H5。单色商品 → 一个完整主商品 + 两个真实细节缩略图，不虚构颜色。"
+    }
+  ],
+  "notes": [
+    "由 numao/童装 的六份品类模板（保暖外套 / 卫衣运动套装 / 夏季套装 / 裤装 / 女童裙装 / 睡衣家居服）合并而来；共用骨架，品类差异在 brief_by_kind",
+    "init 后先 set --kind 标品类，不标就是 generic，H1 标题和场景会很泛",
+    "写 prompt 前先列一张 H1-H9 动作台账：每槽的人物 / 动作 / 机位 / 裁切 / 场景，任意两槽不得同时重复剪影 + 机位 + 背景；写完把 9 张缩略图并排看，像的重出",
+    "强调色：从主推商品真实主色取一个 hex，九张复用；文字 #2D2D2D，底 #F7F5F1，白底图才用 #FFFFFF",
+    "白底图：每个真实色款一张（#FFFFFF，正面居中占 78-84%，无模特无文字），不计入 9 张。品夹里有就用 init 迁进来的；没有就 gen 一张，输出到该品夹",
+    "背面：H6 要背面图；品没有时脚本先派生。背面有印花 / 图案 / 特殊结构的品，派生不可信，向用户要真背面图",
+    "多色款：H5 / H9 要全部真实颜色，颜色名只用用户确认的；不知道就问，不编",
+    "出完放大 200% 核对：葡语拼写重音、版型印花口袋是否与参考一致、800×800、≤2MB"
+  ]
+}

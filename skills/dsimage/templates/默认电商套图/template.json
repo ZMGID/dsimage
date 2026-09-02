@@ -1,0 +1,74 @@
+{
+  "name": "默认电商套图",
+  "mode": "smart",
+  "category": "通用电商商品（不限品类）",
+  "language": "巴西葡萄牙语（pt-BR）。图内所有可见文字用 pt-BR，无重音也可；品牌名 / 型号原样保留；禁止英语、西语混入。",
+  "output": {
+    "ratio": "1:1",
+    "resolution": "1k",
+    "format": "png",
+    "quality": "high",
+    "deliver": {
+      "width": 800,
+      "height": 800,
+      "max_bytes": "2MB"
+    }
+  },
+  "style": "Campaign Style Lock: one consistent premium e-commerce visual system across all nine images. Every image has a real, designed background - never a plain flat white or grey void: use warm-neutral studio sets, textured surfaces (stone, wood, linen, matte concrete), soft gradient walls, or believable lifestyle interiors, all in ONE shared palette of warm off-white, sand, deep charcoal and a single accent color matched to the product. Product is always photographed sharp, true to the reference image in shape, color, material, hardware and logo, and stays the visual hero (35-55% of frame). Lighting: soft directional key light with gentle fill, natural shadows, no harsh flash, no HDR glow. Typography: one modern geometric sans-serif family, short pt-BR headlines in deep charcoal or white, thin-line icons in the accent color, rounded label tags; text never covers the product. Same camera language (slight 3/4 or eye-level, 50-85mm feel) throughout. No collage clutter, no stock-photo gloss, no watermark, no fake ratings, no invented certifications.",
+  "text_policy": "Short pt-BR copy only: headline max 4 words, sub-line max 8 words, labels max 3 words; product / brand names kept verbatim. If the user did not give specs (dimensions, capacity, materials, price) do not invent numbers - ask, or leave that slot's text generic (e.g. 'Compacto e leve'). No English, no Spanish, no lorem ipsum.",
+  "slots": [
+    {
+      "id": "H1",
+      "purpose": "主图 · 展示",
+      "brief": "第一页，也是列表页缩略图。产品完整、正面 3/4、居中偏下占 45-55%，放在有质感的场景台面上（石材 / 木纹 / 亚麻），后面是同色系柔和背景墙，一点自然光影。文字只放品名或一句 pt-BR 定位语（≤4 词），放在上方留白，不压产品。不要卖点列表、不要图标。"
+    },
+    {
+      "id": "H2",
+      "purpose": "核心卖点 · 三点",
+      "brief": "产品在一侧（左或右占 40%），另一侧竖排 3 个卖点：细线图标 + 3 词以内 pt-BR 标签。卖点从产品图和用户说明里挑最能打动买家的三个（材质 / 容量 / 便携 / 耐用 / 设计…），不要凑数。背景与 H1 同色系但换一种材质或角度，不重复 H1 的构图。"
+    },
+    {
+      "id": "H3",
+      "purpose": "材质细节 · 特写",
+      "brief": "2-3 格微距特写拼在一页：面料纹理、缝线 / 接缝、五金或按键、logo。每格是同一产品的真实局部，颜色材质与参考图一致，五金上没有刻字就不加字。每格一个 2-3 词 pt-BR 小标。格与格之间用细分割线或统一圆角，不要大面积白底。"
+    },
+    {
+      "id": "H4",
+      "purpose": "结构 / 功能 · 标注",
+      "brief": "产品打开或展示结构（内部隔层 / 开合 / 接口 / 可拆部件，看品决定），用 3-5 条细引线指向真实存在的部位，每条一个 pt-BR 短标签。只标产品图上能看到或用户确认的结构，不发明功能。背景深一点，让引线和标签清楚。"
+    },
+    {
+      "id": "H5",
+      "purpose": "使用场景 A · 有人",
+      "brief": "真实生活场景里一个人在使用产品：巴西面孔、日常穿搭、动作自然（拿 / 背 / 用 / 放），产品清晰可辨占 25-35%。写清这个人的性别、年龄段、发型、衣着、动作和场地。**这个人物、动作、场地在整套里只出现这一次**，H7 必须换成不同的人和不同的动作。可以不放文字，或一句情境短句（≤6 词）。"
+    },
+    {
+      "id": "H6",
+      "purpose": "尺寸 / 规格",
+      "brief": "产品正面或侧面平视，两侧或下方用细标注线给出尺寸（长 × 宽 × 高，单位 cm）和 1-2 个关键规格（容量 / 重量 / 材质）。数字从用户说明拿；没有就问，问不到就用「Tamanho compacto」这类不带数字的表述，绝不编数字。背景素净一点但仍有渐变或台面，不要纯白。"
+    },
+    {
+      "id": "H7",
+      "purpose": "使用场景 B · 换人换动作",
+      "brief": "第二个场景：与 H5 不同的人（性别或年龄段至少换一个）、不同动作、不同场地（室内 ↔ 户外，工作 ↔ 休闲），光线也换（晨光 / 黄昏 / 室内暖灯）。产品仍清晰占 25-35%。目的是覆盖另一类买家，不是重复 H5。可配一句 pt-BR 短句。"
+    },
+    {
+      "id": "H8",
+      "purpose": "品质 / 保障",
+      "brief": "传达「买得放心」：产品局部 + 2-3 个保障要点（做工 / 检验 / 包装保护 / 售后），细线图标 + pt-BR 短标签。不要写星级评分、销量、认证徽章，除非用户给了真实凭证。构图可用横向分栏或底部条带，背景换一种质感。"
+    },
+    {
+      "id": "H9",
+      "purpose": "全家福 / 配色 / 包装",
+      "brief": "看品选一种：有多色 → 全部颜色并排（每个颜色都要跟参考图或用户说明一致，不发明颜色）；有配件 → 「Na caixa」摆出全部内容物；都没有 → 产品 + 包装盒的收尾图。俯拍或 3/4 俯视，背景延续套图色板，一句 pt-BR 收尾语（≤4 词）。"
+    }
+  ],
+  "notes": [
+    "默认模板：用户只给产品图、没点名模板、也没有特殊要求时用它；有平台 / 风格 / 张数要求走 design 另建",
+    "每套 9 张正图 + 品的白底图（init 已自动迁进成图夹），800×800 ≤2MB 由 deliver 压",
+    "人物只在 H5 / H7 出现，两页必须是不同的人、不同动作、不同场地；prompt 里把人写具体，不写「a person」",
+    "九张背景都要「有东西」：台面 / 墙面 / 场景，同一色板下变化材质和角度，不能是纯白或纯灰空底",
+    "尺寸 / 容量 / 材质 / 价格没给就问；不编数字",
+    "出完第一个品先 preview，重点看：文字是不是 pt-BR、H5/H7 是不是两个人、有没有哪页背景太素"
+  ]
+}

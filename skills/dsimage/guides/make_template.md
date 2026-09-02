@@ -39,6 +39,8 @@ python scripts/dsimage.py template check <模板名>
 
 有风格要求、每个品要单独写：见 `design.md` 第 3 步（`template init --blank --slots N --mode smart`）。有版式参考图可以 `--from <参考夹>`，图只当示例不进生图。
 
+一个大类下有几个子品类、九页骨架一样只是场景 / 标题 / 关注部位不同（童装：外套 / 套装 / 裤 / 裙 / 睡衣）：不要建六个模板，建一个，`product_kinds` 列子品类，差异写进 `slots[].brief_by_kind`，第一个键当默认。范本：`templates/童装套图/`。
+
 ## 从 smart 结果冻成 replace
 
 `template freeze <成图根> <SKU> <新名>`，见 `smart.md`。
@@ -68,11 +70,12 @@ python scripts/dsimage.py template check <模板名>
       "prompt": "…{sku}…{vary}…",                       // replace 必填
       "prompt_by_kind": {"bag": "…"},
       "vary": ["…", "…"],                               // prompt 用了 {vary} 才要
-      "brief": "…"                                       // smart 必填
+      "brief": "…",                                      // smart 必填
+      "brief_by_kind": {"bag": "…"}                      // smart 可选，按品类追加一行
     }
   ],
   "notes": ["给下次用这个模板的人看的提醒"]
 }
 ```
 
-`template check` 会查：示例图在不在、refs 引用的文件在不在、占位符合法、`{vary}` 有列表、`prompt_by_kind` 键在 `product_kinds` 里、需要 `@product.back` 的模板有没有 `derive.back`、deliver 比例和 ratio 一致。
+`template check` 会查：示例图在不在、refs 引用的文件在不在、占位符合法、`{vary}` 有列表、`prompt_by_kind` / `refs_by_kind` / `brief_by_kind` 键在 `product_kinds` 里、需要 `@product.back` 的模板有没有 `derive.back`、deliver 比例和 ratio 一致。
