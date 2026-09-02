@@ -5,9 +5,10 @@
 装进 Claude Code / Codex / Cursor / OpenClaw，开口带「使用 dsimage」，它按模板把一个品、或者一个大文件夹里几十个品，出成整套商品图。
 
 ```text
-使用 dsimage 模板：胜利鹰男款商务背包，把 VE男包系列 这个文件夹的品换进去
-使用 dsimage，用这张图给我设计一套亚马逊图
-使用 dsimage，按这套样图做个模板
+使用 dsimage，这些是产品图，帮我出一套电商主图
+使用 dsimage 模板：胜利鹰男款商务背包，版式别动，只把包换成这些新产品
+使用 dsimage，用这张产品图给我设计一套亚马逊图
+使用 dsimage，把这套已经做好的图做成模板，以后换产品用
 ```
 
 ## 三种做法
@@ -32,14 +33,14 @@ Agent 只做人该做的事：多张图的品挑出白底图、标品类、看�
 按 https://raw.githubusercontent.com/ZMGID/dsimage/main/skills/dsimage/SETUP.md 安装并配置 dsimage
 ```
 
-它会问你一句「生图走哪家（OpenAI / Grok / Gemini / 兼容网关）+ key」，然后拉模型列表让你挑，试出一张，最后把库里的模板列给你。
+它会问你接口地址和 API key，拉模型列表让你挑（可以推荐，但要你选），试出一张，最后把库里的模板列给你。
 
 或者手动：clone 后把 `skills/dsimage/` 拷到技能目录（`~/.claude/skills/`、`~/.codex/skills/`、`~/.cursor/skills/`、`~/.openclaw/skills/`），在里面跑：
 
 ```bash
-python scripts/dsimage.py setup env --provider grok --key sk-...            # 官方三家不用地址
 python scripts/dsimage.py setup env --provider custom --base-url https://xxx/v1 --key ...
-python scripts/dsimage.py setup model <列表里挑的模型>                        # 顺手试出一张 + 列模板
+# 官方地址（api.openai.com / api.x.ai / generativelanguage.googleapis.com）改成对应 --provider openai|grok|gemini，不用 --base-url
+python scripts/dsimage.py setup model <列表里挑的模型>                        # 等人选完再跑；顺手试出一张 + 列模板
 ```
 
 可选 `pip install pillow`（预览拼图、交付压图）。

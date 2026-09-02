@@ -25,27 +25,35 @@
 
 ## 2. 配生图 API（只问一次）
 
-出图只走图片 API，不用宿主自带的生图。问用户一句，四选一，让他把 key 一起发：
+出图只走图片 API，不用宿主自带的生图。**不要问**是 OpenAI / Grok / Gemini 还是哪家。只问这一句，等 URL 和 key 都到了再往下：
 
 ```text
-生图走哪家？把 API key 一起发我。
-  1. OpenAI        2. Grok（xAI）        3. Gemini（Google）
-  4. 其他兼容网关（还要给我接口地址，形如 https://xxx/v1）
+把生图接口地址和 API key 发给我。
+地址形如 https://xxx/v1
 ```
 
-拿到答案就跑（key 只进 `.env`，聊天里不要再回显整串）：
+缺哪样补哪样，不要替用户填官方地址，也不要猜服务商。key 只进 `.env`，聊天里不要再回显整串。
+
+拿到后**你自己从 URL 判断** `--provider`，**不要带 `--model`**：
+
+| URL 里的主机 | 命令 |
+|---|---|
+| `api.openai.com` | `python scripts/dsimage.py setup env --provider openai --key <KEY>` |
+| `api.x.ai` | `python scripts/dsimage.py setup env --provider grok --key <KEY>` |
+| `generativelanguage.googleapis.com` | `python scripts/dsimage.py setup env --provider gemini --key <KEY>` |
+| 其他 | `python scripts/dsimage.py setup env --provider custom --base-url <用户给的地址> --key <KEY>` |
+
+它会写 `.env`，再拉模型列表打出来（官方三家和网关都拉；拉不到就用内置名单）。把列表原样给用户，**推荐的可以标出来并建议用哪个**，然后停下来等他回模型名或序号。
+
+**模型必须用户自己选。** 没点名就不要往下：不要用列表里的「推荐」或「当前」，不要自己 `setup model`，不要 `setup test`。用户说「看着办 / 随便」也要把你建议的那个名字问他确认，得到明确答复再跑。
+
+用户选定后才：
 
 ```bash
-python scripts/dsimage.py setup env --provider grok --key <KEY>
-python scripts/dsimage.py setup env --provider custom --base-url https://xxx/v1 --key <KEY>
+python scripts/dsimage.py setup model <用户选的模型名>
 ```
 
-它会写 `.env`，然后**拉这家的模型列表**打出来（官方三家和网关都拉；拉不到就用内置名单），推荐的会标出来。把列表给用户挑一个：
-
-- 用户选了 / 用推荐的 → `python scripts/dsimage.py setup model <模型名>`
-  没换（就用列表里标「当前」的）→ `python scripts/dsimage.py setup test`
-
-两条都会**直接试出一张**（拿模板示例图当参考，出一张白底图，1k，一次费用），不用再问「要不要试」。成功会打印图片路径和库里的模板清单。打开图看一眼是不是白底上的那个包。
+这条会**直接试出一张**（拿模板示例图当参考，出一张白底图，1k，一次费用），不用再问「要不要试」。成功会打印图片路径和库里的模板清单。打开图看一眼是不是白底上的那个包。
 
 失败按报错处理：401/403 key 错、404 地址或模型名错、超时是网络。改法就是重跑 `setup env` / `setup model`，不要手改 `.env`。
 
@@ -53,23 +61,23 @@ python scripts/dsimage.py setup env --provider custom --base-url https://xxx/v1 
 
 ## 3. 收尾
 
-`setup test` 通过后跟用户说四件事：
+`setup model` 试图通过后跟用户说四件事：
 
 1. 装在哪（路径）。
 2. 出图走哪家 + 哪个模型（不回显 key）。
-3. 库里有哪些模板——就是 `setup test` 最后打印的那张表，原样给他，每个加一句是干什么的：
+3. 库里有哪些模板——就是试图最后打印的那张表，原样给他，每个加一句是干什么的：
    - `默认电商套图`（smart）：只给产品图不点名模板时用，9 张 + 白图，pt-BR，800×800
    - `童装套图`（smart）：童装六类合一，`set --kind` 区分外套 / 套装 / 裤 / 裙 / 睡衣
    - `胜利鹰女款 / 男款商务背包`（replace）：样图换货，脚本直出
 4. 怎么开口：
 
 ```text
-使用 dsimage，用这个文件夹的品出一套图                              ← 默认模板
-使用 dsimage 模板：胜利鹰男款商务背包，把这个文件夹的品换进去        ← replace
-使用 dsimage 模板：童装套图，这几个品是外套                          ← smart
-使用 dsimage，用这张图给我设计一套亚马逊图                          ← design（会先问几个问题）
-使用 dsimage，把这张图换成深灰背景 / 出一张 4:5 的海报              ← gen（一张几张，不建模板）
-使用 dsimage，按这套样图做个模板                                    ← 建模板
+使用 dsimage，这些是产品图，帮我出一套电商主图                      ← 默认套图
+使用 dsimage 模板：胜利鹰男款商务背包，版式别动，只把包换成这些新产品 ← 按样板换产品
+使用 dsimage 模板：童装套图，这些是童装外套                        ← 按模板出童装
+使用 dsimage，用这张产品图给我设计一套亚马逊图                      ← 从零设计（会先问几个问题）
+使用 dsimage，把这张图换成深灰背景 / 出一张 4:5 的海报              ← 只出一张或几张
+使用 dsimage，把这套已经做好的图做成模板，以后换产品用              ← 收成模板
 ```
 
 ## 4. 更新
