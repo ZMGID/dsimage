@@ -16,14 +16,27 @@
   set <成图根> <SKU> [--kind K] [--front 路径] [--back 路径] [--vary H8 "文字"]
 
   gen "<prompt>" [--ref 图 ...] [--ratio 4:5] [--out 目录] [--name 名] [--n 3]   不走模板，直接出图
+
+  setup env --provider openai|grok|gemini|custom [--base-url URL] --key KEY [--model M]   写 .env 并列出模型
+  setup models                            拉服务商模型列表
+  setup model <名>                        定模型并试出一张
+  setup test                              试出一张 + 列模板
+  update [--from <仓库夹|zip>] [--dry-run]  自更新技能文件，保留 .env 和自建模板
 """
 from __future__ import annotations
 
 import argparse
+import io
 import json
+import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
+import urllib.request
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -34,6 +47,11 @@ import core  # noqa: E402
 import gen_image  # noqa: E402
 
 DEFAULT_CONCURRENCY = 9
+SKILL_DIR = ROOT.parent
+REPO_ZIP = "https://github.com/ZMGID/dsimage/archive/refs/heads/main.zip"
+MANAGED_FILES = ("SKILL.md", "SETUP.md")
+MANAGED_DIRS = ("guides", "knowledge", "scripts")
+ENV_KEYS = ("IMG_PROVIDER", "IMG_MODEL", "IMG_API_KEY", "IMG_BASE_URL")
 
 
 def cmd_template(args: argparse.Namespace) -> int:
@@ -427,6 +445,283 @@ def cmd_set(args: argparse.Namespace) -> int:
     return 0
 
 
+# ── setup：配 API ─────────────────────────────────────────
+
+def _env_path(args: argparse.Namespace) -> Path:
+    return Path(args.env_file).resolve() if getattr(args, "env_file", None) else SKILL_DIR / ".env"
+
+
+def _runtime_from_env(env_path: Path) -> tuple[str, str, str, str]:
+    """只认这份 .env（覆盖进程环境里的 IMG_*），返回 provider, base_url, model, api_key。"""
+    if not env_path.is_file():
+        core.fail(f"没有 {env_path}，先 setup env --provider … --key …")
+    values = gen_image.read_env_file(env_path)
+    for key in ENV_KEYS:
+        if key in values:
+            os.environ[key] = values[key]
+        else:
+            os.environ.pop(key, None)
+    return gen_image.resolve_runtime()
+
+
+def _print_models(provider: str, base_url: str, api_key: str, current: str) -> None:
+    spec = gen_image.OFFICIAL_PROVIDERS.get(provider, {})
+    try:
+        image, others = gen_image.list_models(provider, base_url, api_key)
+    except gen_image.GenError as exc:
+        print(f"拉模型列表失败：{exc}")
+        if spec:
+            print("用内置名单：")
+            image, others = list(spec["models"]), []
+        else:
+            print("网关不给列表，让用户直接报模型名，然后 setup model <名>。")
+            return
+    if not image:
+        print("列表里没认出图片模型；全部模型如下，让用户挑：")
+        image, others = others, []
+    print(f"可用图片模型（{provider}）：")
+    for idx, name in enumerate(image, 1):
+        tag = "  ← 当前" if name == current else ""
+        tag += "  推荐" if spec and name == spec.get("default_model") else ""
+        print(f"  {idx}. {name}{tag}")
+    if others:
+        print(f"  （另有 {len(others)} 个非图片模型未列）")
+
+
+def _template_refs() -> list[str]:
+    """拿一份内置模板的两张示例图当参考，试的就是换货用的多图路径。"""
+    for folder in sorted(core.TEMPLATES_DIR.iterdir()) if core.TEMPLATES_DIR.is_dir() else []:
+        found = [str(folder / f"h{i}.png") for i in (1, 2) if (folder / f"h{i}.png").is_file()]
+        if found:
+            return found
+    return []
+
+
+def _print_template_list() -> None:
+    items = core.list_templates()
+    print(f"库里 {len(items)} 个模板：" if items else "库里没有模板。")
+    for item in items:
+        print(f"  {item['name']:<20} {item['mode']:<8} {item['slots']} 槽  {item['category']}")
+
+
+def _setup_test(env_path: Path) -> int:
+    provider, base_url, model, api_key = _runtime_from_env(env_path)
+    mode = gen_image.detect_mode(provider, base_url, None, model)
+    out_dir = SKILL_DIR / "_check"
+    refs = _template_refs()
+    ns = gen_image._probe_args("")
+    ns.image = refs
+    if len(refs) >= 2:
+        prompt = ("Show the exact product from the first image on a pure white seamless background, centered, "
+                  "soft studio light, no text. The second image is the same product; keep shape, color and hardware "
+                  "consistent with both.")
+    elif refs:
+        prompt = "Place the exact product from the first image on a pure white seamless background, centered, soft studio light, no text."
+    else:
+        prompt = "a single red apple on pure white background, studio lighting"
+    print(f"试出一张：{provider} / {model}  mode={mode}" + (f"（带 {len(refs)} 张参考图）" if refs else ""))
+    started = time.time()
+    paths = gen_image.generate_with_retry(base_url, api_key, model, mode, ns, prompt, out_dir, "setup", "test", retries=2)
+    print(f"成功，{time.time() - started:.0f}s：")
+    for p in paths:
+        print(f"  {p}")
+    print("打开看一眼是不是白底上的那个包；是就配好了（多图参考也通了）。")
+    print()
+    _print_template_list()
+    return 0
+
+
+def cmd_setup(args: argparse.Namespace) -> int:
+    env_path = _env_path(args)
+    if args.action == "env":
+        provider = gen_image._normalize_provider(args.provider)
+        if provider not in (*gen_image.OFFICIAL_PROVIDERS, "custom"):
+            core.fail(f"--provider 应为 openai / grok / gemini / custom，实际 {args.provider!r}")
+        key = (args.key or "").strip()
+        if not key:
+            core.fail("--key 不能为空")
+        base_url = (args.base_url or "").strip().rstrip("/")
+        if provider == "custom" and not base_url:
+            core.fail("兼容网关要 --base-url（例如 https://gateway.example/v1）")
+        if provider != "custom" and base_url:
+            by_host = gen_image._provider_from_host(base_url)
+            if by_host != provider:
+                core.fail(f"{provider} 的地址写死在脚本里，不用 --base-url；第三方网关请 --provider custom")
+            base_url = ""
+        spec = gen_image.OFFICIAL_PROVIDERS.get(provider)
+        model = (args.model or "").strip() or (spec["default_model"] if spec else "")
+        updates: dict[str, str | None] = {
+            "IMG_PROVIDER": provider,
+            "IMG_API_KEY": key,
+            "IMG_BASE_URL": base_url or None,
+            "IMG_MODEL": model or None,
+        }
+        gen_image.write_env_file(env_path, updates)
+        print(f"已写 {env_path}")
+        print(f"  provider={provider}" + (f"  base_url={base_url}" if base_url else "") + f"  key={gen_image.mask_key(key)}")
+        print(f"  model={model}" if model else "  model=（未定）")
+        print()
+        _print_models(provider, base_url or gen_image.resolve_base_url(provider, ""), key, model)
+        print()
+        if model:
+            print(f"下一步：用 {model} 就 `setup test`；换别的 `setup model <名>`（会顺手试出一张）。")
+        else:
+            print("下一步：`setup model <名>` 定模型（会顺手试出一张）。")
+        return 0
+    if args.action == "models":
+        provider, base_url, model, api_key = _runtime_from_env(env_path)
+        _print_models(provider, base_url, api_key, model)
+        return 0
+    if args.action == "model":
+        name = args.name.strip()
+        if not name:
+            core.fail("模型名不能为空")
+        if not env_path.is_file():
+            core.fail(f"没有 {env_path}，先 setup env")
+        gen_image.write_env_file(env_path, {"IMG_MODEL": name})
+        print(f"已写 IMG_MODEL={name}")
+        if args.no_test:
+            return 0
+        return _setup_test(env_path)
+    if args.action == "test":
+        return _setup_test(env_path)
+    raise AssertionError(args.action)
+
+
+# ── update：自更新 ────────────────────────────────────────
+
+def _skill_root_in(folder: Path) -> Path | None:
+    for candidate in (folder, folder / "skills" / "dsimage"):
+        if (candidate / "SKILL.md").is_file() and (candidate / "scripts" / "dsimage.py").is_file():
+            return candidate
+    for child in folder.iterdir() if folder.is_dir() else []:
+        if child.is_dir():
+            found = _skill_root_in(child) if child.name.startswith("dsimage") else None
+            if found:
+                return found
+    return None
+
+
+def _fetch_source(source: str | None, tmp: Path) -> Path:
+    if source:
+        p = Path(source).expanduser().resolve()
+        if p.is_dir():
+            found = _skill_root_in(p)
+            if not found:
+                core.fail(f"{p} 里找不到 skills/dsimage（要有 SKILL.md 和 scripts/dsimage.py）")
+            return found
+        if p.is_file() and p.suffix.lower() == ".zip":
+            data = p.read_bytes()
+        else:
+            core.fail(f"--from 应为仓库文件夹或 zip：{p}")
+    else:
+        print(f"下载 {REPO_ZIP} …")
+        try:
+            with urllib.request.urlopen(urllib.request.Request(REPO_ZIP, headers={"User-Agent": gen_image.UA}), timeout=120) as resp:
+                data = resp.read()
+        except OSError as exc:
+            core.fail(f"下载失败：{exc}。可以手动下载 zip 后 update --from <zip>，或 git clone 后 update --from <仓库夹>")
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            zf.extractall(tmp)
+    except zipfile.BadZipFile:
+        core.fail("不是有效的 zip")
+    found = _skill_root_in(tmp)
+    if not found:
+        core.fail("zip 里找不到 skills/dsimage")
+    return found
+
+
+def _iter_files(folder: Path) -> dict[str, Path]:
+    files: dict[str, Path] = {}
+    if not folder.is_dir():
+        return files
+    for p in folder.rglob("*"):
+        if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc":
+            files[p.relative_to(folder).as_posix()] = p
+    return files
+
+
+def _sync_dir(src: Path, dest: Path, report: dict[str, list[str]], *, dry_run: bool, label: str) -> None:
+    src_files = _iter_files(src)
+    dest_files = _iter_files(dest)
+    for rel, sp in src_files.items():
+        dp = dest / rel
+        if not dp.exists():
+            report["added"].append(f"{label}/{rel}")
+        elif dp.read_bytes() != sp.read_bytes():
+            report["updated"].append(f"{label}/{rel}")
+        else:
+            continue
+        if not dry_run:
+            dp.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(sp, dp)
+    for rel, dp in dest_files.items():
+        if rel not in src_files:
+            report["removed"].append(f"{label}/{rel}")
+            if not dry_run:
+                dp.unlink()
+
+
+def sync_skill(src: Path, dest: Path, *, dry_run: bool) -> dict[str, list[str]]:
+    """把新版技能文件同步到已装目录：只动受管文件，.env 和自建模板不碰。"""
+    report: dict[str, list[str]] = {"added": [], "updated": [], "removed": [], "kept": []}
+    for name in MANAGED_FILES:
+        sp, dp = src / name, dest / name
+        if not sp.is_file():
+            continue
+        if not dp.exists():
+            report["added"].append(name)
+        elif dp.read_bytes() != sp.read_bytes():
+            report["updated"].append(name)
+        else:
+            continue
+        if not dry_run:
+            shutil.copy2(sp, dp)
+    for name in MANAGED_DIRS:
+        _sync_dir(src / name, dest / name, report, dry_run=dry_run, label=name)
+    src_tpl, dest_tpl = src / "templates", dest / "templates"
+    builtin = {p.name for p in src_tpl.iterdir() if p.is_dir()} if src_tpl.is_dir() else set()
+    for name in sorted(builtin):
+        _sync_dir(src_tpl / name, dest_tpl / name, report, dry_run=dry_run, label=f"templates/{name}")
+    if dest_tpl.is_dir():
+        report["kept"] += [f"templates/{p.name}" for p in sorted(dest_tpl.iterdir()) if p.is_dir() and p.name not in builtin]
+    if (dest / ".env").is_file():
+        report["kept"].append(".env")
+    return report
+
+
+def cmd_update(args: argparse.Namespace) -> int:
+    dest = Path(args.dest).resolve() if args.dest else SKILL_DIR
+    repo_root = dest.parent.parent
+    if not args.source and (repo_root / ".git").exists() and (repo_root / "skills" / "dsimage").resolve() == dest:
+        print(f"{dest} 就是 dsimage 仓库本体，直接 git pull：")
+        if args.dry_run:
+            return 0
+        result = subprocess.run(["git", "-C", str(repo_root), "pull", "--ff-only"], capture_output=True, text=True)
+        print((result.stdout + result.stderr).strip())
+        if result.returncode == 0:
+            print()
+            _print_template_list()
+        return result.returncode
+    with tempfile.TemporaryDirectory() as tmp:
+        src = _fetch_source(args.source, Path(tmp))
+        report = sync_skill(src, dest, dry_run=args.dry_run)
+    head = "将要" if args.dry_run else "已"
+    print(f"{head}更新 {dest}：新增 {len(report['added'])}，更新 {len(report['updated'])}，删除 {len(report['removed'])}")
+    for key, title in (("added", "新增"), ("updated", "更新"), ("removed", "删除")):
+        for item in report[key]:
+            print(f"  [{title}] {item}")
+    if report["kept"]:
+        print("原样保留：" + "、".join(report["kept"]))
+    if not report["added"] and not report["updated"] and not report["removed"]:
+        print("已经是最新。")
+    if not args.dry_run:
+        print()
+        _print_template_list()
+    return 0
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="dsimage：模板 → 一个品 → 一批品。")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -503,6 +798,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     s.add_argument("--back")
     s.add_argument("--vary", nargs=2, action="append", metavar=("SLOT", "TEXT"))
 
+    su = sub.add_parser("setup", help="配生图 API：写 .env、列模型、试出一张")
+    sus = su.add_subparsers(dest="action", required=True)
+    se = sus.add_parser("env", help="写 .env 并拉模型列表")
+    se.add_argument("--provider", required=True, help="openai | grok | gemini | custom")
+    se.add_argument("--base-url", help="仅 custom 网关")
+    se.add_argument("--key", required=True, help="API key（只写进 .env，不回显）")
+    se.add_argument("--model", help="已知模型名就直接写；不写用服务商默认，custom 留空待选")
+    se.add_argument("--env-file", help=argparse.SUPPRESS)
+    sm = sus.add_parser("models", help="拉服务商模型列表")
+    sm.add_argument("--env-file", help=argparse.SUPPRESS)
+    sn = sus.add_parser("model", help="定模型，然后试出一张")
+    sn.add_argument("name")
+    sn.add_argument("--no-test", action="store_true")
+    sn.add_argument("--env-file", help=argparse.SUPPRESS)
+    st = sus.add_parser("test", help="试出一张带参考图的图，再列模板")
+    st.add_argument("--env-file", help=argparse.SUPPRESS)
+
+    u = sub.add_parser("update", help="自更新：拉新版覆盖技能文件，保留 .env 和自建模板")
+    u.add_argument("--from", dest="source", help="本地仓库夹或 zip；不写就从 GitHub 下载 main")
+    u.add_argument("--dry-run", action="store_true", help="只列会改什么")
+    u.add_argument("--dest", help=argparse.SUPPRESS)
+
     args = parser.parse_args(argv)
     if args.command == "template" and args.action == "init" and not args.source and not args.blank:
         parser.error("template init 要 --from <示例夹> 或 --blank --slots N")
@@ -515,6 +832,7 @@ def main(argv: list[str] | None = None) -> int:
         "template": cmd_template, "init": cmd_init, "run": cmd_run, "derive": cmd_derive, "gen": cmd_gen,
         "status": cmd_status,
         "deliver": cmd_deliver, "preview": cmd_preview, "set": cmd_set,
+        "setup": cmd_setup, "update": cmd_update,
     }
     try:
         return handlers[args.command](args)

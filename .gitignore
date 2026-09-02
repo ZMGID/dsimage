@@ -5,6 +5,7 @@
 
 # Generated images (too large for repo)
 generated-images/
+_check/
 
 # Python
 __pycache__/

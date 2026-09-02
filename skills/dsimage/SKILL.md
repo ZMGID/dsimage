@@ -8,6 +8,7 @@ description: 电商商品图技能，也能当普通生图工具用。套图走�
 一个模板 = `templates/<名>/` 文件夹：`template.json` + 示例图 `h1.png…` + 可选 `assets/`。
 所有命令在本技能目录跑（Windows `python`，macOS/Linux `python3`）：`python scripts/dsimage.py <子命令>`。
 Skill 目录有 `.env` 就能出图；没有 → 先读 `SETUP.md`。不要回显 API key。
+用户在对话里给了接口地址 / key / 模型名（新的或换的）→ 立刻 `python scripts/dsimage.py setup env --provider … --key …`（换模型 `setup model <名>`）写进 `.env`，以后直接用；不要只在这一次命令里临时用，也不要手改 `.env`。
 
 ## 先分流
 

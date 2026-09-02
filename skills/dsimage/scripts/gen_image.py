@@ -308,7 +308,7 @@ def resolve_runtime() -> tuple[str, str, str, str]:
     return provider, base_url, model, api_key
 
 
-def detect_mode(provider: str, base_url: str, explicit_mode: str | None) -> str:
+def detect_mode(provider: str, base_url: str, explicit_mode: str | None, model: str = "") -> str:
     if explicit_mode in API_MODES:
         return explicit_mode
     env_mode = os.environ.get("IMG_API_MODE", "").strip().lower()
@@ -317,6 +317,9 @@ def detect_mode(provider: str, base_url: str, explicit_mode: str | None) -> str:
     if provider == "gemini":
         return "gemini"
     if provider == "grok":
+        return "grok"
+    # 网关转发 grok 模型时仍是 xAI 的 JSON 协议（多图必须 images 数组），走 multipart 会报错
+    if provider == "custom" and _provider_from_model(model) == "grok":
         return "grok"
     if "apimart" in (base_url or "").lower():
         return "async"
@@ -475,10 +478,13 @@ def download_to_path(url: str, dest: Path) -> None:
     dest.write_bytes(data)
 
 
-def http_get(url: str, api_key: str, timeout: int = 30) -> dict[str, Any]:
-    request = urllib.request.Request(
-        url, headers={"Authorization": f"Bearer {api_key}", "User-Agent": UA}, method="GET",
-    )
+def http_get(url: str, api_key: str, timeout: int = 30, *, auth: str = "bearer") -> dict[str, Any]:
+    headers = {"User-Agent": UA}
+    if auth == "gemini":
+        headers["x-goog-api-key"] = api_key
+    else:
+        headers["Authorization"] = f"Bearer {api_key}"
+    request = urllib.request.Request(url, headers=headers, method="GET")
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             raw = response.read().decode("utf-8")
@@ -492,6 +498,101 @@ def http_get(url: str, api_key: str, timeout: int = 30) -> dict[str, Any]:
     except json.JSONDecodeError:
         fail(f"查询接口返回的不是有效 JSON：{raw[:500]}")
     return parsed
+
+
+# ── 模型列表 / .env 读写（setup 用）─────────────────────────
+
+IMAGE_MODEL_HINTS = (
+    "image", "dall-e", "imagen", "flux", "seedream", "seededit", "banana", "stable-diffusion", "sdxl",
+    "midjourney", "kolors", "hunyuan", "wanx", "ideogram", "recraft", "kontext", "photon", "gpt-image",
+)
+NOT_IMAGE_HINTS = ("embedding", "whisper", "tts", "audio", "video", "moderation", "realtime", "transcribe")
+
+
+def is_image_model(model_id: str) -> bool:
+    m = model_id.lower()
+    if any(x in m for x in NOT_IMAGE_HINTS):
+        return False
+    return any(x in m for x in IMAGE_MODEL_HINTS)
+
+
+def _model_ids(payload: dict[str, Any]) -> list[str]:
+    items = payload.get("data")
+    if not isinstance(items, list):
+        items = payload.get("models")
+    if not isinstance(items, list):
+        return []
+    ids: list[str] = []
+    for item in items:
+        if isinstance(item, dict):
+            raw = item.get("id") or item.get("name") or item.get("model")
+        else:
+            raw = item
+        if raw:
+            ids.append(str(raw).split("/")[-1])
+    return ids
+
+
+def list_models(provider: str, base_url: str, api_key: str) -> tuple[list[str], list[str]]:
+    """拉服务商模型列表。返回 (图片模型, 其余模型)；图片模型按内置推荐顺序排在前面。"""
+    if provider == "gemini":
+        payload = http_get(f"{base_url}/models?pageSize=200", api_key, auth="gemini")
+        ids = _model_ids(payload)
+    elif provider == "grok":
+        try:
+            ids = _model_ids(http_get(f"{base_url}/image-generation-models", api_key))
+        except GenError:
+            ids = []
+        if not ids:
+            ids = _model_ids(http_get(f"{base_url}/models", api_key))
+    else:
+        ids = _model_ids(http_get(f"{base_url}/models", api_key))
+    seen = dict.fromkeys(ids)
+    known = list(OFFICIAL_PROVIDERS.get(provider, {}).get("models", ()))
+    image = [m for m in known if m in seen] + sorted(m for m in seen if is_image_model(m) and m not in known)
+    others = sorted(m for m in seen if m not in image)
+    return image, others
+
+
+def read_env_file(env_file: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    if not env_file.is_file():
+        return values
+    for raw in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        if line.startswith("export "):
+            line = line[len("export "):].strip()
+        key, value = line.split("=", 1)
+        values[key.strip()] = strip_env_value(value)
+    return values
+
+
+def write_env_file(env_file: Path, updates: dict[str, str | None]) -> None:
+    """按键更新 .env：None 删除该键，其余行原样保留。"""
+    lines = env_file.read_text(encoding="utf-8").splitlines() if env_file.is_file() else []
+    pending = dict(updates)
+    out: list[str] = []
+    for raw in lines:
+        line = raw.strip()
+        key = None
+        if line and not line.startswith("#") and "=" in line:
+            key = line[len("export "):].split("=", 1)[0].strip() if line.startswith("export ") else line.split("=", 1)[0].strip()
+        if key in pending:
+            value = pending.pop(key)
+            if value is not None:
+                out.append(f"{key}={value}")
+            continue
+        out.append(raw)
+    for key, value in pending.items():
+        if value is not None:
+            out.append(f"{key}={value}")
+    env_file.write_text("\n".join(out).rstrip("\n") + "\n", encoding="utf-8")
+
+
+def mask_key(key: str) -> str:
+    return f"{key[:6]}…（{len(key)} 位）" if len(key) > 8 else f"（{len(key)} 位）"
 
 
 # ── 输出命名 ──────────────────────────────────────────────
@@ -545,10 +646,12 @@ def run_sync(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
     images = ref_images(args)
     if images:
         endpoint = f"{base_url}/images/edits"
+        # OpenAI /images/edits：单图字段 image，多图字段 image[]
+        field = "image" if len(images) == 1 else "image[]"
         files = []
         for path in images:
             data, mime, filename = read_image_file(path)
-            files.append(("image", filename, data, mime))
+            files.append((field, filename, data, mime))
         fields = {"model": model, "prompt": prompt, "n": str(args.n), "size": sync_size(args.size)}
         if args.quality:
             fields["quality"] = args.quality
@@ -1255,7 +1358,7 @@ def run_check(args: argparse.Namespace) -> None:
     print("配置检查（不打接口）")
     print("配置文件：已读取（不回显内容）")
     provider, base_url, model, api_key = resolve_runtime()
-    mode = detect_mode(provider, base_url, args.mode)
+    mode = detect_mode(provider, base_url, args.mode, model)
     with tempfile.TemporaryDirectory() as tmp:
         probe = Path(tmp) / "probe.png"
         probe.write_bytes(PROBE_PNG)
@@ -1321,7 +1424,7 @@ def main() -> None:
         env_file = Path(args.env_file) if args.env_file else find_default_env_file()
         load_env_file(env_file)
         _provider, base_url, model, api_key = resolve_runtime()
-        mode = detect_mode(_provider, base_url, args.mode)
+        mode = detect_mode(_provider, base_url, args.mode, model)
 
         if args.batch:
             run_batch(args, base_url, api_key, model, mode)

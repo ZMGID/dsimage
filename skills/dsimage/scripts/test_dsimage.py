@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
 
 import core  # noqa: E402
 import dsimage as _dsimage  # noqa: E402
+import gen_image  # noqa: E402
 
 
 class dsimage:  # noqa: N801
@@ -431,6 +432,94 @@ class GenTests(TempTemplatesMixin, unittest.TestCase):
         self.assertNotEqual(dsimage.main(["gen", "x", "--ratio", "7:3", "--dry-run"]), 0)
         self.assertNotEqual(dsimage.main(["gen", "x", "--name", "a/b", "--dry-run"]), 0)
         self.assertNotEqual(dsimage.main(["gen", "@" + str(self.tmp / "missing.txt"), "--dry-run"]), 0)
+
+
+class SetupUpdateTests(TempTemplatesMixin, unittest.TestCase):
+    def test_env_file_round_trip(self) -> None:
+        env = self.tmp / ".env"
+        env.write_text("# 注释\nIMG_PROVIDER=openai\nIMG_BASE_URL=https://x/v1\nOTHER=1\n", encoding="utf-8")
+        gen_image.write_env_file(env, {"IMG_PROVIDER": "grok", "IMG_BASE_URL": None, "IMG_API_KEY": "k"})
+        text = env.read_text(encoding="utf-8")
+        self.assertIn("# 注释", text)
+        self.assertIn("OTHER=1", text)
+        self.assertNotIn("IMG_BASE_URL", text)
+        self.assertEqual(gen_image.read_env_file(env), {"IMG_PROVIDER": "grok", "OTHER": "1", "IMG_API_KEY": "k"})
+
+    def test_model_filter_and_order(self) -> None:
+        self.assertTrue(gen_image.is_image_model("gpt-image-2"))
+        self.assertTrue(gen_image.is_image_model("flux-pro"))
+        self.assertFalse(gen_image.is_image_model("text-embedding-3-small"))
+        self.assertFalse(gen_image.is_image_model("gpt-4o"))
+        original = gen_image.http_get
+        gen_image.http_get = lambda *a, **k: {"data": [{"id": "gpt-4o"}, {"id": "dall-e-3"}, {"id": "gpt-image-2"}, {"id": "zz-image"}]}
+        try:
+            image, others = gen_image.list_models("openai", "https://api.openai.com/v1", "k")
+        finally:
+            gen_image.http_get = original
+        self.assertEqual(image, ["gpt-image-2", "dall-e-3", "zz-image"])
+        self.assertEqual(others, ["gpt-4o"])
+
+    def test_detect_mode_gateway_grok(self) -> None:
+        import os
+        os.environ.pop("IMG_API_MODE", None)
+        self.assertEqual(gen_image.detect_mode("custom", "https://gw/v1", None, "grok-imagine-image-2.0"), "grok")
+        self.assertEqual(gen_image.detect_mode("custom", "https://gw/v1", None, "gpt-image-2"), "sync")
+        self.assertEqual(gen_image.detect_mode("custom", "https://gw/v1", "sync", "grok-imagine-image-2.0"), "sync")
+        self.assertEqual(gen_image.detect_mode("grok", "https://api.x.ai/v1", None, "grok-imagine-image-2.0"), "grok")
+
+    def test_setup_env_cli(self) -> None:
+        env = self.tmp / "s.env"
+        original = gen_image.list_models
+        gen_image.list_models = lambda *a, **k: (_ for _ in ()).throw(gen_image.GenError("offline"))
+        try:
+            self.assertEqual(dsimage.main(["setup", "env", "--provider", "xai", "--key", "sk-1", "--env-file", str(env)]), 0)
+            self.assertEqual(gen_image.read_env_file(env)["IMG_PROVIDER"], "grok")
+            self.assertEqual(gen_image.read_env_file(env)["IMG_MODEL"], "grok-imagine-image-2.0")
+            self.assertNotEqual(dsimage.main(["setup", "env", "--provider", "custom", "--key", "k", "--env-file", str(env)]), 0)
+            self.assertNotEqual(dsimage.main(["setup", "env", "--provider", "openai", "--base-url", "https://gw/v1", "--key", "k", "--env-file", str(env)]), 0)
+            self.assertEqual(dsimage.main(["setup", "env", "--provider", "custom", "--base-url", "https://gw/v1/", "--key", "k", "--env-file", str(env)]), 0)
+            values = gen_image.read_env_file(env)
+            self.assertEqual(values["IMG_BASE_URL"], "https://gw/v1")
+            self.assertNotIn("IMG_MODEL", values)
+            self.assertEqual(dsimage.main(["setup", "model", "flux-pro", "--no-test", "--env-file", str(env)]), 0)
+            self.assertEqual(gen_image.read_env_file(env)["IMG_MODEL"], "flux-pro")
+        finally:
+            gen_image.list_models = original
+
+    def test_sync_skill_keeps_env_and_user_templates(self) -> None:
+        src = self.tmp / "src"
+        dest = self.tmp / "dest"
+        (src / "scripts").mkdir(parents=True)
+        (src / "templates" / "内置").mkdir(parents=True)
+        (src / "SKILL.md").write_text("new", encoding="utf-8")
+        (src / "scripts" / "core.py").write_text("v2", encoding="utf-8")
+        (src / "scripts" / "dsimage.py").write_text("v2", encoding="utf-8")
+        (src / "templates" / "内置" / "template.json").write_text("{}", encoding="utf-8")
+        (dest / "scripts" / "__pycache__").mkdir(parents=True)
+        (dest / "templates" / "自建").mkdir(parents=True)
+        (dest / "templates" / "内置").mkdir(parents=True)
+        (dest / "SKILL.md").write_text("old", encoding="utf-8")
+        (dest / ".env").write_text("IMG_API_KEY=k\n", encoding="utf-8")
+        (dest / "scripts" / "core.py").write_text("v1", encoding="utf-8")
+        (dest / "scripts" / "old.py").write_text("x", encoding="utf-8")
+        (dest / "scripts" / "__pycache__" / "a.pyc").write_bytes(b"x")
+        (dest / "templates" / "自建" / "template.json").write_text("{}", encoding="utf-8")
+        (dest / "templates" / "内置" / "stale.png").write_bytes(b"x")
+        dry = _dsimage.sync_skill(src, dest, dry_run=True)
+        self.assertEqual((dest / "SKILL.md").read_text(encoding="utf-8"), "old")
+        self.assertEqual(sorted(dry["removed"]), ["scripts/old.py", "templates/内置/stale.png"])
+        report = _dsimage.sync_skill(src, dest, dry_run=False)
+        self.assertEqual(sorted(report["updated"]), ["SKILL.md", "scripts/core.py"])
+        self.assertEqual(sorted(report["added"]), ["scripts/dsimage.py", "templates/内置/template.json"])
+        self.assertIn("templates/自建", report["kept"])
+        self.assertIn(".env", report["kept"])
+        self.assertEqual((dest / "SKILL.md").read_text(encoding="utf-8"), "new")
+        self.assertFalse((dest / "scripts" / "old.py").exists())
+        self.assertTrue((dest / "templates" / "自建" / "template.json").exists())
+        self.assertTrue((dest / ".env").exists())
+        again = _dsimage.sync_skill(src, dest, dry_run=False)
+        self.assertEqual(again["added"] + again["updated"] + again["removed"], [])
+        self.assertEqual(dsimage.main(["update", "--from", str(src), "--dest", str(dest), "--dry-run"]), 0)
 
 
 class DeliverPreviewTests(TempTemplatesMixin, unittest.TestCase):

@@ -1061,7 +1061,7 @@ def run_pool(jobs: list[dict[str, Any]], *, concurrency: int, redo: bool, env_fi
     if model_pin:
         os.environ["IMG_MODEL"] = model_pin
     provider, base_url, model, api_key = gen_image.resolve_runtime()
-    mode = gen_image.detect_mode(provider, base_url, api_mode)
+    mode = gen_image.detect_mode(provider, base_url, api_mode, model)
     pool = to_pool_jobs(jobs)
     results = gen_image.run_job_pool(
         pool, concurrency=concurrency, skip_existing=not redo, base_url=base_url,

@@ -32,18 +32,19 @@ Agent 只做人该做的事：多张图的品挑出白底图、标品类、看�
 按 https://raw.githubusercontent.com/ZMGID/dsimage/main/skills/dsimage/SETUP.md 安装并配置 dsimage
 ```
 
-或者手动：clone 后把 `skills/dsimage/` 拷到技能目录（`~/.claude/skills/`、`~/.codex/skills/`、`~/.cursor/skills/`、`~/.openclaw/skills/`），在 `skills/dsimage/.env` 填生图 API：
+它会问你一句「生图走哪家（OpenAI / Grok / Gemini / 兼容网关）+ key」，然后拉模型列表让你挑，试出一张，最后把库里的模板列给你。
 
-```dotenv
-IMG_PROVIDER=grok                 # openai | grok | gemini | custom
-IMG_MODEL=grok-imagine-image-2.0
-IMG_API_KEY=...
-# IMG_BASE_URL=...                ← 仅 custom 网关
+或者手动：clone 后把 `skills/dsimage/` 拷到技能目录（`~/.claude/skills/`、`~/.codex/skills/`、`~/.cursor/skills/`、`~/.openclaw/skills/`），在里面跑：
+
+```bash
+python scripts/dsimage.py setup env --provider grok --key sk-...            # 官方三家不用地址
+python scripts/dsimage.py setup env --provider custom --base-url https://xxx/v1 --key ...
+python scripts/dsimage.py setup model <列表里挑的模型>                        # 顺手试出一张 + 列模板
 ```
 
-官方三家地址写死在脚本里，不用填。可选 `pip install pillow`（预览拼图、交付压图）。
+可选 `pip install pillow`（预览拼图、交付压图）。
 
-更新：`git pull` 后把 `skills/dsimage/` 覆盖过去，`.env` 和自建模板不动。详见 `SETUP.md` 第 4 节。
+更新：`python scripts/dsimage.py update`（`--dry-run` 先看），`.env` 和自建模板不动。
 
 ## 直接用脚本
 
@@ -79,7 +80,7 @@ VE男包生成/            ← 同级默认成图根
 ```
 skills/dsimage/
   SKILL.md              Agent 入口：分流 + 硬规矩
-  SETUP.md              安装 / 配 API / 更新
+  SETUP.md              安装 / 配 API（setup）/ 更新（update）
   guides/               replace.md  smart.md  design.md  gen.md  make_template.md
   knowledge/shots.md    26 类电商图拍法速查
   templates/            默认电商套图/  童装套图/（smart）  胜利鹰女款商务背包/  胜利鹰男款商务背包/（replace）
