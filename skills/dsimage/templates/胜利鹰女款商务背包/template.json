@@ -1,0 +1,159 @@
+{
+  "name": "胜利鹰女款商务背包",
+  "mode": "replace",
+  "category": "女款商务双肩包 / mochila executiva feminina",
+  "language": "图内文字葡萄牙语（巴西），以母版为准",
+  "output": {
+    "ratio": "1:1",
+    "resolution": "1k",
+    "format": "png",
+    "quality": "high",
+    "deliver": {
+      "width": 800,
+      "height": 800,
+      "max_bytes": "2MB"
+    }
+  },
+  "text_policy": "未点名的文字、图标、版式、背景一律保持母版原样；只有 editable_fields 且本轮给出新值时才改",
+  "product_kinds": {
+    "backpack": "双肩包（默认）：有两条肩带、背板",
+    "bag": "非背包：旅行包 / 手提袋 / 挎包 / 化妆包等，没有双肩带；用该槽的 bag 变体"
+  },
+  "slots": [
+    {
+      "id": "H1",
+      "purpose": "主图·总览",
+      "example": "h1.png",
+      "refs": [
+        "@example",
+        "@product.front"
+      ],
+      "prompt": "The first reference image is a locked layout master. The second reference image is the product to insert. Replace only the product in the master with the product from the second reference, keeping the exact master layout, background, typography, icons, callout lines, labels, grid, lighting, reflections, camera angle, scale and composition. Do not restyle, do not redraw the page, do not add or remove labels/icons/text, do not change the font. The new product must match the second reference exactly in shape, color, material, structure, hardware, logo and any charms, and must appear in the exact same pose, angle and position as the product in the master. H1 hero: keep the product front 3/4 on the reflective round table, beige wall with a soft window shadow behind, and the exact text VICTORY EAGLE / MOCHILA EXECUTIVA PREMIUM with the teal underline. Negative: no invented features, no changed background or text, no added props."
+    },
+    {
+      "id": "H2",
+      "purpose": "容量·装得下",
+      "example": "h2.png",
+      "refs": [
+        "@example",
+        "@product.front"
+      ],
+      "prompt": "The first reference image is a locked layout master. The second reference image is the product to insert. Replace only the product in the master with the product from the second reference, keeping the exact master layout, background, typography, icons, callout lines, labels, grid, lighting, reflections, camera angle, scale and composition. Do not restyle, do not redraw the page, do not add or remove labels/icons/text, do not change the font. The new product must match the second reference exactly in shape, color, material, structure, hardware, logo and any charms, and must appear in the exact same pose, angle and position as the product in the master. H2 capacity: keep the product front 3/4 on the left and the flat-lay of items on the right (laptop, notebook, tablet, mouse, charger, power bank, bottle, umbrella), headline ESPACO INTELIGENTE, subtitle TRABALHO . VIAGEM . DIA A DIA and the three teal outline icons at top. Do not add or remove the items."
+    },
+    {
+      "id": "H3",
+      "purpose": "背负·透气",
+      "example": "h3.png",
+      "refs": [
+        "@example",
+        "@product.front"
+      ],
+      "prompt": "The first reference image is a locked layout master. The second reference image is the product to insert. Replace only the product in the master with the product from the second reference, keeping the exact master layout, background, typography, icons, callout lines, labels, grid, lighting, reflections, camera angle, scale and composition. Do not restyle, do not redraw the page, do not add or remove labels/icons/text, do not change the font. The new product must match the second reference exactly in shape, color, material, structure, hardware, logo and any charms, and must appear in the exact same pose, angle and position as the product in the master. H3 comfort: show the product FROM THE BACK, facing the camera, with the padded breathable mesh back panel in the center and two teal ventilation arrows; keep the two detail circles (meshed back, padded straps). The mesh back panel, shoulder straps, zippers and back hardware must match the product reference color - inherit NO black or dark material from the master. Keep text CONFORTO ERGONOMICO / COSTAS RESPIRAVEIS / ALCOAS ACOLCHOADAS. Negative: no black/dark back, no front-facing pack.",
+      "prompt_by_kind": {
+        "bag": "The first reference image is a locked layout master. The second reference image is the product to insert. Replace only the product in the master with the product from the second reference, keeping the exact master layout, background, typography, icons, callout lines, labels, grid, lighting, reflections, camera angle, scale and composition. Do not restyle, do not redraw the page, do not add or remove labels/icons/text, do not change the font. The new product must match the second reference exactly in shape, color, material, structure, hardware, logo and any charms. H3 comfort NON-BACKPACK edition: the product in the second reference is a travel duffel / shoulder bag / mini case with its own top handles or strap - it is NOT a backpack. Do NOT draw any backpack features: no two vertical shoulder straps, no mesh back panel, no thick backpack back frame, no back luggage strap. Render the product exactly as shown in the reference, centered in the master product position, front 3/4 facing slightly toward the camera, keeping the large teal arrow rising up the body and the two teal arrows near the bottom pointing to the lower body/handles. Keep the two detail circles on the right (top circle = body fabric, bottom circle = top handle/strap) with their teal connector lines, and keep the exact text CONFORTO ERGONOMICO / COSTAS RESPIRAVEIS / ALCOAS ACOLCHOADAS. The product colors, fabric, handles, zippers, logo and hardware must match the reference - inherit NO black or dark material from the master. Negative: no backpack straps, no mesh back panel, no black/dark product, no changed layout, background, icons or text."
+      }
+    },
+    {
+      "id": "H4",
+      "purpose": "旅行·拉杆套",
+      "example": "h4.png",
+      "refs": [
+        "@example",
+        "@product.front"
+      ],
+      "prompt": "The first reference image is a locked layout master. The second reference image is the product to insert. Replace only the product in the master with the product from the second reference, keeping the exact master layout, background, typography, icons, callout lines, labels, grid, lighting, reflections, camera angle, scale and composition. Do not restyle, do not redraw the page, do not add or remove labels/icons/text, do not change the font. The new product must match the second reference exactly in shape, color, material, structure, hardware, logo and any charms, and must appear in the exact same pose, angle and position as the product in the master. H4 travel: show the product FROM THE BACK mounted on the rolling suitcase, with the telescopic handle pulled up and passing through the horizontal luggage strap on the back, handle rising above the bag, shoulder straps hanging at the sides. Do NOT show the product resting on top of the suitcase or its front pockets/logo face-on. The mesh back panel, luggage strap and shoulder straps must all match the product reference color - inherit NO black/dark material from the master. Keep text PRONTA PARA VIAJAR / ENCAIXE SEGURO / VIAGENS FAC-EIS and the three teal icons on the left. Negative: no front-facing pack, no pack on top of the suitcase, no black/dark back.",
+      "prompt_by_kind": {
+        "bag": "The first reference image is a locked layout master. The second reference image is the product to insert. Replace only the product in the master with the product from the second reference, keeping the exact master layout, background, typography, icons, callout lines, labels, grid, lighting, reflections, camera angle, scale and composition. Do not restyle, do not redraw the page, do not add or remove labels/icons/text, do not change the font. The new product must match the second reference exactly in shape, color, material, structure, hardware, logo and any charms. H4 travel NON-BACKPACK edition: the product in the second reference is a travel duffel / shoulder bag / mini case - it is NOT a backpack. Do NOT draw any backpack features: no two vertical shoulder straps, no mesh back panel, no telescopic handle threading through a back strap. Keep the rolling suitcase prop below the product; place the product ON TOP of the suitcase (a duffel / bag sitting on top of the luggage, handles up and forward) so it clearly reads as ready to travel. Keep the three teal circle icons on the left with the exact text PRONTA PARA VIAJAR / ENCAIXE SEGURO / VIAGENS FAC-EIS. Product colors, handles, zippers, logo and material must match the reference - inherit NO black or dark material from the master. Negative: no backpack straps, no mesh back, no product turned into a backpack, no changed layout or text."
+      }
+    },
+    {
+      "id": "H5",
+      "purpose": "防盗·隐藏后袋",
+      "example": "h5.png",
+      "refs": [
+        "@example",
+        "@product.front"
+      ],
+      "prompt": "The first reference image is a locked layout master. The second reference image is the product to insert. Replace only the product in the master with the product from the second reference, keeping the exact master layout, background, typography, icons, callout lines, labels, grid, lighting, reflections, camera angle, scale and composition. Do not restyle, do not redraw the page, do not add or remove labels/icons/text, do not change the font. The new product must match the second reference exactly in shape, color, material, structure, hardware, logo and any charms, and must appear in the exact same pose, angle and position as the product in the master. H5 security: show the product from the back/side in a discreet pose with a circular zoom on the hidden back pocket. The bag, mesh back panel, straps, back pocket and hardware must all match the product reference color - inherit NO black/dark material from the master, and keep the pom-pom visible. Keep text SEGURANCA DISCRETA / BOLSO TRASEIRO OCULTO and the three teal icon bullets with the gold divider. Negative: no black/dark back, no changed layout.",
+      "prompt_by_kind": {
+        "bag": "The first reference image is a locked layout master. The second reference image is the product to insert. Replace only the product in the master with the product from the second reference, keeping the exact master layout, background, typography, icons, callout lines, labels, grid, lighting, reflections, camera angle, scale and composition. Do not restyle, do not redraw the page, do not add or remove labels/icons/text, do not change the font. The new product must match the second reference exactly in shape, color, material, structure, hardware, logo and any charms. H5 security NON-BACKPACK edition: the product in the second reference is a travel duffel / shoulder bag / mini case - it is NOT a backpack. Do NOT draw any backpack features: no two vertical shoulder straps, no mesh back panel. Render the product exactly as shown in the reference in a discreet back/side pose, with a large circular zoom callout on the hidden side/back pocket or zipper, opening to show small items (phone / wallet) just like the master. Keep the exact text SEGURANCA DISCRETA / BOLSO TRASEIRO OCULTO and the three teal icon bullets (ESSENCIAIS AO ALCANCE / OBJETOS SEMPRE PERTO / DESIGN DISCRETO) with the gold divider. Product colors, handles, zippers, logo and material must match the reference - inherit NO black or dark material from the master. Negative: no backpack straps, no mesh back, no black/dark product, no changed layout or text."
+      }
+    },
+    {
+      "id": "H6",
+      "purpose": "细节·高级四宫格",
+      "example": "h6.png",
+      "refs": [
+        "@example",
+        "@product.front"
+      ],
+      "refs_by_kind": {
+        "bag": [
+          "@product.front"
+        ]
+      },
+      "prompt": "The first reference image is a locked layout master. The second reference image is the product to insert. Replace only the product in the master with the product from the second reference, keeping the exact master layout, background, typography, icons, callout lines, labels, grid, lighting, reflections, camera angle, scale and composition. Do not restyle, do not redraw the page, do not add or remove labels/icons/text, do not change the font. The new product must match the second reference exactly in shape, color, material, structure, hardware, logo and any charms, and must appear in the exact same pose, angle and position as the product in the master. H6 details: dark premium background; compose a 2x2 rounded grid of four macro crops from the product reference: zipper hardware, padded handle, readable logo with stitching, and side pocket/pom-pom. Keep the two-level headline DETALHES PREMIUM (DETALHES white, PREMIUM gold) and the four label strips (ZIPERES METALICOS / ALCA ACOLCHOADA / COSTURA REFINADA / BOLSO LATERAL) with thin teal icons. Do not invent materials or hardware; keep plain unbranded zipper pulls if the reference shows none; match the logo exactly. Negative: no invented features, no wrong logo, no changed labels.",
+      "prompt_by_kind": {
+        "bag": "Premium e-commerce detail page for a women's bag, dark charcoal studio background, centered two-level headline DETALHES PREMIUM (DETALHES in white, PREMIUM in gold) with a thin teal divider and a small shield icon. Below, a clean 2x2 grid of four rounded-corner macro tiles, each with a thin teal icon and a short gold label strip: box 1 ZIPERES METALICOS = a tight macro of ONLY the bag's polished metal zipper pulls; box 2 DESIGN QUILTADO = a tight macro of ONLY the quilted / ribbed soft fabric SURFACE (no handle, no zipper, no logo, no strap); box 3 COSTURA REFINADA = the round embossed brand roundel reading VICTORY EAGLE (VICTORY on the top arc, EAGLE on the bottom arc, eagle emblem in the center) with fine stitching; box 4 BOLSO SEGURO = a closed zipper pocket of the bag with its metal zipper. Use the bag from the reference image and keep its exact color, soft quilted material, metal zippers and understated round logo. Match the luxury dark studio lighting, soft highlights and clean negative space. Negative: no backpack shoulder straps, no padded back panel, no mesh, no elastic side pocket, no padded top handle, no repeated zipper pull in two tiles, no invented hardware, no other brand text."
+      }
+    },
+    {
+      "id": "H7",
+      "purpose": "组织·分区标注",
+      "example": "h7.png",
+      "refs": [
+        "@example",
+        "@product.front"
+      ],
+      "prompt": "The first reference image is a locked layout master. The second reference image is the product to insert. Replace only the product in the master with the product from the second reference, keeping the exact master layout, background, typography, icons, callout lines, labels, grid, lighting, reflections, camera angle, scale and composition. Do not restyle, do not redraw the page, do not add or remove labels/icons/text, do not change the font. The new product must match the second reference exactly in shape, color, material, structure, hardware, logo and any charms, and must appear in the exact same pose, angle and position as the product in the master. H7 organization: keep the product front 3/4 centered, headline ORGANIZACAO INTELIGENTE, the four teal callout icons/labels (COMPARTIMENTO PRINCIPAL / BOLSO FRONTAL / ACESSO RAPIDO / BOLSO LATERAL) with thin teal callout lines and a short gold divider. The product must match the product reference. Negative: no changed layout or labels."
+    },
+    {
+      "id": "H8",
+      "purpose": "商务场景·模特（女款）",
+      "example": "h8.png",
+      "vary": [
+        "a woman in her early 30s, long wavy caramel hair, camel trench coat, walking with a confident stride along the avenue",
+        "a woman in her late 20s, sleek dark ponytail, black tailored suit, standing side-on and looking back over her shoulder",
+        "a woman around 40, shoulder-length dark brown bob, ivory blazer over slim trousers, adjusting a shoulder strap",
+        "a woman in her mid 30s, hair in a low bun, charcoal double-breasted suit, checking her wristwatch mid-step",
+        "a woman in her late 30s, loose black waves, navy trench coat, holding a phone at her ear while walking",
+        "a woman in her early 30s, high wavy ponytail, beige tailored suit, hands in her pockets, glancing sideways",
+        "a woman around 45, chin-length caramel waves, black trench coat with a silk scarf, carrying a tablet under her arm",
+        "a woman in her late 20s, long straight dark hair, light grey pantsuit, pausing on the steps and looking down the street",
+        "a woman in her mid 30s, curly deep brown hair, cream trench coat, walking briskly with a coffee cup in hand"
+      ],
+      "refs": [
+        "@example",
+        "@product.front"
+      ],
+      "refs_by_kind": {
+        "bag": [
+          "@example",
+          "@product.front"
+        ]
+      },
+      "prompt": "Premium high-end executive business lifestyle e-commerce hero for a women's backpack, shot in the reference benchmark style. A confident Brazilian businesswoman is photographed OUTDOORS in front of an elegant European cafe facade on a warm golden morning avenue from a THREE-QUARTER or SIDE-BACK camera angle, so the backpack is clearly seen WORN ON HER BACK behind her with BOTH shoulder straps firmly on both shoulders, her face visible in an elegant side / three-quarter profile. She wears a sharp tailored trench coat or tailored business suit and looks sophisticated, powerful and elite. The backpack MUST be worn on her BACK - never on her front or chest, never slung over one shoulder, never carried by hand or under the arm, never hanging loose at her side. The model must be a BRAZILIAN woman: tan / olive / sun-kissed skin, deep brown or caramel or black hair (often wavy), natural Latin American beauty; no Black African features, no East/South Asian look, no male. EVERY product in a batch must use a DIFFERENT Brazilian woman AND a DIFFERENT pose / action - vary her age, hairstyle (waves / ponytail / bob / bun), hair tone, outfit and the specific pose per product (walking, standing side-on, looking back over the shoulder, adjusting a shoulder strap, checking a wristwatch, holding a phone or tablet, hands in pockets, etc.), never reuse the same face or the same pose and NEVER default every product to the same stance; This product's model, outfit and pose: {vary}. Top-left brand overlay reads VICTORYEAGLE / BUSINESS COLLECTION / ORGANIZE SUA VIDA. ELEVE SEU ESTILO. The backpack must match the reference exactly in color, material, logo, hardware and charms and must be worn on both shoulders. Luxury lifestyle photography, shallow depth of field, warm soft highlight, clean modern composition. Negative: NO backpack in front of her / on her chest / slung over one shoulder / hanging at her side / carried by hand or under the arm - it must ALWAYS be worn centered on her BACK behind her with both straps on; no dead-centre front camera; no male model; no Black model; no East/South Asian model; no same face or pose reused across products; no changed bag; no garbled brand text.",
+      "prompt_by_kind": {
+        "bag": "Premium high-end executive business lifestyle e-commerce hero for a women's bag (travel duffel / shoulder bag / mini case), shot in the reference benchmark style. A confident Brazilian businesswoman is photographed OUTDOORS in front of an elegant European cafe facade on a warm golden morning avenue from a three-quarter / side camera angle, carrying the bag from the reference NATURALLY - in her hand by its handles, or on her shoulder exactly as designed - her face clearly visible and graceful, wearing a sharp smart executive outfit, sophisticated and powerful. The bag must NOT be drawn as a backpack: no vertical shoulder straps, no mesh back panel, no back luggage strap, and it must never be worn on her front like a backpack; it is held at her side or on her shoulder as shown in the reference. The model must be a BRAZILIAN woman: tan / olive / sun-kissed skin, deep brown or caramel or black hair (often wavy), natural Latin American beauty; no Black African features, no East/South Asian look, no male. EVERY product in a batch must use a DIFFERENT Brazilian woman AND a DIFFERENT pose / action - vary her age, hairstyle (waves / ponytail / bob / bun), hair tone, outfit and the specific natural carrying pose per product (walking holding the handles, shoulder bag slung on the shoulder, holding it close at her side, etc.), never reuse the same face or the same pose and NEVER default every product to the same stance; This product's model, outfit and pose: {vary}. Top-left brand overlay reads VICTORYEAGLE / BUSINESS COLLECTION / ORGANIZE SUA VIDA. ELEVE SEU ESTILO. The bag must match the reference exactly in color, material, logo and hardware. Luxury lifestyle photography, shallow depth of field, warm soft highlight, clean modern composition. Negative: no backpack features on the bag, no bag worn like a backpack on her front, no male model, no Black model, no East/South Asian model, no same face or pose reused across products, no changed bag, no garbled brand text."
+      }
+    },
+    {
+      "id": "H9",
+      "purpose": "旗舰主图·暗色",
+      "example": "h9.png",
+      "refs": [
+        "@example",
+        "@product.front"
+      ],
+      "prompt": "The first reference image is a locked layout master. The second reference image is the product to insert. Replace only the product in the master with the product from the second reference, keeping the exact master layout, background, typography, icons, callout lines, labels, grid, lighting, reflections, camera angle, scale and composition. Do not restyle, do not redraw the page, do not add or remove labels/icons/text, do not change the font. The new product must match the second reference exactly in shape, color, material, structure, hardware, logo and any charms, and must appear in the exact same pose, angle and position as the product in the master. H9 dark hero: keep the product front 3/4 on the dark pedestal stage with warm gold rim lighting, the gold shield logo at top and the exact text VICTORY EAGLE / MOCHILA EXECUTIVA / FEITA PARA ACOMPANHAR VOCE. Match the logo and hardware exactly. Negative: no changed layout, text or background."
+    }
+  ],
+  "notes": [
+    "H8 每个品换不同模特 + 不同动作 + 不同场景；脚本按 vary 列表轮换，某个品想指定就 set --vary H8 \"…\"",
+    "背面页（H3/H4/H5）看：网布、肩带、行李带颜色必须跟产品图，不能继承母版的黑色",
+    "H4 看：镜头看到的是背包背面，拉杆从背面行李带穿上来，不是把包放在箱子顶上",
+    "H6 看：拉链拉片没刻字就别刻字，logo 逐字一致，四格不重复",
+    "非背包品先 set --kind bag，再出图；否则 H3/H4/H5 会被画成双肩包",
+    "女款 H3/H4/H5 不派生背面，直接用正面图换；效果不稳可参照男款加 derive.back"
+  ]
+}

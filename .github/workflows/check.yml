@@ -12,7 +12,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Validate scenes and templates
-        run: python skills/dsimage/scripts/check_scenes.py
-      - name: Runtime unit tests
-        run: python skills/dsimage/scripts/test_runtime.py
+      - run: pip install pillow
+      - name: Unit tests
+        run: python skills/dsimage/scripts/test_dsimage.py
+      - name: Check bundled templates
+        working-directory: skills/dsimage
+        run: |
+          set -e
+          for t in templates/*/; do python scripts/dsimage.py template check "$t"; done

@@ -4,8 +4,8 @@
 单张模式：--prompt / --prompt-file
 批量模式：--batch jobs.json —— 一品多图套图，一次并发生成全部槽位；
 失败槽位加 --skip-existing 重跑同一命令即可只补失败的图。
-多品文件夹用 queue_pack.py 调度（品工人并发写 Prompt，--run 把各品槽位丢进同一并发池）。
-jobs.json 的 image 可为字符串或数组（lock=master 换货：[母版, 产品图]）。
+模板出图走 dsimage.py（init / run），它把各品槽位丢进这里的 run_job_pool。
+jobs.json 的 image 可为字符串或数组（换货：[母版, 产品图]）。
 
 官方服务商地址写死在脚本里，只需 IMG_PROVIDER + IMG_API_KEY + IMG_MODEL：
   openai → https://api.openai.com/v1          （同步 /images/generations|/edits）
@@ -1217,7 +1217,7 @@ def build_check_report(
         if "<IMAGE_0>" not in str(multi.get("prompt")) or "<IMAGE_1>" not in str(multi.get("prompt")):
             fail("Grok 多图试装失败：prompt 没有 <IMAGE_0> / <IMAGE_1>")
         lines.append(f"参考图：Grok JSON POST {base_url}/images/edits；单图 image 对象（data URI），多图 images 数组（互斥）")
-        lines.append("请求已带浏览器 User-Agent。出图用 gen_image.py / queue_pack.py --run。")
+        lines.append("请求已带浏览器 User-Agent。出图用 dsimage.py run（单张用 gen_image.py）。")
         lines.append(
             f"--size 仍传比例。1:1 → aspect_ratio={grok_ratio('1:1')}  "
             f"resolution={grok_resolution('1k')}；16:9 → {grok_ratio('16:9')}"
