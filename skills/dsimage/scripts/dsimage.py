@@ -446,7 +446,7 @@ def cmd_deliver(args: argparse.Namespace) -> int:
     if not changed:
         print("没有成图可压。")
         return 0
-    print(f"已按模板 deliver 处理 {len(changed)} 张：")
+    print(f"已压 {len(changed)} 张到各品夹 {core.DELIVER_DIR}/（成图原件没动）：")
     for path in changed:
         print(f"  {path}")
     return 0

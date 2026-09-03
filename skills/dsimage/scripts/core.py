@@ -32,6 +32,7 @@ TEMPLATES_DIR = SKILL_ROOT / "templates"
 TEMPLATE_FILE = "template.json"
 REQUIRE_FILE = "要求.json"
 WORK_DIR = "_dsimage"
+DELIVER_DIR = "deliver"
 BATCH_FILE = "batch.json"
 PROMPTS_FILE = "prompts.json"
 BRIEF_FILE = "brief.md"
@@ -1211,31 +1212,44 @@ def _pil():
     return Image
 
 
-def _save_under_bytes(image: Any, path: Path, max_bytes: int | None, fmt: str) -> Path:
+def deliver_dest(source: Path) -> Path:
+    """成图原件旁边的交付文件：{SKU}/deliver/h1.png。不写回原路径。"""
+    return source.parent / DELIVER_DIR / source.name
+
+
+def _save_under_bytes(image: Any, dest: Path, max_bytes: int | None, fmt: str) -> Path:
     fmt = "jpeg" if fmt in ("jpg", "jpeg") else fmt
     work = image
     if fmt == "jpeg" and work.mode in {"RGBA", "P", "LA"}:
         work = work.convert("RGB")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(dest.name + ".tmp")
     quality = 92
-    while True:
-        if fmt == "jpeg":
-            work.save(path, format="JPEG", quality=quality, optimize=True)
-        elif fmt == "webp":
-            work.save(path, format="WEBP", quality=quality, method=6)
-        else:
-            work.save(path, format="PNG", optimize=True)
-        if max_bytes is None or path.stat().st_size <= max_bytes or quality <= 40:
-            break
-        if fmt == "png":
-            jpeg_path = path.with_suffix(".jpg")
-            rgb = work.convert("RGB") if work.mode != "RGB" else work
-            result = _save_under_bytes(rgb, jpeg_path, max_bytes, "jpeg")
-            path.unlink(missing_ok=True)
-            return result
-        quality -= 8
-    if max_bytes is not None and path.stat().st_size > max_bytes:
-        fail(f"压到 quality=40 仍超过 {max_bytes} 字节：{path}")
-    return path
+    try:
+        while True:
+            if fmt == "jpeg":
+                work.save(tmp, format="JPEG", quality=quality, optimize=True)
+            elif fmt == "webp":
+                work.save(tmp, format="WEBP", quality=quality, method=6)
+            else:
+                work.save(tmp, format="PNG", optimize=True)
+            if max_bytes is None or tmp.stat().st_size <= max_bytes or quality <= 40:
+                break
+            if fmt == "png":
+                jpeg_dest = dest.with_suffix(".jpg")
+                rgb = work.convert("RGB") if work.mode != "RGB" else work
+                result = _save_under_bytes(rgb, jpeg_dest, max_bytes, "jpeg")
+                dest.unlink(missing_ok=True)
+                return result
+            quality -= 8
+        if max_bytes is not None and tmp.stat().st_size > max_bytes:
+            fail(f"压到 quality=40 仍超过 {max_bytes} 字节：{dest}")
+        tmp.replace(dest)
+        if dest.suffix.lower() != ".jpg":
+            dest.with_suffix(".jpg").unlink(missing_ok=True)
+        return dest
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def deliver_image(path: Path, spec: dict[str, Any]) -> Path:
@@ -1254,7 +1268,8 @@ def deliver_image(path: Path, spec: dict[str, Any]) -> Path:
             image.thumbnail((width, height), resample)
     elif max_px and (image.width > max_px or image.height > max_px):
         image.thumbnail((max_px, max_px), resample)
-    return _save_under_bytes(image, path, max_bytes, path.suffix.lower().lstrip(".") or "png")
+    dest = deliver_dest(path)
+    return _save_under_bytes(image, dest, max_bytes, path.suffix.lower().lstrip(".") or "png")
 
 
 def deliver_batch(batch: dict[str, Any], tpl: dict[str, Any], only: list[str] | None = None) -> list[Path]:

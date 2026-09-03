@@ -61,7 +61,7 @@ python scripts/dsimage.py run "D:/甲方/VE男包生成" --only V26007 V26008   
 python scripts/dsimage.py preview "D:/甲方/VE男包生成" --only V26007 V26008
 python scripts/dsimage.py run "D:/甲方/VE男包生成"                         # 点头后铺全部；已有的跳过
 python scripts/dsimage.py status "D:/甲方/VE男包生成"
-python scripts/dsimage.py deliver "D:/甲方/VE男包生成"                # 模板写了交付尺寸时
+python scripts/dsimage.py deliver "D:/甲方/VE男包生成"                # 压到各品夹 deliver/，成图原件不动
 ```
 
 ```text

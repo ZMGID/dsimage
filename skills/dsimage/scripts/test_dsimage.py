@@ -668,15 +668,35 @@ class DeliverPreviewTests(TempTemplatesMixin, unittest.TestCase):
         path = self.tmp / "h1.png"
         Image.new("RGB", (1600, 1600), (10, 20, 30)).save(path)
         out = core.deliver_image(path, {"width": 800, "height": 800, "max_bytes": "2MB"})
+        self.assertEqual(out, self.tmp / core.DELIVER_DIR / "h1.png")
         with Image.open(out) as image:
             self.assertEqual(image.size, (800, 800))
+        with Image.open(path) as image:
+            self.assertEqual(image.size, (1600, 1600), "成图原件不能被 deliver 改掉")
         wide = self.tmp / "h2.png"
         Image.new("RGB", (1600, 900)).save(wide)
         with self.assertRaises(core.DsError):
             core.deliver_image(wide, {"width": 800, "height": 800})
+        with Image.open(wide) as image:
+            self.assertEqual(image.size, (1600, 900))
         out = core.deliver_image(wide, {"max_px": 800})
         with Image.open(out) as image:
             self.assertEqual(image.size, (800, 450))
+        with Image.open(wide) as image:
+            self.assertEqual(image.size, (1600, 900))
+
+    def test_deliver_fail_leaves_original(self) -> None:
+        from PIL import Image
+
+        path = self.tmp / "h1.png"
+        Image.new("RGB", (1600, 1600), (10, 20, 30)).save(path)
+        with self.assertRaises(core.DsError):
+            core.deliver_image(path, {"width": 800, "height": 800, "max_bytes": "1"})
+        with Image.open(path) as image:
+            self.assertEqual(image.size, (1600, 1600))
+        self.assertFalse((self.tmp / core.DELIVER_DIR / "h1.png").exists())
+        self.assertFalse((self.tmp / core.DELIVER_DIR / "h1.png.tmp").exists())
+        self.assertFalse((self.tmp / core.DELIVER_DIR / "h1.jpg").exists())
 
     def test_deliver_batch_and_preview(self) -> None:
         from PIL import Image
@@ -692,7 +712,11 @@ class DeliverPreviewTests(TempTemplatesMixin, unittest.TestCase):
         changed = core.deliver_batch(batch, tpl)
         self.assertEqual(len(changed), 2)
         with Image.open(out / "h1.png") as image:
+            self.assertEqual(image.size, (1024, 1024), "成图原件仍是生成尺寸")
+        with Image.open(out / core.DELIVER_DIR / "h1.png") as image:
             self.assertEqual(image.size, (800, 800))
+        self.assertEqual({p.parent.name for p in changed}, {core.DELIVER_DIR})
+        self.assertEqual({p.name for p in changed}, {"h1.png", "h2.png"})
         preview = core.preview_product(batch, tpl, batch["products"][0])
         self.assertTrue(preview and preview.is_file())
         with Image.open(preview) as sheet:

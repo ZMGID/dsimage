@@ -38,7 +38,7 @@ python scripts/dsimage.py preview "<成图根>" --only V26007 V26008
 ```bash
 python scripts/dsimage.py run "<成图根>"
 python scripts/dsimage.py status "<成图根>"
-python scripts/dsimage.py deliver "<成图根>"      # 模板 output.deliver 有值时
+python scripts/dsimage.py deliver "<成图根>"      # 模板 output.deliver 有值时；压到各品夹 deliver/，成图原件不动
 ```
 
 失败的槽位同一条 `run` 再跑一次即可。
