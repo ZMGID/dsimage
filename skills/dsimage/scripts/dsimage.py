@@ -148,6 +148,7 @@ def cmd_init(args: argparse.Namespace) -> int:
                 print(f"{'':16}{path}")
     print()
     print("下一步：")
+    pilot = " ".join(p["sku"] for p in batch["products"][:2]) or "<SKU>"
     if undecided:
         print(f"  1) {len(undecided)} 个品有多张图。逐张打开看，选白底/抠图的商品图（不是场景图、不是合成好的主图）：")
         print("     set <成图根> <SKU> --front <路径>   有背面图再加 --back <路径>。没选的品 run 时不出。")
@@ -155,11 +156,13 @@ def cmd_init(args: argparse.Namespace) -> int:
         print(f"  2) 品类不是「{core.default_kind(tpl)}」的先标：set <成图根> <SKU> --kind <标签>")
     if need_back:
         print(f"  3) {len(need_back)} 个品没有背面图，模板有槽位要背面，出图前会先派生一张。"
-              "第一个品建议先 derive <成图根> --only <SKU> 看派生对不对，再 run。")
+              f"试出品先 derive <成图根> --only {pilot} 看派生对不对，再 run。")
     if tpl["mode"] == "replace":
-        print("  4) 先出一个品：run <成图根> --only <SKU>，preview 看完点头再 run 全部。")
+        print(f"  4) 试出两个：run <成图根> --only {pilot}，preview 看完。"
+              "有问题改模板后 redo 这两个，点头再 run 全部。")
     else:
-        print("  4) run <成图根> 会给每个品写 brief.md + prompts.json；按 brief 写好 prompt 再 run。")
+        print(f"  4) 试出两个：先 run --only {pilot} 拿 brief；写完这两个 prompts.json（不要照抄 brief），"
+              "再 run --only 这两个出图。点头后再给其余写 prompt、run 全部。")
     return 0
 
 
@@ -336,7 +339,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"  卡住 {key}（{'、'.join(slots)}）")
     if waiting:
         print()
-        print("这些品还没有 prompt，已写好 brief.md + prompts.json，按 brief 填完再 run：")
+        print("现在停：按每份 brief.md 写完该品 prompts.json（brief 只是骨架，打开产品图按这件货写），写齐再 run。")
         for sku in waiting:
             print(f"  {core.work_dir(batch, sku) / core.BRIEF_FILE}")
 
@@ -371,6 +374,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         print("这次新派生的背面图（顺手看一眼，不对就 set --back 或 derive --redo，再 run --redo 相关槽位）：")
         for sku, path in derived_now:
             print(f"  {sku:<14} {path}")
+    if args.only and not waiting and slot_jobs and not failed and not args.dry_run:
+        print()
+        print("试出完了。preview 看图；有问题改模板后 redo 这两个，没问题再 run（不带 --only）。")
     if failed:
         print()
         print("失败的槽位再跑一次同样的 run 即可只补缺的。", file=sys.stderr)
@@ -831,7 +837,7 @@ def cmd_update(args: argparse.Namespace) -> int:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="dsimage：模板 → 一个品 → 一批品。")
+    parser = argparse.ArgumentParser(description="dsimage：模板 → 试出两个 → 一批品。")
     sub = parser.add_subparsers(dest="command", required=True)
 
     t = sub.add_parser("template", help="模板管理")

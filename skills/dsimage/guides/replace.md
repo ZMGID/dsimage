@@ -1,6 +1,10 @@
 # replace：按甲方样图换货
 
-模板已经把每一页画好（`h1.png…`）并且每槽 prompt 写死。脚本把 `[示例图, 该品白图]` 和 prompt 组成 jobs 直接出图。你不写 prompt，不派工人写 prompt。
+本路：replace。脚本按模板 prompt 出图。
+你写：不写生图 prompt；只改模板槽位 / 白图。
+停：先出两个品 preview，有问题改模板后再 redo 这两个，点头了才铺（不够两个就全出）。
+
+模板已经把每一页画好（`h1.png…`）并且每槽 prompt 写死。脚本把 `[示例图, 该品白图]` 和 prompt 组成 jobs 直接出图。
 
 ## 流程
 
@@ -18,19 +22,16 @@ python scripts/dsimage.py set "<成图根>" V26031 --kind bag        # 模板有
 
 品没有背面图、模板有槽位要背面（`init` 那行显示「背面 派生」）→ 先派生并看一眼：
 
-```bash
-python scripts/dsimage.py derive "<成图根>" --only V26007
-```
-
-打开 `_dsimage/V26007/back.png`：同一个产品的背面？颜色、材质、五金、比例对不对？不对 → 改模板 `derive.back.prompt`（或加一张 `assets/` 背面参考进 `derive.back.refs`）后 `derive --redo`；或者自己找一张背面图 `set --back`。对了再出套图：
+打开 `_dsimage/V26007/back.png`：同一个产品的背面？颜色、材质、五金、比例对不对？不对 → 改模板 `derive.back.prompt`（或加一张 `assets/` 背面参考进 `derive.back.refs`）后 `derive --redo`；或者自己找一张背面图 `set --back`。对了再出套图。默认先出两个品（颜色 / 款式差一些的更好）：
 
 ```bash
-python scripts/dsimage.py run "<成图根>" --only V26007
-python scripts/dsimage.py preview "<成图根>" --only V26007
+python scripts/dsimage.py derive "<成图根>" --only V26007 V26008
+python scripts/dsimage.py run "<成图根>" --only V26007 V26008
+python scripts/dsimage.py preview "<成图根>" --only V26007 V26008
 ```
 
 打开预览图对照模板示例图。查四件事：版式没动；文字/图标一个没多没少；产品换成了这个品（形、色、材质、五金、logo、挂件）；背面页的颜色跟产品图而不是母版。
-问题在某一槽 → 改模板那槽 `prompt`（或 `prompt_by_kind`），`run --redo --only V26007 --slot H5`。白图选错 → `set --front`，`run --redo --only V26007`。
+问题在某一槽 → 改模板那槽 `prompt`（或 `prompt_by_kind`），`run --redo --only V26007 V26008 --slot H5`。白图选错 → `set --front`，`run --redo --only` 这两个。未点头不要铺。
 
 用户点头后铺全部（已出的跳过）：
 

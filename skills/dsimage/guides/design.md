@@ -1,5 +1,9 @@
 # design：用户明确不用库里的模板，从零设计一套
 
+本路：design。把需求落成一份 smart 模板，再转 `smart.md` 出图。
+你写：模板的 `style` / 每槽 `brief`；出图阶段写 prompts.json。
+停：需求问完再建模板；模板 `check` 过了再 init。
+
 从 SKILL.md「没点名先问」进来：用户说了**不用模板**。开口就说「直接生成」的走 `默认电商套图` + `smart.md`，不要进这里。
 
 目标是把上一问还没问清的需求补完，落成一个 smart 模板，按这件货写每槽 prompt，再出图。模板留在库里，下次同类品可以直接用。最省事的起点是把 `templates/默认电商套图/` 整夹拷一份改名，只改不一样的字段。
@@ -47,7 +51,7 @@ python scripts/dsimage.py template check <模板名>
 
 ## 4. 出图
 
-转 `smart.md`：`init` → `run` 得 brief → 写 prompts.json → `run --only` 先出一个 → 看 → 改 → 铺。
+转 `smart.md`：`init` → `run` 得 brief → 先给两个品写 prompts.json → `run --only` 这两个 → 看 → 改模板 → 点头再铺。
 
 ## 5. 收口
 

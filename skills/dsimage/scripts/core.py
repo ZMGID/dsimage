@@ -1087,7 +1087,8 @@ def write_smart_packet(batch: dict[str, Any], tpl: dict[str, Any], product: dict
     lines = [
         f"# {sku} · 模板「{tpl.get('name')}」（smart）",
         "",
-        "把每槽 prompt 写进同目录 prompts.json（键 = 槽位 id，值 = 完整英文 prompt）。写完跑 run 出图。",
+        "把每槽完整英文 prompt 写进同目录 prompts.json（键 = 槽位 id）。写齐再 run。",
+        "下面 brief 只说这一页干什么，不要原文当 prompt。每条开头原样贴风格锁。打开产品图按这件货写。",
         "",
         "## 全套约束",
         f"- 品类：{tpl.get('category') or '（未写）'}；本品品类标签：{product.get('kind') or '（无）'}",

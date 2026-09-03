@@ -1,5 +1,9 @@
 # smart：按模板 brief，每个品单独写 prompt
 
+本路：smart。第一次 `run` 只写 brief，你按品写 `prompts.json` 再出图。
+你写：每槽完整英文 prompt；`brief.md` 只是骨架，不要原文照抄。
+停：先给两个试出品写 prompt 并 preview；有问题改模板 / prompt，点头了再写其余、再铺（不够两个就全出）。
+
 模板锁的是风格（`style`）、文字策略、画幅、每槽要表达什么（`brief`）。prompt 不锁，你（或子代理）按品写。适合品差异大、每个品要单独发挥的情况。
 
 ## 流程
@@ -7,10 +11,10 @@
 ```bash
 python scripts/dsimage.py init --template <模板名或甲方/模板名> --source "<甲方夹|单品夹|一张图>"
 # 多图的品先 set --front；见 SKILL.md
-python scripts/dsimage.py run "<成图根>"
+python scripts/dsimage.py run "<成图根>" --only <SKU1> <SKU2>    # 先给这两个写 brief
 ```
 
-第一次 `run` 不出图：给每个还没 prompt 的品写 `_dsimage/<SKU>/brief.md` + `prompts.json`（键 = 槽位 id，值空）。
+第一次 `run` 不出图：给这两个还没 prompt 的品写 `_dsimage/<SKU>/brief.md` + `prompts.json`（键 = 槽位 id，值空）。其余品先别写。
 
 ## 写 prompt
 
@@ -26,12 +30,12 @@ python scripts/dsimage.py run "<成图根>"
 2. 每槽一条完整英文 prompt，开头原样贴风格锁，然后写这一页的构图、产品怎么摆、光、底、文字（按模板语言，短）、否定项。构图数值和角度短语可以翻 `knowledge/shots.md` 抄。
 3. 写进 `prompts.json`。所有槽非空才算齐。
 
-多个品：一品一个子代理，只做「读 brief → 看图 → 写 prompts.json」。写完主会话一条 `run`。
+多个品：先挑两个试出品写 `prompts.json`（一品一个子代理也行）。主会话指令只带该品 `brief.md` 路径和产品图，只许写该品 `prompts.json`（不出图、不改模板、不 init）。这两个出完、用户点头后，再给其余写 prompt，主会话一条 `run` 铺开。
 
 ```bash
-python scripts/dsimage.py run "<成图根>" --only <SKU>     # 先出一个看
-python scripts/dsimage.py preview "<成图根>" --only <SKU>
-python scripts/dsimage.py run "<成图根>"                  # 都写齐后铺全部
+python scripts/dsimage.py run "<成图根>" --only <SKU1> <SKU2>     # 先出两个
+python scripts/dsimage.py preview "<成图根>" --only <SKU1> <SKU2>
+python scripts/dsimage.py run "<成图根>"                          # 点头后铺其余
 ```
 
 改 prompt 后 `run --redo --only <SKU> --slot H3` 只重出那槽。

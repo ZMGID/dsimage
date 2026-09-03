@@ -56,10 +56,10 @@ python scripts/dsimage.py setup model <列表里挑的模型>                   
 python scripts/dsimage.py template list
 python scripts/dsimage.py init --template 胜利鹰男款商务背包 --source "D:/甲方/VE男包系列"
 python scripts/dsimage.py set "D:/甲方/VE男包生成" V26008 --front "…/V26008正面.jpg" --back "…/V26008背面.jpg"
-python scripts/dsimage.py derive "D:/甲方/VE男包生成" --only V26007   # 品没背面图时先派生一张，看一眼
-python scripts/dsimage.py run "D:/甲方/VE男包生成" --only V26007      # 先出一个
-python scripts/dsimage.py preview "D:/甲方/VE男包生成" --only V26007
-python scripts/dsimage.py run "D:/甲方/VE男包生成"                    # 铺全部；已有的跳过
+python scripts/dsimage.py derive "D:/甲方/VE男包生成" --only V26007 V26008   # 品没背面图时先派生，看一眼
+python scripts/dsimage.py run "D:/甲方/VE男包生成" --only V26007 V26008   # 先出两个
+python scripts/dsimage.py preview "D:/甲方/VE男包生成" --only V26007 V26008
+python scripts/dsimage.py run "D:/甲方/VE男包生成"                         # 点头后铺全部；已有的跳过
 python scripts/dsimage.py status "D:/甲方/VE男包生成"
 python scripts/dsimage.py deliver "D:/甲方/VE男包生成"                # 模板写了交付尺寸时
 ```
@@ -75,7 +75,7 @@ VE男包生成/            ← 同级默认成图根
 
 建模板：`template init <名> --from <样图夹>`（replace）或 `--blank --slots 7 --mode smart`，填 `template.json`，`template check`。字段说明在 `skills/dsimage/guides/make_template.md`。
 
-一个甲方、大文件夹里好几个大类：`template client` 填 `要求.json`，`sort --source … --group 大类=SKU,…` 拷到同级分类根（源夹不改），一类一模板，每类 `run --only` 先出两个。流程在 `skills/dsimage/guides/client.md`。
+一个甲方、大文件夹里好几个大类：`template client` 填 `要求.json`，`sort --source … --group 大类=SKU,…` 拷到同级分类根（源夹不改），一类一模板，每类也是先出两个再铺。流程在 `skills/dsimage/guides/client.md`。
 
 单张 / 几张：`python scripts/dsimage.py gen "…" --ref a.jpg --ratio 4:5 --name hero [--n 3]`，输出到 `./generated-images/`，prompt 记在 `_dsimage/gen.jsonl` 方便改图。
 

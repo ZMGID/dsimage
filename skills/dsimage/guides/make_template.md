@@ -1,5 +1,9 @@
 # 建模板
 
+本路：建模板。出图前把 `template.json` 写完并 `template check` 过。
+你写：replace 每槽 `prompt`；smart 每槽 `brief` + 全套 `style`。共用字段写进甲方 `要求.json`。
+停：check 过了再按 `replace.md` / `smart.md` 试出。
+
 模板 = `templates/<名>/` 夹：`template.json` + `h1.png…` + 可选 `assets/`。整夹拷走就能分享。
 
 同一甲方有多套时，不要摊在根下：建 `templates/{甲方}/`，共用一份 `要求.json`，下面每个模板一个夹。一个大文件夹里混了多个大类、要一类一模板再出图：整条流程见 `client.md`（先 `template client` 填要求，再 `sort` 分类）。
@@ -69,7 +73,7 @@ python scripts/dsimage.py template init <模板名> --from "<样图夹>" --mode 
 python scripts/dsimage.py template check <模板名>
 ```
 
-通过后按 `replace.md` 用一个品试出，对着样图改到像，再铺。
+通过后按 `replace.md` 用两个品试出，对着样图改到像，再铺。
 
 ## 建 smart 模板
 
