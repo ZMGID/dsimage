@@ -2,6 +2,7 @@
 """不打真实 API 的单测：python scripts/test_dsimage.py"""
 from __future__ import annotations
 
+import base64
 import json
 import shutil
 import struct
@@ -587,13 +588,81 @@ class SetupUpdateTests(TempTemplatesMixin, unittest.TestCase):
         self.assertEqual(image, ["gpt-image-2", "dall-e-3", "zz-image"])
         self.assertEqual(others, ["gpt-4o"])
 
-    def test_detect_mode_gateway_grok(self) -> None:
+    def test_detect_mode_gateway_protocols(self) -> None:
         import os
         os.environ.pop("IMG_API_MODE", None)
         self.assertEqual(gen_image.detect_mode("custom", "https://gw/v1", None, "grok-imagine-image-2.0"), "grok")
+        self.assertEqual(gen_image.detect_mode("custom", "https://ybw-ai.com", None, "gemini-3.1-flash-image"), "gemini-chat")
+        self.assertEqual(gen_image.detect_mode("custom", "https://gw/v1", None, "gemini-3.1-flash-image"), "gemini")
+        self.assertEqual(gen_image.detect_mode("custom", "https://ybw-ai.com", "gemini", "gemini-3.1-flash-image"), "gemini")
         self.assertEqual(gen_image.detect_mode("custom", "https://gw/v1", None, "gpt-image-2"), "sync")
         self.assertEqual(gen_image.detect_mode("custom", "https://gw/v1", "sync", "grok-imagine-image-2.0"), "sync")
         self.assertEqual(gen_image.detect_mode("grok", "https://api.x.ai/v1", None, "grok-imagine-image-2.0"), "grok")
+
+    def test_gemini_request_shapes(self) -> None:
+        args = gen_image.argparse.Namespace(size="1:1", resolution="1k")
+        parts = [{"text": "draw a circle"}]
+
+        official_url = gen_image.gemini_endpoint(
+            "https://generativelanguage.googleapis.com/v1", "gemini-3.1-flash-image"
+        )
+        official = gen_image.build_gemini_payload(args, parts)
+        self.assertEqual(
+            official_url,
+            "https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash-image:generateContent",
+        )
+        self.assertEqual(
+            official["generationConfig"]["responseFormat"]["image"],
+            {"aspectRatio": "1:1", "imageSize": "1K"},
+        )
+
+        gateway_url = gen_image.gemini_chat_endpoint("https://ybw-ai.com")
+        gateway = gen_image.build_gemini_chat_payload(args, "draw a circle", "gemini-3.1-flash-image", [])
+        self.assertEqual(
+            gateway_url,
+            "https://ybw-ai.com/v1/chat/completions",
+        )
+        self.assertEqual(
+            gateway["generationConfig"]["imageConfig"],
+            {"aspectRatio": "1:1", "imageSize": "1K"},
+        )
+        self.assertEqual(gateway["messages"][0]["content"], "draw a circle")
+
+        source = write_png(self.tmp / "source.png").read_bytes()
+        gateway_with_image = gen_image.build_gemini_chat_payload(
+            args, "edit this", "gemini-3.1-flash-image", [self.tmp / "source.png"]
+        )
+        image_url = gateway_with_image["messages"][0]["content"][1]["image_url"]["url"]
+        self.assertTrue(image_url.startswith("data:image/png;base64,"))
+
+        encoded = base64.b64encode(source).decode("ascii")
+        paths = gen_image.save_gemini_chat_images(
+            {"choices": [{"message": {"content": f"![image](data:image/png;base64,{encoded})"}}]},
+            self.tmp / "out",
+            "png",
+        )
+        self.assertEqual(paths[0].read_bytes(), source)
+
+        live_args = gen_image.argparse.Namespace(
+            size="1:1", resolution="1k", image=[], timeout=None, n=1
+        )
+        calls = []
+        original_post = gen_image.http_post
+        gen_image.http_post = lambda *a, **k: (
+            calls.append((a, k))
+            or {"choices": [{"message": {"content": f"![image](data:image/png;base64,{encoded})"}}]}
+        )
+        try:
+            generated = gen_image.run_gemini_chat(
+                "https://ybw-ai.com", "secret", live_args, "draw", "gemini-3.1-flash-image",
+                self.tmp / "run", "png",
+            )
+        finally:
+            gen_image.http_post = original_post
+        self.assertEqual(calls[0][0][0], "https://ybw-ai.com/v1/chat/completions")
+        self.assertEqual(generated[0].read_bytes(), source)
+        self.assertIs(gen_image.ADAPTER_RUNNERS["gemini-chat"], gen_image.run_gemini_chat)
+        self.assertEqual(set(gen_image.API_MODES), set(gen_image.ADAPTER_RUNNERS))
 
     def test_setup_env_cli(self) -> None:
         env = self.tmp / "s.env"

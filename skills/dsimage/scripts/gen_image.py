@@ -10,10 +10,10 @@ jobs.json 的 image 可为字符串或数组（换货：[母版, 产品图]）�
 官方服务商地址写死在脚本里，只需 IMG_PROVIDER + IMG_API_KEY + IMG_MODEL：
   openai → https://api.openai.com/v1          （同步 /images/generations|/edits）
   grok   → https://api.x.ai/v1                （JSON，aspect_ratio + resolution；单图 image，多图 images）
-  gemini → https://generativelanguage.googleapis.com/v1beta  （generateContent）
+  gemini → https://generativelanguage.googleapis.com/v1      （generateContent）
 其他兼容网关才填 IMG_BASE_URL；URL 含 apimart → 异步轮询。
 
-可用 --mode 或 IMG_API_MODE 强制指定 sync|async|grok|gemini。
+可用 --mode 或 IMG_API_MODE 强制指定 sync|async|grok|gemini|gemini-chat。
 """
 
 from __future__ import annotations
@@ -69,7 +69,7 @@ OFFICIAL_PROVIDERS: dict[str, dict[str, Any]] = {
         "models": ("grok-imagine-image-2.0", "grok-imagine-image"),
     },
     "gemini": {
-        "base_url": "https://generativelanguage.googleapis.com/v1beta",
+        "base_url": "https://generativelanguage.googleapis.com/v1",
         "hosts": ("generativelanguage.googleapis.com",),
         "default_model": "gemini-3.1-flash-image",
         "models": (
@@ -84,7 +84,8 @@ PROVIDER_ALIASES = {
     "google": "gemini", "nano-banana": "gemini",
     "gpt": "openai",
 }
-API_MODES = ("sync", "async", "grok", "gemini")
+# mode 表示实际线协议，不表示模型厂商；同一 Gemini 模型可走原生或 Chat 兼容协议。
+API_MODES = ("sync", "async", "grok", "gemini", "gemini-chat")
 
 VALID_RATIOS = ("auto", "1:1", "3:2", "2:3", "4:3", "3:4", "5:4", "4:5",
                 "16:9", "9:16", "2:1", "1:2", "21:9", "9:21")
@@ -243,6 +244,12 @@ def _host_of(url: str) -> str:
     return urllib.parse.urlparse(raw).netloc.lower()
 
 
+def _host_matches(url: str, domain: str) -> bool:
+    raw = url if "://" in url else f"https://{url}"
+    host = (urllib.parse.urlparse(raw).hostname or "").lower()
+    return host == domain or host.endswith("." + domain)
+
+
 def _provider_from_host(url: str) -> str | None:
     host = _host_of(url)
     for name, spec in OFFICIAL_PROVIDERS.items():
@@ -321,6 +328,8 @@ def detect_mode(provider: str, base_url: str, explicit_mode: str | None, model: 
     # 网关转发 grok 模型时仍是 xAI 的 JSON 协议（多图必须 images 数组），走 multipart 会报错
     if provider == "custom" and _provider_from_model(model) == "grok":
         return "grok"
+    if provider == "custom" and _provider_from_model(model) == "gemini":
+        return "gemini-chat" if _host_matches(base_url, "ybw-ai.com") else "gemini"
     if "apimart" in (base_url or "").lower():
         return "async"
     return "sync"
@@ -614,6 +623,17 @@ def _suffix_from_url(image_url: str, fallback: str) -> str:
     return suffix if suffix in KNOWN_IMAGE_SUFFIXES else fallback
 
 
+def _suffix_from_mime(mime: str, fallback: str) -> str:
+    text = (mime or "").lower()
+    if "jpeg" in text or "jpg" in text:
+        return "jpeg"
+    if "webp" in text:
+        return "webp"
+    if "png" in text:
+        return "png"
+    return fallback
+
+
 # ── 同步模式（OpenAI 兼容）──────────────────────────────────
 
 SYNC_SIZE_MAP: dict[str, str] = {
@@ -638,6 +658,34 @@ def build_sync_payload(args: argparse.Namespace, prompt: str, model: str) -> dic
     if args.quality:
         payload["quality"] = args.quality
     return payload
+
+
+def save_sync_images(result: dict[str, Any], output_dir: Path, fmt: str,
+                     name_prefix: str | None = None) -> list[Path]:
+    data = result.get("data")
+    if not isinstance(data, list) or not data:
+        fail(f"接口返回中没有 data 图片数组：{json.dumps(result)[:300]}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    paths: list[Path] = []
+    for index, item in enumerate(data):
+        if not isinstance(item, dict):
+            fail("接口返回格式不正确：data 中包含非对象项目。")
+        if item.get("b64_json"):
+            try:
+                image_bytes = base64.b64decode(item["b64_json"])
+            except (binascii.Error, ValueError) as exc:
+                fail(f"无法解码 b64_json 图片：{exc}")
+            p = output_dir / output_name(name_prefix, index, fmt)
+            p.write_bytes(image_bytes)
+            paths.append(p)
+        elif item.get("url"):
+            image_url = item["url"]
+            p = output_dir / output_name(name_prefix, index, _suffix_from_url(image_url, fmt))
+            download_to_path(image_url, p)
+            paths.append(p)
+        else:
+            fail("图片结果既没有 b64_json，也没有 url。")
+    return paths
 
 
 def run_sync(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
@@ -753,9 +801,9 @@ def run_grok(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
     return save_sync_images(result, output_dir, fmt, name_prefix)
 
 
-# ── Gemini（官方 generateContent，地址写死）────────────────
+# ── Gemini 原生协议（官方 generateContent）─────────────────
 
-GEMINI_RATIO_FALLBACK = {"2:1": "16:9", "1:2": "9:16"}
+GEMINI_RATIO_FALLBACK = {"2:1": "16:9", "1:2": "9:16", "9:21": "9:16"}
 GEMINI_SIZE = {"1k": "1K", "2k": "2K", "4k": "4K"}
 
 
@@ -766,15 +814,25 @@ def gemini_ratio(size: str) -> str:
     return GEMINI_RATIO_FALLBACK.get(ratio, ratio)
 
 
-def _mime_suffix(mime: str, fallback: str) -> str:
-    text = (mime or "").lower()
-    if "jpeg" in text or "jpg" in text:
-        return "jpeg"
-    if "webp" in text:
-        return "webp"
-    if "png" in text:
-        return "png"
-    return fallback
+def gemini_endpoint(base_url: str, model: str) -> str:
+    model_id = model.split("/")[-1]
+    return f"{base_url.rstrip('/')}/models/{model_id}:generateContent"
+
+
+def build_gemini_payload(args: argparse.Namespace, parts: list[dict[str, Any]]) -> dict[str, Any]:
+    ratio = gemini_ratio(args.size)
+    return {
+        "contents": [{"parts": parts}],
+        "generationConfig": {
+            "responseModalities": ["TEXT", "IMAGE"],
+            "responseFormat": {
+                "image": {
+                    "aspectRatio": ratio,
+                    "imageSize": GEMINI_SIZE.get(args.resolution, "1K"),
+                },
+            },
+        },
+    }
 
 
 def _gemini_inline(part: dict[str, Any]) -> dict[str, Any] | None:
@@ -817,7 +875,7 @@ def save_gemini_images(result: dict[str, Any], output_dir: Path, fmt: str,
         except (binascii.Error, ValueError) as exc:
             fail(f"无法解码 Gemini 图片：{exc}")
         mime = str(inline.get("mimeType") or inline.get("mime_type") or "")
-        p = output_dir / output_name(name_prefix, start_index + offset, _mime_suffix(mime, fmt))
+        p = output_dir / output_name(name_prefix, start_index + offset, _suffix_from_mime(mime, fmt))
         p.write_bytes(image_bytes)
         paths.append(p)
     return paths
@@ -826,10 +884,9 @@ def save_gemini_images(result: dict[str, Any], output_dir: Path, fmt: str,
 def run_gemini(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
                model: str, output_dir: Path, fmt: str,
                label: str = "gemini", name_prefix: str | None = None) -> list[Path]:
-    model_id = model.split("/")[-1]
-    endpoint = f"{base_url}/models/{model_id}:generateContent"
-    parts: list[dict[str, Any]] = [{"text": prompt}]
     images = ref_images(args)
+    endpoint = gemini_endpoint(base_url, model)
+    parts: list[dict[str, Any]] = [{"text": prompt}]
     if images:
         for path in images:
             data, mime, _ = read_image_file(path)
@@ -837,16 +894,7 @@ def run_gemini(base_url: str, api_key: str, args: argparse.Namespace, prompt: st
         log(label, f"图生图模式：{len(images)} 张参考图经 {endpoint} 提交...")
     else:
         log(label, f"提交生成请求到 {endpoint}...")
-    payload: dict[str, Any] = {
-        "contents": [{"parts": parts}],
-        "generationConfig": {
-            "responseModalities": ["TEXT", "IMAGE"],
-            "imageConfig": {
-                "aspectRatio": gemini_ratio(args.size),
-                "imageSize": GEMINI_SIZE.get(args.resolution, "1K"),
-            },
-        },
-    }
+    payload = build_gemini_payload(args, parts)
     timeout = max(300, resolve_timeout(args))
     paths: list[Path] = []
     n = max(1, int(args.n))
@@ -858,31 +906,84 @@ def run_gemini(base_url: str, api_key: str, args: argparse.Namespace, prompt: st
     return paths
 
 
-def save_sync_images(result: dict[str, Any], output_dir: Path, fmt: str,
-                     name_prefix: str | None = None) -> list[Path]:
-    data = result.get("data")
-    if not isinstance(data, list) or not data:
-        fail(f"接口返回中没有 data 图片数组：{json.dumps(result)[:300]}")
+# ── Gemini Chat 兼容协议（ybw-ai.com）──────────────────────
+
+def gemini_chat_endpoint(base_url: str) -> str:
+    root = base_url.rstrip("/")
+    if not urllib.parse.urlparse(root).path.rstrip("/"):
+        root += "/v1"
+    return f"{root}/chat/completions"
+
+
+def build_gemini_chat_payload(args: argparse.Namespace, prompt: str, model: str,
+                              images: list[str]) -> dict[str, Any]:
+    content: str | list[dict[str, Any]] = prompt
+    if images:
+        blocks: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+        for path in images:
+            blocks.append({
+                "type": "image_url",
+                "image_url": {"url": encode_image_data_uri(path)},
+            })
+        content = blocks
+    return {
+        "model": model,
+        "messages": [{"role": "user", "content": content}],
+        "stream": False,
+        "generationConfig": {
+            "responseModalities": ["IMAGE"],
+            "imageConfig": {
+                "aspectRatio": gemini_ratio(args.size),
+                "imageSize": GEMINI_SIZE.get(args.resolution, "1K"),
+            },
+        },
+    }
+
+
+def save_gemini_chat_images(result: dict[str, Any], output_dir: Path, fmt: str,
+                            name_prefix: str | None = None, start_index: int = 0) -> list[Path]:
+    choices = result.get("choices")
+    if not isinstance(choices, list) or not choices:
+        fail(f"Gemini Chat 返回中没有 choices：{json.dumps(result)[:400]}")
+    message = choices[0].get("message") if isinstance(choices[0], dict) else None
+    content = message.get("content") if isinstance(message, dict) else None
+    if not isinstance(content, str):
+        fail(f"Gemini Chat 返回中没有文本 content：{json.dumps(result)[:400]}")
+    matches = re.findall(r"data:(image/[\w.+-]+);base64,([A-Za-z0-9+/=]+)", content)
+    if not matches:
+        fail(f"Gemini Chat 返回中没有图片 Data URL：{content[:400]}")
     output_dir.mkdir(parents=True, exist_ok=True)
     paths: list[Path] = []
-    for index, item in enumerate(data):
-        if not isinstance(item, dict):
-            fail("接口返回格式不正确：data 中包含非对象项目。")
-        if item.get("b64_json"):
-            try:
-                image_bytes = base64.b64decode(item["b64_json"])
-            except (binascii.Error, ValueError) as exc:
-                fail(f"无法解码 b64_json 图片：{exc}")
-            p = output_dir / output_name(name_prefix, index, fmt)
-            p.write_bytes(image_bytes)
-            paths.append(p)
-        elif item.get("url"):
-            image_url = item["url"]
-            p = output_dir / output_name(name_prefix, index, _suffix_from_url(image_url, fmt))
-            download_to_path(image_url, p)
-            paths.append(p)
-        else:
-            fail("图片结果既没有 b64_json，也没有 url。")
+    for offset, (mime, encoded) in enumerate(matches):
+        try:
+            image_bytes = base64.b64decode(encoded)
+        except (binascii.Error, ValueError) as exc:
+            fail(f"无法解码 Gemini Chat 图片：{exc}")
+        p = output_dir / output_name(
+            name_prefix, start_index + offset, _suffix_from_mime(mime, fmt)
+        )
+        p.write_bytes(image_bytes)
+        paths.append(p)
+    return paths
+
+
+def run_gemini_chat(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
+                    model: str, output_dir: Path, fmt: str,
+                    label: str = "gemini-chat", name_prefix: str | None = None) -> list[Path]:
+    images = ref_images(args)
+    endpoint = gemini_chat_endpoint(base_url)
+    payload = build_gemini_chat_payload(args, prompt, model, images)
+    log(label, f"{'图生图' if images else '文生图'}：{endpoint}")
+    timeout = max(300, resolve_timeout(args))
+    paths: list[Path] = []
+    n = max(1, int(args.n))
+    for index in range(n):
+        result = http_post(endpoint, api_key, payload, timeout=timeout)
+        paths.extend(save_gemini_chat_images(
+            result, output_dir, fmt, name_prefix, start_index=len(paths)
+        ))
+        if n > 1:
+            log(label, f"已生成 {index + 1}/{n}")
     return paths
 
 
@@ -970,22 +1071,37 @@ def _save_async_images(task_data: dict[str, Any], output_dir: Path, fmt: str,
     return paths
 
 
-# ── 单张任务入口 ──────────────────────────────────────────
+# ── 统一适配器入口 ────────────────────────────────────────
+
+def run_async_adapter(base_url: str, api_key: str, args: argparse.Namespace, prompt: str,
+                      model: str, output_dir: Path, fmt: str,
+                      label: str = "async", name_prefix: str | None = None) -> list[Path]:
+    payload = build_async_payload(args, prompt, model)
+    return run_async(
+        base_url, api_key, payload, output_dir, fmt,
+        args.poll_interval, resolve_timeout(args), label, name_prefix,
+    )
+
+
+ADAPTER_RUNNERS = {
+    "sync": run_sync,
+    "async": run_async_adapter,
+    "grok": run_grok,
+    "gemini": run_gemini,
+    "gemini-chat": run_gemini_chat,
+}
+
 
 def generate_one(base_url: str, api_key: str, model: str, mode: str,
                  args: argparse.Namespace, prompt: str, output_dir: Path,
                  label: str, name_prefix: str | None = None) -> list[Path]:
-    if mode == "async":
-        payload = build_async_payload(args, prompt, model)
-        return run_async(base_url, api_key, payload, output_dir, args.format,
-                         args.poll_interval, resolve_timeout(args), label, name_prefix)
-    if mode == "gemini":
-        return run_gemini(base_url, api_key, args, prompt, model, output_dir,
-                          args.format, label, name_prefix)
-    if mode == "grok":
-        return run_grok(base_url, api_key, args, prompt, model, output_dir,
-                        args.format, label, name_prefix)
-    return run_sync(base_url, api_key, args, prompt, model, output_dir, args.format, label, name_prefix)
+    runner = ADAPTER_RUNNERS.get(mode)
+    if not runner:
+        fail(f"未知 API 模式：{mode}")
+    return runner(
+        base_url, api_key, args, prompt, model, output_dir,
+        args.format, label, name_prefix,
+    )
 
 
 def is_rate_limit(exc: BaseException) -> bool:
@@ -1325,6 +1441,19 @@ def build_check_report(
             f"--size 仍传比例。1:1 → aspect_ratio={grok_ratio('1:1')}  "
             f"resolution={grok_resolution('1k')}；16:9 → {grok_ratio('16:9')}"
         )
+    elif mode == "gemini-chat":
+        payload = build_gemini_chat_payload(ns, "probe", model, images)
+        content = payload["messages"][0]["content"]
+        image_url = content[1]["image_url"]["url"] if isinstance(content, list) else ""
+        if not image_url.startswith("data:image/"):
+            fail("Gemini Chat 参考图不是 data URI，没有真正上送文件")
+        lines.append(
+            f"参考图：Gemini Chat POST {gemini_chat_endpoint(base_url)}（{filename} {mime} {len(data)} bytes）"
+        )
+        lines.append(
+            f"--size 仍传比例。1:1 → aspectRatio={gemini_ratio('1:1')}；"
+            f"16:9 → {gemini_ratio('16:9')}"
+        )
     elif mode == "gemini":
         lines.append(
             f"参考图：Gemini generateContent inline_data（{filename} {mime} {len(data)} bytes）"
@@ -1396,7 +1525,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--skip-existing", action="store_true", help="批量模式跳过输出文件已存在的槽位，用于失败后重跑补齐。")
     parser.add_argument("--output-dir", default="generated-images", help="图片输出目录，默认 generated-images。")
     parser.add_argument("--env-file", help="指定 .env 配置文件；不指定时从当前目录向上查找（只认含 IMG_ 配置的），兜底 Skill 目录。")
-    parser.add_argument("--mode", choices=API_MODES, help="API 模式。默认按 IMG_PROVIDER / 官方地址 / 模型名检测（gemini、grok、apimart→async、其余→sync）。")
+    parser.add_argument("--mode", choices=API_MODES, help="API 模式。默认按服务商、网关地址和模型名检测；ybw Gemini→gemini-chat，官方 Gemini→gemini。")
     parser.add_argument("--size", default="1:1", help="传比例（1:1、16:9）。脚本按模式翻译；sync 会变成像素。不要先改成 1024x1024。")
     parser.add_argument("--resolution", default="1k", choices=VALID_RESOLUTIONS, help="异步模式分辨率档位，默认 1k。")
     parser.add_argument("--quality", choices=("low", "medium", "high"), help="同步模式图片质量参数。")
