@@ -3,10 +3,15 @@
 
   template list                          看库里有哪些模板
   template init <名> --from <示例夹>      从甲方示例套图建模板骨架（--mode replace|smart）
-  template init <名> --blank --slots 9   从零建 smart 模板骨架
-  template check <名>                    校验模板夹
-  template freeze <成图根> <SKU> <新名>   smart 批次的一品成图 + prompt 冻成 replace 模板
+  template init <名> --blank --slots 9 [--client 甲方]   从零建骨架；--client 放进甲方夹并写入 要求.json
+  template check <名>                    校验模板夹（甲方里的可用 甲方/名）
+  template freeze <成图根> <SKU> <新名> [--client 甲方]
 
+  template client <甲方>                 建甲方夹和空的 要求.json（先填共用要求）
+
+  sort [--source 大文件夹]               列出源里的品（不改甲方源）
+  sort --source <大文件夹> --group 外套=SKU1,SKU2 --group 裤装=SKU3
+  sort <分类.json>                      按 分类.json 把品拷到源夹同级「分类」根
   init --template <名> --source <甲方夹或单品夹或图片> [--out <成图根>]
   run <成图根> [--only SKU ...] [--slot H1 ...] [--redo] [--dry-run] [--concurrency N]
   derive <成图根> [--only SKU ...] [--redo]   只派生背面参考图（品没背面图、模板要背面时），先看再 run
@@ -61,15 +66,19 @@ def cmd_template(args: argparse.Namespace) -> int:
             print("库里没有模板。用 template init 建一个。")
             return 0
         for item in items:
-            print(f"{item['name']:<24} {item['mode']:<8} {item['slots']} 槽  {item['category']}")
+            label = item.get("key") or item["name"]
+            print(f"{label:<32} {item['mode']:<8} {item['slots']} 槽  {item['category']}")
         return 0
     if args.action == "init":
         from_dir = Path(args.source).resolve() if args.source else None
         folder = core.init_template(
             args.name, mode=args.mode, from_dir=from_dir, slot_count=args.slots,
             category=args.category or "", language=args.language or "",
+            client=args.client or "",
         )
         print(f"已建模板夹：{folder}")
+        if args.client:
+            print(f"已写入 {args.client}/{core.REQUIRE_FILE} 的 templates。共用语言/风格/分辨率写在那份文件里，本套差异才写进 template.json。")
         print("下一步：填 template.json（purpose、prompt/brief、style、language），再 template check。")
         return 0
     if args.action == "check":
@@ -84,9 +93,15 @@ def cmd_template(args: argparse.Namespace) -> int:
         return 0
     if args.action == "freeze":
         batch = core.load_batch(Path(args.output))
-        folder = core.freeze_template(batch, args.sku, args.name)
+        folder = core.freeze_template(batch, args.sku, args.name, client=args.client or "")
         print(f"已冻成 replace 模板：{folder}")
         print("请通读 template.json 每槽 prompt，把生成口吻改成保留口吻，再 template check。")
+        return 0
+    if args.action == "client":
+        folder = core.ensure_client(args.name)
+        print(f"甲方夹：{folder}")
+        print(f"共用要求：{folder / core.REQUIRE_FILE}")
+        print("先填 language / style / generation / brand，跟用户确认后再分类、再建各套模板。")
         return 0
     raise AssertionError(args.action)
 
@@ -145,6 +160,65 @@ def cmd_init(args: argparse.Namespace) -> int:
         print("  4) 先出一个品：run <成图根> --only <SKU>，preview 看完点头再 run 全部。")
     else:
         print("  4) run <成图根> 会给每个品写 brief.md + prompts.json；按 brief 写好 prompt 再 run。")
+    return 0
+
+
+def _groups_from_map(data: object) -> dict[str, list[str]]:
+    if not isinstance(data, dict):
+        core.fail("分类.json 顶层应为对象")
+    raw = data.get("groups")
+    if not isinstance(raw, dict) or not raw:
+        core.fail("分类.json 要有 groups：大类 → 品编号列表")
+    groups: dict[str, list[str]] = {}
+    for key, value in raw.items():
+        if isinstance(value, str):
+            groups[str(key)] = [s.strip() for s in value.split(",") if s.strip()]
+        elif isinstance(value, list):
+            groups[str(key)] = [str(x).strip() for x in value if str(x).strip()]
+        else:
+            core.fail(f"大类「{key}」的品列表格式不对")
+    return groups
+
+
+def cmd_sort(args: argparse.Namespace) -> int:
+    source: Path | None = Path(args.source) if args.source else None
+    output = Path(args.out) if args.out else None
+    groups: dict[str, list[str]] = {}
+    if args.plan:
+        data = core.read_json(Path(args.plan))
+        groups = _groups_from_map(data)
+        if source is None:
+            src = data.get("source") if isinstance(data, dict) else None
+            if not src:
+                core.fail("分类.json 缺 source，或用 --source 指定")
+            source = Path(str(src))
+        if output is None and isinstance(data, dict) and data.get("output"):
+            output = Path(str(data["output"]))
+    elif args.group:
+        for item in args.group:
+            if "=" not in item:
+                core.fail("--group 写成 大类=SKU,SKU")
+            name, rest = item.split("=", 1)
+            groups[name.strip()] = [s.strip() for s in rest.split(",") if s.strip()]
+    if source is None:
+        core.fail("sort 要给分类.json，或 --source")
+    if not source.exists():
+        core.fail(f"源不存在：{source}")
+    if not groups:
+        products = core.scan_source(source)
+        print(f"源里 {len(products)} 个品（甲方源不会改）：")
+        for product in products:
+            n = len(product["images"])
+            extra = "已认白图" if product.get("front") and n == 1 else f"{n} 张"
+            print(f"  {product['sku']:<14} 夹 {product['folder']:<20} {extra}")
+        print("大类即可（外套 / 裤装这种，不要按颜色尺码拆）。跟用户确认后再：")
+        print("  sort --source <大文件夹> --group 外套=SKU,SKU --group 裤装=SKU")
+        return 0
+    dest = core.sort_products(source, groups, output)
+    print(f"已分类到 {dest}（甲方源没改）")
+    for name, skus in groups.items():
+        print(f"  {name}  {len(skus)} 品")
+    print("下一步：每个大类做一份模板（--client 甲方），template check 过了，再对该类 init，run --only 先出 2 个。")
     return 0
 
 
@@ -490,7 +564,8 @@ def _print_models(provider: str, base_url: str, api_key: str, current: str) -> N
 
 def _template_refs() -> list[str]:
     """拿一份内置模板的两张示例图当参考，试的就是换货用的多图路径。"""
-    for folder in sorted(core.TEMPLATES_DIR.iterdir()) if core.TEMPLATES_DIR.is_dir() else []:
+    for item in core.list_templates():
+        folder = item["path"]
         found = [str(folder / f"h{i}.png") for i in (1, 2) if (folder / f"h{i}.png").is_file()]
         if found:
             return found
@@ -501,7 +576,7 @@ def _print_template_list() -> None:
     items = core.list_templates()
     print(f"库里 {len(items)} 个模板：" if items else "库里没有模板。")
     for item in items:
-        print(f"  {item['name']:<20} {item['mode']:<8} {item['slots']} 槽  {item['category']}")
+        print(f"  {(item.get('key') or item['name']):<24} {item['mode']:<8} {item['slots']} 槽  {item['category']}")
 
 
 def _setup_test(env_path: Path) -> int:
@@ -663,6 +738,20 @@ def _sync_dir(src: Path, dest: Path, report: dict[str, list[str]], *, dry_run: b
                 dp.unlink()
 
 
+def _sync_file(src: Path, dest: Path, report: dict[str, list[str]], *, dry_run: bool, label: str) -> None:
+    if not src.is_file():
+        return
+    if not dest.exists():
+        report["added"].append(label)
+    elif dest.read_bytes() != src.read_bytes():
+        report["updated"].append(label)
+    else:
+        return
+    if not dry_run:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+
+
 def sync_skill(src: Path, dest: Path, *, dry_run: bool) -> dict[str, list[str]]:
     """把新版技能文件同步到已装目录：只动受管文件，.env 和自建模板不碰。"""
     report: dict[str, list[str]] = {"added": [], "updated": [], "removed": [], "kept": []}
@@ -681,11 +770,30 @@ def sync_skill(src: Path, dest: Path, *, dry_run: bool) -> dict[str, list[str]]:
     for name in MANAGED_DIRS:
         _sync_dir(src / name, dest / name, report, dry_run=dry_run, label=name)
     src_tpl, dest_tpl = src / "templates", dest / "templates"
-    builtin = {p.name for p in src_tpl.iterdir() if p.is_dir()} if src_tpl.is_dir() else set()
-    for name in sorted(builtin):
-        _sync_dir(src_tpl / name, dest_tpl / name, report, dry_run=dry_run, label=f"templates/{name}")
+    src_dirs = {p.name: p for p in src_tpl.iterdir() if p.is_dir()} if src_tpl.is_dir() else {}
+    for name, sp in sorted(src_dirs.items()):
+        dp = dest_tpl / name
+        if core.is_client_dir(sp):
+            _sync_file(sp / core.REQUIRE_FILE, dp / core.REQUIRE_FILE, report,
+                       dry_run=dry_run, label=f"templates/{name}/{core.REQUIRE_FILE}")
+            src_children = {c.name: c for c in sp.iterdir() if c.is_dir() and core.is_template_dir(c)}
+            for child_name, child_src in sorted(src_children.items()):
+                _sync_dir(child_src, dp / child_name, report, dry_run=dry_run,
+                          label=f"templates/{name}/{child_name}")
+            if dp.is_dir():
+                report["kept"] += [
+                    f"templates/{name}/{child.name}"
+                    for child in sorted(dp.iterdir())
+                    if child.is_dir() and core.is_template_dir(child) and child.name not in src_children
+                ]
+        else:
+            _sync_dir(sp, dp, report, dry_run=dry_run, label=f"templates/{name}")
     if dest_tpl.is_dir():
-        report["kept"] += [f"templates/{p.name}" for p in sorted(dest_tpl.iterdir()) if p.is_dir() and p.name not in builtin]
+        report["kept"] += [
+            f"templates/{p.name}"
+            for p in sorted(dest_tpl.iterdir())
+            if p.is_dir() and p.name not in src_dirs
+        ]
     if (dest / ".env").is_file():
         report["kept"].append(".env")
     return report
@@ -737,12 +845,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ti.add_argument("--mode", choices=core.MODES, default="replace")
     ti.add_argument("--category")
     ti.add_argument("--language")
+    ti.add_argument("--client", help="放进这个甲方夹，并写入 要求.json")
     tc = ts.add_parser("check")
     tc.add_argument("name")
     tf = ts.add_parser("freeze")
     tf.add_argument("output")
     tf.add_argument("sku")
     tf.add_argument("name")
+    tf.add_argument("--client", help="冻进这个甲方夹，并写入 要求.json")
+    tcl = ts.add_parser("client", help="建甲方夹和空的 要求.json")
+    tcl.add_argument("name")
+
+    so = sub.add_parser("sort", help="按大类把品拷到源夹同级分类根（不改甲方源）")
+    so.add_argument("plan", nargs="?", help="分类.json，含 source 和 groups")
+    so.add_argument("--source", help="甲方大文件夹")
+    so.add_argument("--out", help="分类根；默认源夹同级「XX分类」")
+    so.add_argument("--group", action="append", help="大类=SKU,SKU，可重复")
 
     i = sub.add_parser("init", help="扫源、建成图根、写批次")
     i.add_argument("--template", required=True)
@@ -829,7 +947,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     handlers = {
-        "template": cmd_template, "init": cmd_init, "run": cmd_run, "derive": cmd_derive, "gen": cmd_gen,
+        "template": cmd_template, "sort": cmd_sort, "init": cmd_init, "run": cmd_run,
+        "derive": cmd_derive, "gen": cmd_gen,
         "status": cmd_status,
         "deliver": cmd_deliver, "preview": cmd_preview, "set": cmd_set,
         "setup": cmd_setup, "update": cmd_update,

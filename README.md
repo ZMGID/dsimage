@@ -2,13 +2,14 @@
 
 **给 AI 装一个电商美工。**
 
-装进 Claude Code / Codex / Cursor / OpenClaw，开口带「使用 dsimage」，它按模板把一个品、或者一个大文件夹里几十个品，出成整套商品图。
+装进 Claude Code / Codex / Cursor / OpenClaw，开口带「使用 dsimage」。不会用打 `dsimage引导`。
 
 ```text
 使用 dsimage，这些是产品图，帮我出一套电商主图
 使用 dsimage 模板：胜利鹰男款商务背包，版式别动，只把包换成这些新产品
 使用 dsimage，用这张产品图给我设计一套亚马逊图
 使用 dsimage，把这套已经做好的图做成模板，以后换产品用
+使用 dsimage，这是某某甲方的一批货，大文件夹在这，按大类做模板再出图
 ```
 
 ## 三种做法
@@ -74,6 +75,8 @@ VE男包生成/            ← 同级默认成图根
 
 建模板：`template init <名> --from <样图夹>`（replace）或 `--blank --slots 7 --mode smart`，填 `template.json`，`template check`。字段说明在 `skills/dsimage/guides/make_template.md`。
 
+一个甲方、大文件夹里好几个大类：`template client` 填 `要求.json`，`sort --source … --group 大类=SKU,…` 拷到同级分类根（源夹不改），一类一模板，每类 `run --only` 先出两个。流程在 `skills/dsimage/guides/client.md`。
+
 单张 / 几张：`python scripts/dsimage.py gen "…" --ref a.jpg --ratio 4:5 --name hero [--n 3]`，输出到 `./generated-images/`，prompt 记在 `_dsimage/gen.jsonl` 方便改图。
 
 ## 目录
@@ -82,9 +85,9 @@ VE男包生成/            ← 同级默认成图根
 skills/dsimage/
   SKILL.md              Agent 入口：分流 + 硬规矩
   SETUP.md              安装 / 配 API（setup）/ 更新（update）
-  guides/               replace.md  smart.md  design.md  gen.md  make_template.md
+  guides/               howto.md  client.md  replace.md  smart.md  design.md  gen.md  make_template.md
   knowledge/shots.md    26 类电商图拍法速查
-  templates/            默认电商套图/  童装套图/（smart）  胜利鹰女款商务背包/  胜利鹰男款商务背包/（replace）
+  templates/            默认电商套图/  童装套图/  胜利鹰女款…/；同一甲方多套时 {甲方}/要求.json + 模板夹
   scripts/              dsimage.py  core.py  gen_image.py  test_dsimage.py
 ```
 

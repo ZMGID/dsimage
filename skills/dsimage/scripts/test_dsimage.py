@@ -205,6 +205,134 @@ class TemplateCheckTests(TempTemplatesMixin, unittest.TestCase):
         self.assertEqual({t["name"] for t in core.list_templates()}, {"空", "新模板"})
 
 
+class ClientTemplateTests(TempTemplatesMixin, unittest.TestCase):
+    def test_init_client_inherits_require(self) -> None:
+        folder = core.init_template("报价", mode="smart", slot_count=2, client="BeautyU")
+        self.assertEqual(folder, core.TEMPLATES_DIR / "BeautyU" / "报价")
+        req_path = core.TEMPLATES_DIR / "BeautyU" / core.REQUIRE_FILE
+        req = core.read_json(req_path)
+        self.assertEqual(req["templates"], ["报价"])
+        req.update({
+            "language": "pt-BR",
+            "style": "Campaign Style Lock: gold accent.",
+            "generation": {"resolution": "2k", "format": "png", "quality": "high"},
+            "brand": {"accent": "#D6B77A"},
+        })
+        core.write_json(req_path, req)
+        data = core.read_json(folder / core.TEMPLATE_FILE)
+        self.assertNotIn("language", data)
+        self.assertNotIn("style", data)
+        for slot in data["slots"]:
+            slot["brief"] = "产品居中"
+        core.write_json(folder / core.TEMPLATE_FILE, data)
+        tpl = core.load_template(folder)
+        self.assertEqual(tpl["language"], "pt-BR")
+        self.assertEqual(tpl["style"], "Campaign Style Lock: gold accent.")
+        self.assertEqual(tpl["output"]["resolution"], "2k")
+        self.assertEqual(tpl["brand"]["accent"], "#D6B77A")
+        self.assertEqual(core.check_template(tpl), [])
+        self.assertEqual(core.find_template("报价"), folder.resolve())
+        self.assertEqual(core.find_template("BeautyU/报价"), folder.resolve())
+        self.assertIn("BeautyU/报价", {t["key"] for t in core.list_templates()})
+
+    def test_template_overrides_require(self) -> None:
+        folder = core.init_template("报价", mode="smart", slot_count=1, client="A", language="zh")
+        req_path = core.TEMPLATES_DIR / "A" / core.REQUIRE_FILE
+        req = core.read_json(req_path)
+        req["language"] = "pt-BR"
+        req["style"] = "Campaign Style Lock: from client."
+        core.write_json(req_path, req)
+        data = core.read_json(folder / core.TEMPLATE_FILE)
+        data["slots"][0]["brief"] = "x"
+        core.write_json(folder / core.TEMPLATE_FILE, data)
+        self.assertEqual(core.load_template(folder)["language"], "zh")
+
+    def test_not_listed_cannot_load(self) -> None:
+        folder = core.init_template("报价", mode="smart", slot_count=1, client="A")
+        req_path = core.TEMPLATES_DIR / "A" / core.REQUIRE_FILE
+        req = core.read_json(req_path)
+        req["templates"] = []
+        core.write_json(req_path, req)
+        with self.assertRaises(core.DsError) as ctx:
+            core.load_template(folder)
+        self.assertIn("templates", str(ctx.exception))
+
+    def test_duplicate_names_need_client_prefix(self) -> None:
+        core.init_template("同名", mode="smart", slot_count=1, client="甲")
+        core.init_template("同名", mode="smart", slot_count=1, client="乙")
+        with self.assertRaises(core.DsError) as ctx:
+            core.find_template("同名")
+        self.assertIn("甲/同名", str(ctx.exception))
+        self.assertEqual(core.find_template("甲/同名"), (core.TEMPLATES_DIR / "甲" / "同名").resolve())
+
+    def test_template_client_cli(self) -> None:
+        self.assertEqual(dsimage.main(["template", "client", "BeautyU"]), 0)
+        req = core.TEMPLATES_DIR / "BeautyU" / core.REQUIRE_FILE
+        self.assertTrue(req.is_file())
+        self.assertEqual(core.read_json(req)["id"], "BeautyU")
+        self.assertEqual(core.read_json(req)["templates"], [])
+
+
+class SortTests(TempTemplatesMixin, unittest.TestCase):
+    def test_default_sort_dir(self) -> None:
+        self.assertEqual(core.default_sort_dir(Path("D:/x/VE男包系列")).name, "VE男包分类")
+        self.assertEqual(core.default_sort_dir(Path("D:/x/春季新品")).name, "春季新品分类")
+
+    def test_sort_copies_and_keeps_source(self) -> None:
+        source = client_source(self.tmp)
+        dest = core.sort_products(source, {
+            "双肩包": ["V26007", "V26008"],
+            "腰包": ["V26025"],
+        })
+        self.assertEqual(dest, source.parent / "VE男包分类")
+        self.assertTrue((dest / "双肩包" / "V26007" / "V26007.jpg").is_file())
+        self.assertTrue((dest / "双肩包" / "V26008" / "V26008正面.jpg").is_file())
+        self.assertTrue((dest / "腰包" / "V26025" / "未标题-7.png").is_file())
+        self.assertTrue((source / "V26007-V26010" / "V26007.jpg").is_file())
+        data = core.read_json(dest / "分类.json")
+        self.assertEqual(data["groups"]["腰包"], ["V26025"])
+        self.assertEqual({p["sku"] for p in core.scan_source(dest / "双肩包")}, {"V26007", "V26008"})
+
+    def test_sort_rejects_leftover_dup_and_inside_source(self) -> None:
+        source = client_source(self.tmp)
+        with self.assertRaises(core.DsError) as ctx:
+            core.sort_products(source, {"包": ["V26007", "V26008"]})
+        self.assertIn("V26025", str(ctx.exception))
+        with self.assertRaises(core.DsError) as ctx:
+            core.sort_products(source, {"A": ["V26007"], "B": ["V26007", "V26008", "V26025"]})
+        self.assertIn("两个大类", str(ctx.exception))
+        with self.assertRaises(core.DsError) as ctx:
+            core.sort_products(source, {"包": ["V26007", "V26008", "V26025"]}, source / "分类")
+        self.assertIn("源夹里面", str(ctx.exception))
+
+    def test_sort_rerun_drops_old_category(self) -> None:
+        source = client_source(self.tmp)
+        dest = core.sort_products(source, {
+            "双肩包": ["V26007", "V26008"],
+            "腰包": ["V26025"],
+        })
+        core.sort_products(source, {"包": ["V26007", "V26008", "V26025"]}, dest)
+        self.assertTrue((dest / "包" / "V26007" / "V26007.jpg").is_file())
+        self.assertFalse((dest / "双肩包").exists())
+        self.assertFalse((dest / "腰包").exists())
+
+    def test_cli_sort_list_and_group(self) -> None:
+        source = client_source(self.tmp)
+        self.assertEqual(dsimage.main(["sort", "--source", str(source)]), 0)
+        self.assertFalse((source.parent / "VE男包分类").exists())
+        self.assertEqual(dsimage.main([
+            "sort", "--source", str(source),
+            "--group", "双肩包=V26007,V26008",
+            "--group", "腰包=V26025",
+        ]), 0)
+        dest = source.parent / "VE男包分类"
+        self.assertTrue((dest / "腰包" / "V26025" / "未标题-7.png").is_file())
+        self.assertEqual(dsimage.main(["sort", str(dest / "分类.json")]), 0)
+        self.assertEqual(dsimage.main([
+            "sort", "--source", str(source), "--group", "包=V26007,V26099,V26025",
+        ]), 1)
+
+
 class ReplaceRunTests(TempTemplatesMixin, unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
@@ -504,6 +632,9 @@ class SetupUpdateTests(TempTemplatesMixin, unittest.TestCase):
         (dest / "scripts" / "old.py").write_text("x", encoding="utf-8")
         (dest / "scripts" / "__pycache__" / "a.pyc").write_bytes(b"x")
         (dest / "templates" / "自建" / "template.json").write_text("{}", encoding="utf-8")
+        (dest / "templates" / "甲方" / "自建套").mkdir(parents=True)
+        (dest / "templates" / "甲方" / "要求.json").write_text("{}", encoding="utf-8")
+        (dest / "templates" / "甲方" / "自建套" / "template.json").write_text("{}", encoding="utf-8")
         (dest / "templates" / "内置" / "stale.png").write_bytes(b"x")
         dry = _dsimage.sync_skill(src, dest, dry_run=True)
         self.assertEqual((dest / "SKILL.md").read_text(encoding="utf-8"), "old")
@@ -512,6 +643,7 @@ class SetupUpdateTests(TempTemplatesMixin, unittest.TestCase):
         self.assertEqual(sorted(report["updated"]), ["SKILL.md", "scripts/core.py"])
         self.assertEqual(sorted(report["added"]), ["scripts/dsimage.py", "templates/内置/template.json"])
         self.assertIn("templates/自建", report["kept"])
+        self.assertIn("templates/甲方", report["kept"])
         self.assertIn(".env", report["kept"])
         self.assertEqual((dest / "SKILL.md").read_text(encoding="utf-8"), "new")
         self.assertFalse((dest / "scripts" / "old.py").exists())

@@ -5,7 +5,7 @@
 ## 流程
 
 ```bash
-python scripts/dsimage.py init --template <模板名> --source "<甲方夹|单品夹|一张图>"
+python scripts/dsimage.py init --template <模板名或甲方/模板名> --source "<甲方夹|单品夹|一张图>"
 # 多图的品先 set --front；见 SKILL.md
 python scripts/dsimage.py run "<成图根>"
 ```
@@ -41,7 +41,7 @@ python scripts/dsimage.py run "<成图根>"                  # 都写齐后铺�
 一个品的整套效果被用户认可，后面同类品只想换货：
 
 ```bash
-python scripts/dsimage.py template freeze "<成图根>" <SKU> <新模板名>
+python scripts/dsimage.py template freeze "<成图根>" <SKU> <新模板名>   # 可加 --client <甲方>
 ```
 
 会把这个品的 9 张成图拷成新模板的示例图，每槽 prompt = 换货前缀 + 当时的生成 prompt。打开新模板 `template.json` 通读一遍，把「生成一个…」的口吻改成「保留母版…只换产品」，`template check` 通过后就是 replace 模板。

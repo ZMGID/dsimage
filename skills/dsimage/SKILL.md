@@ -1,11 +1,12 @@
 ---
 name: dsimage
-description: 电商商品图技能，也能当普通生图工具用。套图走模板（一个文件夹：template.json + 示例图），三种做法：replace（甲方样图换货，脚本直出）、smart（模板给每槽 brief，按品写 prompt）、design（没模板，从零问需求设计一套）；零散一张几张图走 gen。出图走 OpenAI / Grok / Gemini 或兼容网关的图片 API。Use when the user says 使用 dsimage / dsimage, or asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / 套图 / listing images / product photos / PDP / A+ content, or 生成一张图 / 出张图 / 改图 / 换背景 / 海报 / generate an image / edit this image, or 制作模板 / 创建模板 / 换货 / 换品 / 替换模板 / 按这套样图做.
+description: 电商商品图技能，也能当普通生图工具用。套图走模板（一个文件夹：template.json + 示例图），三种做法：replace（甲方样图换货，脚本直出）、smart（模板给每槽 brief，按品写 prompt）、design（没模板，从零问需求设计一套）；同一甲方一大夹混了多个大类走甲方大单（先 要求.json，按大类分夹，一类一模板，每类先出 2 个再铺）；零散一张几张图走 gen。出图走 OpenAI / Grok / Gemini 或兼容网关的图片 API。Use when the user says 使用 dsimage / dsimage / dsimage引导 / 打印dsimage引导, or asks 怎么用 / 不会用 / 使用说明, or asks for 电商主图 / 详情页 / 产品图 / 商品图 / 白底图 / 套图 / listing images / product photos / PDP / A+ content, or 生成一张图 / 出张图 / 改图 / 换背景 / 海报 / generate an image / edit this image, or 制作模板 / 创建模板 / 换货 / 换品 / 替换模板 / 按这套样图做, or 甲方大单 / 一个大文件夹很多品 / 按大类做模板.
 ---
 
 # dsimage
 
 一个模板 = `templates/<名>/` 文件夹：`template.json` + 示例图 `h1.png…` + 可选 `assets/`。
+同一甲方多套模板放 `templates/{甲方}/`，共用一份 `要求.json`；零散的仍摊在 `templates/` 根下。
 所有命令在本技能目录跑（Windows `python`，macOS/Linux `python3`）：`python scripts/dsimage.py <子命令>`。
 Skill 目录有 `.env` 就能出图；没有 → 先读 `SETUP.md`。不要回显 API key。
 用户在对话里给了接口地址 / key（新的或换的）→ 立刻按 `SETUP.md` 第 2 步从 URL 判断 `--provider`，`setup env` **不要带 `--model`**；给了模型名才 `setup model <名>`。没给模型名就拉列表让用户挑（可推荐，必须等人选），不要自己定、不要问是哪家服务商。不要只在这一次命令里临时用，也不要手改 `.env`。
@@ -14,16 +15,21 @@ Skill 目录有 `.env` 就能出图；没有 → 先读 `SETUP.md`。不要回�
 
 | 用户给了什么 | 走哪条 | 读 |
 |---|---|---|
+| 一个甲方 + 大文件夹里很多品、不止一个种类（要求大体一样） | **甲方大单**：先 `要求.json`，按大类分夹，一类一模板，每类先出 2 个审核再铺 | `guides/client.md` |
 | 点名了库里的 replace 模板，或「按这套样图把这些品换进去」（样图 + 产品夹） | **replace**：脚本直出，你只选白图、看图、改模板 | `guides/replace.md` |
 | 点名了库里的 smart 模板 | **smart**：脚本给 brief，你按品写 prompts.json，再出 | `guides/smart.md` |
 | 只要**一张或几张图**：出张图、改这张图、换背景、做张海报 | **gen**：不建模板不建批次，写 prompt 直接出 | `guides/gen.md` |
 | 「做个模板」「把这套样图收成模板」 | 建模板 | `guides/make_template.md` |
+| 「dsimage引导」「打印dsimage引导」「怎么用」「不会用」 | 把 `guides/howto.md` **原样**给用户，不要开做出图 | `guides/howto.md` |
 | 安装 / 配 API / 更新 | | `SETUP.md` |
 | 要**一套图**，没点名模板 | **先问**，禁止 `init` / `run` / `derive` | 下一节 |
 
 不确定是 replace 还是 smart：有成品套图 + 只想换货 → replace；只有风格参考或想每个品单独发挥 → smart。问一句，不要自己猜。
 一套还是几张：用户说「套图 / 详情页 / 主图全套 / 这些品都做 / 给这个品做一套」→ 套；说「一张 / 这张 / 改一下 / 海报」→ gen。
-先 `template list` 看库里有什么；用户点名的不在库里就说没有，不要拿别的顶替。开口已经点名模板，或开口就说「直接生成」→ 跳过下一节。
+一个甲方、一个大文件夹、里面明显不止一个种类 → 甲方大单，读 `guides/client.md`，不要整夹 `init`，也不要走下一节那五问。
+先 `template list` 看库里有什么；甲方里的显示成 `甲方/模板名`。用户点名的不在库里就说没有，不要拿别的顶替。开口已经点名模板，或开口就说「直接生成」→ 跳过下一节。
+
+用户用自然语言讲需求、还没说「使用 dsimage …」：对照 `guides/howto.md` 推荐最贴的 **1 句**（必要时 2 句），把那句完整写出来让他确认或直接复制；点头后再按分流开做。已经带「使用 dsimage」或材料已经够分流 → 不要再逼他抄引导句。不会用、没说要干什么 → 提示打 `dsimage引导`，或直接把 howto.md 原样给他。
 
 ## 没点名先问
 
@@ -45,13 +51,15 @@ Skill 目录有 `.env` 就能出图；没有 → 先读 `SETUP.md`。不要回�
 
 **不用模板** → 读 `guides/design.md`。上面已经答过的不要再问；把还缺的问完（平台、每张干什么、文字谁写、交付尺寸）。问完按这些信息建 smart 模板、按这件货写每槽 prompt，再出图。
 
-**用模板** → `python scripts/dsimage.py template list`。按这件货 + 他刚说的要求匹配，**最多 5 名**（第 1 最贴）。每行：模板名、mode、为什么适合这件货。品类明显不对的不要凑进名单。replace 模板：他没给成品样图、也没说换货，往后排。把名单给他，等人回序号或名字。没回就停着，不要用第 1 名开做。选完：replace 读 `guides/replace.md`，smart 读 `guides/smart.md`。
+**用模板** → `python scripts/dsimage.py template list`。按这件货 + 他刚说的要求匹配，**最多 5 名**（第 1 最贴）。每行：名单上的名字（甲方里的是 `甲方/模板名`）、mode、为什么适合这件货。品类明显不对的不要凑进名单。replace 模板：他没给成品样图、也没说换货，往后排。把名单给他，等人回序号或名字。没回就停着，不要用第 1 名开做。选完：replace 读 `guides/replace.md`，smart 读 `guides/smart.md`。
 
 **直接生成**（开口就说，或问的时候说）→ `默认电商套图`，读 `guides/smart.md`。这份模板只有大概骨架（9 张、语言、每槽 brief），必须按这件货写每槽 prompt，不要把 brief 原文当 prompt，也不要因为看起来像童装就改走童装套图。
 
 ## 开工前跟用户确认
 
-路已经定了之后，没说的才问：
+甲方大单按 `guides/client.md`：先确认 `要求.json` 和分类表，再 `sort`；模板齐了每类先出 2 个，不要一上来对整个大文件夹 `init`。
+
+路已经定了之后（单套 / 单品），没说的才问：
 
 1. 源在哪：甲方大文件夹 / 单品夹 / 一张图。成图放哪（不说就默认源夹同级 `XX生成`）。
 2. 先出哪个品看效果（不说就第一个）。
@@ -91,8 +99,8 @@ python scripts/dsimage.py deliver <成图根>                 # 模板写了 out
 
 - 只做**静态图**：套图走模板，零散几张走 `gen`。视频、精修抠图、翻译文案不在这里。
 - 一个品的图只认**正面**（必有）和**背面**（可选，没有就派生）。侧面、内部、细节不派生——需要就让模型在槽位 prompt 里自己画，或让用户补图。
-- 源夹只读；成图根一个 SKU 一夹（套图 `h1.png…` + 迁进来的白图）；工作文件都在 `_dsimage/`。
-- 多个品不要在对话里一个一个做：replace 一条 `run` 全出；smart 每个品的 prompt 可以分给子代理写（一品一个，只写 `prompts.json`），写完主会话一条 `run`。
+- 源夹只读；分类是拷到同级「XX分类」，不改甲方源。成图根一个 SKU 一夹（套图 `h1.png…` + 迁进来的白图）；工作文件都在 `_dsimage/`。
+- 多个品不要在对话里一个一个做：replace 一条 `run` 全出；smart 每个品的 prompt 可以分给子代理写（一品一个，只写 `prompts.json`），写完主会话一条 `run`。甲方大单例外：每类先 `--only` 两个，点头再铺该类。
 - 并发、画幅、分辨率、格式、模型都在模板 `output` / `model` 里，用户本轮点名才覆盖，不要自己加旗。
 - 分辩率只有 `1k/2k/4k`，接口给多大存多大，不本地放大。交付尺寸用 `deliver`，不要手写 PIL。
 - 同一个成图根换模板出：`init` 会提醒，旧图不会自动重出，要 `run --redo`。
@@ -103,8 +111,9 @@ python scripts/dsimage.py deliver <成图根>                 # 模板写了 out
 ```
 skills/dsimage/
   SKILL.md  SETUP.md
-  guides/      replace.md  smart.md  design.md  gen.md  make_template.md
+  guides/      howto.md  client.md  replace.md  smart.md  design.md  gen.md  make_template.md
   knowledge/   shots.md            26 类电商图的拍法速查（写 prompt 时翻）
-  templates/   默认电商套图/  童装套图/（smart）  胜利鹰女款商务背包/  胜利鹰男款商务背包/（replace）
+  templates/   默认电商套图/  童装套图/  胜利鹰女款商务背包/  胜利鹰男款商务背包/
+               {甲方}/要求.json + {甲方}/{模板}/   同一甲方多套时
   scripts/     dsimage.py（CLI） core.py  gen_image.py（API）  test_dsimage.py
 ```

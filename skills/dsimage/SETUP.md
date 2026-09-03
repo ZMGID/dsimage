@@ -69,17 +69,7 @@ python scripts/dsimage.py setup model <用户选的模型名>
    - `默认电商套图`（smart）：说「直接生成」时用；只有 9 张骨架，仍要按这件货写 prompt
    - `童装套图`（smart）：要用模板时会出现在匹配名单里；`set --kind` 区分外套 / 套装 / 裤 / 裙 / 睡衣
    - `胜利鹰女款 / 男款商务背包`（replace）：样图换货，脚本直出
-4. 怎么开口：
-
-```text
-使用 dsimage，这些是产品图，帮我出一套电商主图                      ← 会先问要求和要不要模板
-使用 dsimage，这些是产品图，直接生成                                ← 默认套图（仍按这件货写 prompt）
-使用 dsimage 模板：胜利鹰男款商务背包，版式别动，只把包换成这些新产品 ← 按样板换产品
-使用 dsimage 模板：童装套图，这些是童装外套                        ← 点名模板，不再问用哪个
-使用 dsimage，用这张产品图给我设计一套亚马逊图                      ← 从零设计（会先问几个问题）
-使用 dsimage，把这张图换成深灰背景 / 出一张 4:5 的海报              ← 只出一张或几张
-使用 dsimage，把这套已经做好的图做成模板，以后换产品用              ← 收成模板
-```
+4. 怎么开口：不会用让他打 `dsimage引导`（把 `guides/howto.md` 原样给他）。
 
 ## 4. 更新
 
@@ -89,7 +79,7 @@ python scripts/dsimage.py update --dry-run  # 先看会改什么
 python scripts/dsimage.py update --from <本地仓库夹或 zip>   # 没网 / 想用本地版本
 ```
 
-只动 `SKILL.md`、`SETUP.md`、`guides/`、`knowledge/`、`scripts/` 和内置模板；**`.env` 和用户自建模板原位不动**（自建 = 新版里没有的模板夹）。已装目录本身就是仓库克隆时它会改走 `git pull`。跑完打印新增 / 更新 / 删除了什么和模板清单，照着汇报；再跑一遍 `python scripts/test_dsimage.py` 确认。
+只动 `SKILL.md`、`SETUP.md`、`guides/`、`knowledge/`、`scripts/` 和内置模板；**`.env` 和用户自建模板原位不动**（自建 = 新版里没有的模板夹或甲方夹）。已装目录本身就是仓库克隆时它会改走 `git pull`。跑完打印新增 / 更新 / 删除了什么和模板清单，照着汇报；再跑一遍 `python scripts/test_dsimage.py` 确认。
 
 找不到已装目录就按第 1 节的表逐个找；找不到问用户。
 

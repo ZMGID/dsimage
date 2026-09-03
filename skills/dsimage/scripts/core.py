@@ -2,6 +2,7 @@
 """dsimage 核心库：模板、扫品、组 jobs、状态、交付、预览。CLI 在 dsimage.py。
 
 模板 = 一个文件夹：template.json + 示例图（h1.png…）+ 可选 assets/。
+同一甲方多套模板放 templates/{甲方}/，共用一份 要求.json；零散模板仍摊在 templates/ 根下。
 mode=replace：每槽固定 prompt，脚本直接组 jobs 出图，模型不介入。
 mode=smart：每槽 brief，脚本给每个品写 brief.md + prompts.json 骨架，模型填完再出图。
 """
@@ -29,6 +30,7 @@ import gen_image  # noqa: E402
 SKILL_ROOT = ROOT.parent
 TEMPLATES_DIR = SKILL_ROOT / "templates"
 TEMPLATE_FILE = "template.json"
+REQUIRE_FILE = "要求.json"
 WORK_DIR = "_dsimage"
 BATCH_FILE = "batch.json"
 PROMPTS_FILE = "prompts.json"
@@ -150,23 +152,167 @@ def ratio_of(width: int, height: int) -> str:
 
 # ── 模板 ──────────────────────────────────────────────────
 
+def is_template_dir(folder: Path) -> bool:
+    return folder.is_dir() and (folder / TEMPLATE_FILE).is_file()
+
+
+def is_client_dir(folder: Path) -> bool:
+    if not folder.is_dir() or is_template_dir(folder):
+        return False
+    if (folder / REQUIRE_FILE).is_file():
+        return True
+    return any(is_template_dir(child) for child in folder.iterdir() if child.is_dir())
+
+
+def template_key(folder: Path) -> str:
+    client = template_client(folder)
+    return f"{client}/{folder.name}" if client else folder.name
+
+
+def template_client(folder: Path) -> str:
+    parent = folder.parent
+    try:
+        templates = TEMPLATES_DIR.resolve()
+        if parent.resolve() == templates:
+            return ""
+        if parent.parent.resolve() == templates:
+            return parent.name
+    except OSError:
+        return ""
+    return ""
+
+
+def iter_template_dirs() -> list[Path]:
+    if not TEMPLATES_DIR.is_dir():
+        return []
+    found: list[Path] = []
+    for folder in sorted(TEMPLATES_DIR.iterdir(), key=lambda p: natural_key(p.name)):
+        if is_template_dir(folder):
+            found.append(folder)
+            continue
+        if not folder.is_dir():
+            continue
+        for child in sorted(folder.iterdir(), key=lambda p: natural_key(p.name)):
+            if is_template_dir(child):
+                found.append(child)
+    return found
+
+
+def _blank(value: Any) -> bool:
+    return value in (None, "", [], {})
+
+
+def _validate_client_name(name: str) -> None:
+    if not name or name in (".", "..") or "/" in name or "\\" in name or "&" in name:
+        fail("甲方夹名不要用 / \\ &，也不要带路径")
+
+
+def ensure_client(client: str) -> Path:
+    _validate_client_name(client)
+    folder = TEMPLATES_DIR / client
+    folder.mkdir(parents=True, exist_ok=True)
+    req_path = folder / REQUIRE_FILE
+    if not req_path.is_file():
+        write_json(req_path, {
+            "id": client,
+            "name": client,
+            "templates": [],
+            "language": "",
+            "generation": {"resolution": "1k", "format": "png", "quality": "high"},
+            "style": "",
+            "notes": ["同一甲方下各模板共用本文件；templates 必须与下面的模板夹名一一对应"],
+        })
+    return folder
+
+
+def register_client_template(client: str, template_name: str) -> None:
+    folder = ensure_client(client)
+    req_path = folder / REQUIRE_FILE
+    req = read_json(req_path)
+    if not isinstance(req, dict):
+        fail(f"{req_path} 顶层应为对象")
+    listed = [str(x) for x in (req.get("templates") or [])]
+    if template_name not in listed:
+        listed.append(template_name)
+        req["templates"] = listed
+        write_json(req_path, req)
+
+
+def apply_client_require(tpl: dict[str, Any], folder: Path) -> dict[str, Any]:
+    """甲方夹里的模板：先核 要求.json 的 templates，再用共用字段填模板里空着的项。"""
+    client = template_client(folder)
+    tpl["_client"] = client
+    if not client:
+        return tpl
+    parent = folder.parent
+    req_path = parent / REQUIRE_FILE
+    if not req_path.is_file():
+        fail(f"{folder.name} 在甲方夹 {client} 里，但没有 {REQUIRE_FILE}")
+    req = read_json(req_path)
+    if not isinstance(req, dict):
+        fail(f"{req_path} 顶层应为对象")
+    listed = [str(x) for x in (req.get("templates") or [])]
+    if folder.name not in listed:
+        fail(f"{folder.name} 不在 {client}/{REQUIRE_FILE} 的 templates 里，不要拿这份要求套它")
+    if _blank(tpl.get("language")) and req.get("language"):
+        tpl["language"] = req["language"]
+    if _blank(tpl.get("style")) and req.get("style"):
+        tpl["style"] = req["style"]
+    if _blank(tpl.get("brand")) and isinstance(req.get("brand"), dict):
+        tpl["brand"] = req["brand"]
+    gen = req.get("generation") if isinstance(req.get("generation"), dict) else {}
+    out = tpl.get("output") if isinstance(tpl.get("output"), dict) else {}
+    tpl["output"] = out
+    for key in ("resolution", "format", "quality"):
+        if _blank(out.get(key)) and gen.get(key):
+            out[key] = gen[key]
+    if _blank(out.get("deliver")) and isinstance(gen.get("deliver"), dict):
+        out["deliver"] = gen["deliver"]
+    tpl["_require"] = str(req_path)
+    return tpl
+
+
+def check_client_require(parent: Path) -> list[str]:
+    errors: list[str] = []
+    req_path = parent / REQUIRE_FILE
+    if not req_path.is_file():
+        return [f"甲方夹 {parent.name} 缺 {REQUIRE_FILE}"]
+    try:
+        req = read_json(req_path)
+    except DsError as exc:
+        return [str(exc)]
+    if not isinstance(req, dict):
+        return [f"{req_path} 顶层应为对象"]
+    if req.get("id") and str(req["id"]) != parent.name:
+        errors.append(f"{REQUIRE_FILE} 的 id 应为夹名 {parent.name}，实际 {req.get('id')!r}")
+    listed = [str(x) for x in (req.get("templates") or [])]
+    disk = [p.name for p in sorted(parent.iterdir(), key=lambda p: natural_key(p.name)) if is_template_dir(p)]
+    for name in listed:
+        if name not in disk:
+            errors.append(f"{REQUIRE_FILE} 列出了「{name}」，文件夹里没有这个模板夹")
+    for name in disk:
+        if name not in listed:
+            errors.append(f"「{name}」在甲方夹里，但没写进 {REQUIRE_FILE} 的 templates")
+    return errors
+
+
 def list_templates() -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
-    if not TEMPLATES_DIR.is_dir():
-        return items
-    for folder in sorted(TEMPLATES_DIR.iterdir(), key=lambda p: natural_key(p.name)):
-        if folder.is_dir() and (folder / TEMPLATE_FILE).is_file():
-            try:
-                data = read_json(folder / TEMPLATE_FILE)
-            except DsError:
-                data = {}
-            items.append({
-                "name": folder.name,
-                "mode": data.get("mode", "?"),
-                "category": data.get("category", ""),
-                "slots": len(data.get("slots") or []),
-                "path": folder,
-            })
+    for folder in iter_template_dirs():
+        try:
+            data = read_json(folder / TEMPLATE_FILE)
+        except DsError:
+            data = {}
+        client = template_client(folder)
+        items.append({
+            "name": folder.name,
+            "key": template_key(folder),
+            "client": client,
+            "mode": data.get("mode", "?"),
+            "category": data.get("category", ""),
+            "slots": len(data.get("slots") or []),
+            "path": folder,
+        })
     return items
 
 
@@ -177,7 +323,13 @@ def find_template(name_or_path: str) -> Path:
         folder = candidate.parent if candidate.name == TEMPLATE_FILE else candidate
         if (folder / TEMPLATE_FILE).is_file():
             return folder.resolve()
-    names = "、".join(item["name"] for item in list_templates()) or "（空）"
+    matches = [item["path"] for item in list_templates() if item["name"] == name_or_path or item["key"] == name_or_path]
+    if len(matches) == 1:
+        return matches[0].resolve()
+    if len(matches) > 1:
+        keys = "、".join(template_key(p) for p in matches)
+        fail(f"模板名「{name_or_path}」有多份，写全：{keys}")
+    names = "、".join(item["key"] for item in list_templates()) or "（空）"
     fail(f"找不到模板「{name_or_path}」。库里有：{names}")
 
 
@@ -186,7 +338,7 @@ def load_template(folder: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         fail(f"{folder / TEMPLATE_FILE} 顶层应为对象")
     data["_dir"] = folder
-    return data
+    return apply_client_require(data, folder)
 
 
 def template_output(tpl: dict[str, Any]) -> dict[str, Any]:
@@ -251,6 +403,9 @@ def check_template(tpl: dict[str, Any]) -> list[str]:
     """返回问题列表；空列表 = 通过。"""
     errors: list[str] = []
     folder: Path = tpl["_dir"]
+    client = template_client(folder)
+    if client:
+        errors.extend(check_client_require(folder.parent))
     mode = tpl.get("mode")
     if not tpl.get("name"):
         errors.append("缺 name")
@@ -387,10 +542,14 @@ def check_template(tpl: dict[str, Any]) -> list[str]:
 
 
 def init_template(name: str, *, mode: str, from_dir: Path | None = None,
-                  slot_count: int = 0, category: str = "", language: str = "") -> Path:
+                  slot_count: int = 0, category: str = "", language: str = "",
+                  client: str = "") -> Path:
     if mode not in MODES:
         fail(f"mode 应为 replace / smart，实际 {mode!r}")
-    folder = TEMPLATES_DIR / name
+    if "/" in name or "\\" in name:
+        fail("模板名不要带路径；要放进甲方夹用 --client")
+    parent = ensure_client(client) if client else TEMPLATES_DIR
+    folder = parent / name
     if folder.exists():
         fail(f"模板已存在：{folder}")
     images: list[Path] = []
@@ -426,26 +585,35 @@ def init_template(name: str, *, mode: str, from_dir: Path | None = None,
         "name": name,
         "mode": mode,
         "category": category,
-        "language": language,
-        "output": {"ratio": ratio, "resolution": "1k", "format": "png", "quality": "high"},
-        "style": "",
-        "text_policy": "",
         "slots": slots,
         "notes": ["init 生成的骨架，待填。示例图对应：" + "；".join(mapping)] if mapping else ["init 生成的骨架，待填"],
     }
+    if language:
+        data["language"] = language
+    if not client:
+        data["language"] = language
+        data["output"] = {"ratio": ratio, "resolution": "1k", "format": "png", "quality": "high"}
+        data["style"] = ""
+        data["text_policy"] = ""
+    else:
+        data["output"] = {"ratio": ratio}
+        register_client_template(client, name)
     write_json(folder / TEMPLATE_FILE, data)
     return folder
 
 
-def freeze_template(batch: dict[str, Any], sku: str, new_name: str) -> Path:
+def freeze_template(batch: dict[str, Any], sku: str, new_name: str, *, client: str = "") -> Path:
     """把 smart 批次里某个品这一轮的成图 + 实际用过的 prompt 冻成 replace 模板。"""
     tpl = load_template(Path(batch["template"]))
     if tpl.get("mode") != "smart":
         fail("freeze 只用于 smart 模板的批次；replace 模板本来就是冻住的")
+    if "/" in new_name or "\\" in new_name:
+        fail("模板名不要带路径；要放进甲方夹用 --client")
     product = find_product(batch, sku)
     out_dir = Path(batch["output"]) / sku
     prompts = read_prompts(batch, sku, require_complete=True)
-    folder = TEMPLATES_DIR / new_name
+    parent = ensure_client(client) if client else TEMPLATES_DIR
+    folder = parent / new_name
     if folder.exists():
         fail(f"模板已存在：{folder}")
     fmt = template_output(tpl)["format"]
@@ -470,15 +638,19 @@ def freeze_template(batch: dict[str, Any], sku: str, new_name: str) -> Path:
         "name": new_name,
         "mode": "replace",
         "category": tpl.get("category", ""),
-        "language": tpl.get("language", ""),
-        "output": tpl.get("output") or DEFAULT_OUTPUT,
-        "text_policy": tpl.get("text_policy", "冻结母版全部文字、图标、版式；只换产品"),
         "slots": slots,
         "notes": [
             f"由 smart 模板「{tpl.get('name')}」的品 {product['sku']} 冻结而来",
             "每槽 prompt = 换货前缀 + 该品当时的生成 prompt，请通读一遍把「生成」口吻改成「保留」口吻",
         ],
     }
+    if not client:
+        data["language"] = tpl.get("language", "")
+        data["output"] = tpl.get("output") or DEFAULT_OUTPUT
+        data["text_policy"] = tpl.get("text_policy", "冻结母版全部文字、图标、版式；只换产品")
+    else:
+        data["output"] = {"ratio": template_output(tpl)["ratio"]}
+        register_client_template(client, new_name)
     if tpl.get("model"):
         data["model"] = tpl["model"]
     write_json(folder / TEMPLATE_FILE, data)
@@ -567,6 +739,82 @@ def default_output_dir(source: Path) -> Path:
     if name.endswith("系列"):
         name = name[:-2]
     return source.parent / f"{name}生成"
+
+
+def default_sort_dir(source: Path) -> Path:
+    source = source.resolve()
+    name = source.stem if source.is_file() else source.name
+    if name.endswith("系列"):
+        name = name[:-2]
+    return source.parent / f"{name}分类"
+
+
+def sort_products(source: Path, groups: dict[str, list[str]], output: Path | None = None) -> Path:
+    """按大类把品拷到源夹同级「分类」根：{类}/{SKU}/图。不改甲方源夹。"""
+    if not groups:
+        fail("至少要有一个大类")
+    products = {p["sku"]: p for p in scan_source(source)}
+    assigned: list[str] = []
+    cleaned: dict[str, list[str]] = {}
+    for name, skus in groups.items():
+        label = str(name).strip()
+        if not label or any(c in label for c in r'\/:*?"<>|'):
+            fail(f"大类名不合法：{name!r}")
+        if label in cleaned:
+            fail(f"大类重复：{label}")
+        ids = [str(s).strip() for s in skus if str(s).strip()]
+        if not ids:
+            fail(f"大类「{label}」没有品")
+        cleaned[label] = ids
+        assigned.extend(ids)
+    missing = [s for s in assigned if s not in products]
+    if missing:
+        fail("源里没有这些品：" + _join_skus(missing))
+    seen: set[str] = set()
+    dups: list[str] = []
+    for sku in assigned:
+        if sku in seen:
+            dups.append(sku)
+        seen.add(sku)
+    if dups:
+        fail("一个品分进了两个大类：" + _join_skus(list(dict.fromkeys(dups))))
+    leftover = [p["sku"] for p in products.values() if p["sku"] not in seen]
+    if leftover:
+        fail("还有品没分类：" + _join_skus(leftover) + "。大类即可，但每个品都要有类。")
+    dest = (output or default_sort_dir(source)).resolve()
+    if dest.resolve() == source.resolve() or dest.is_relative_to(source.resolve()):
+        fail("分类根不能建在甲方源夹里面")
+    dest.mkdir(parents=True, exist_ok=True)
+    for child in list(dest.iterdir()):
+        if not child.is_dir() or child.name.startswith("."):
+            continue
+        if child.name in cleaned:
+            shutil.rmtree(child)
+            continue
+        for sku_dir in list(child.iterdir()):
+            if sku_dir.is_dir() and sku_dir.name in seen:
+                shutil.rmtree(sku_dir)
+        if not any(child.iterdir()):
+            child.rmdir()
+    for label, skus in cleaned.items():
+        for sku in skus:
+            folder = dest / label / sku
+            folder.mkdir(parents=True)
+            for image in products[sku]["images"]:
+                src = Path(image)
+                shutil.copy2(src, folder / src.name)
+    write_json(dest / "分类.json", {
+        "source": str(source.resolve()),
+        "output": str(dest),
+        "groups": cleaned,
+    })
+    return dest
+
+
+def _join_skus(skus: list[str], limit: int = 20) -> str:
+    if len(skus) <= limit:
+        return "、".join(skus)
+    return "、".join(skus[:limit]) + f" 等 {len(skus)} 个"
 
 
 # ── 批次 ──────────────────────────────────────────────────
@@ -846,6 +1094,13 @@ def write_smart_packet(batch: dict[str, Any], tpl: dict[str, Any], product: dict
         f"- 图内文字语言：{tpl.get('language') or '（未写）'}",
         f"- 画幅 {out['ratio']}，{out['resolution']}，{out['format']}",
         f"- 文字策略：{tpl.get('text_policy') or '（未写）'}",
+    ]
+    if tpl.get("_client"):
+        lines.append(f"- 甲方：{tpl['_client']}（共用 {REQUIRE_FILE}）")
+    brand = tpl.get("brand") if isinstance(tpl.get("brand"), dict) else {}
+    if brand:
+        lines.append("- 品牌色板：" + "，".join(f"{k} {v}" for k, v in brand.items()))
+    lines += [
         "",
         "## 风格锁（每条 prompt 开头原样带上）",
         "",

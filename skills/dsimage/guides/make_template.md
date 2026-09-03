@@ -2,12 +2,48 @@
 
 模板 = `templates/<名>/` 夹：`template.json` + `h1.png…` + 可选 `assets/`。整夹拷走就能分享。
 
+同一甲方有多套时，不要摊在根下：建 `templates/{甲方}/`，共用一份 `要求.json`，下面每个模板一个夹。一个大文件夹里混了多个大类、要一类一模板再出图：整条流程见 `client.md`（先 `template client` 填要求，再 `sort` 分类）。
+
+```text
+templates/
+  默认电商套图/                 ← 零散
+  BeautyU/                     ← 甲方（夹名不要用 &）
+    要求.json                  ← 共用语言 / 风格 / 分辨率 / 色板；templates 列出下面的夹名
+    箱包单品报价/
+      template.json
+      h1.png …
+```
+
+```bash
+python scripts/dsimage.py template init <模板名> --from "<样图夹>" --mode replace --client <甲方>
+python scripts/dsimage.py template init <模板名> --blank --slots 9 --mode smart --client <甲方>
+```
+
+`--client` 会建甲方夹、写或更新 `要求.json` 的 `templates`。本套和别的套一样的字段（语言、风格、分辨率、brand）只写在 `要求.json`，不要再抄进 `template.json`；这一套独有的才写模板。出图时模板同名字段覆盖 `要求.json`。夹名不在 `templates` 列表里，脚本会拒绝加载。
+
+`要求.json`：
+
+```json
+{
+  "id": "BeautyU",
+  "name": "BEAUTY&U",
+  "templates": ["箱包单品报价"],
+  "language": "图内文字默认葡萄牙语（巴西）",
+  "generation": {"resolution": "1k", "format": "png", "quality": "high"},
+  "style": "专业商务、产品主导",
+  "brand": {"background": "#F3F3F3", "text": "#111111", "accent": "#D6B77A"}
+}
+```
+
+`id` 必须等于甲方夹名。分享整甲方就拷 `{甲方}/`；只把其中一套丢到根下当零散时，先把 `要求.json` 里的 language / generation / style / brand 写进那份 `template.json`。
+
 ## 从甲方样图建 replace 模板
 
 甲方给了一套做好的图（一个品 9 张），以后只换品。
 
 ```bash
 python scripts/dsimage.py template init <模板名> --from "<样图夹>" --mode replace --category "<品类>" --language "<图内文字语言>"
+# 同一甲方还有别的套：加上 --client <甲方>，语言写进 要求.json 而不是这条
 ```
 
 脚本按文件名自然顺序把样图拷成 `h1.png…`，写骨架，`notes[0]` 记着谁对谁。**打开每张图核对顺序**：主图是不是 h1、顺序对不对；不对就改文件名和 `slots[].example`。
@@ -43,7 +79,7 @@ python scripts/dsimage.py template check <模板名>
 
 ## 从 smart 结果冻成 replace
 
-`template freeze <成图根> <SKU> <新名>`，见 `smart.md`。
+`template freeze <成图根> <SKU> <新名>`（可加 `--client <甲方>`），见 `smart.md`。
 
 ## template.json 字段
 
@@ -78,4 +114,6 @@ python scripts/dsimage.py template check <模板名>
 }
 ```
 
-`template check` 会查：示例图在不在、refs 引用的文件在不在、占位符合法、`{vary}` 有列表、`prompt_by_kind` / `refs_by_kind` / `brief_by_kind` 键在 `product_kinds` 里、需要 `@product.back` 的模板有没有 `derive.back`、deliver 比例和 ratio 一致。
+`language` / `style` / `output` 在甲方夹里可省，跟 `要求.json`；这一套不一样才写。smart 的 `style`：模板和 `要求.json` 都没有则校验不过。
+
+`template check` 会查：示例图在不在、refs 引用的文件在不在、占位符合法、`{vary}` 有列表、`prompt_by_kind` / `refs_by_kind` / `brief_by_kind` 键在 `product_kinds` 里、需要 `@product.back` 的模板有没有 `derive.back`、deliver 比例和 ratio 一致。甲方夹还会查 `要求.json` 的 `templates` 是否和磁盘上的模板夹一一对应。
