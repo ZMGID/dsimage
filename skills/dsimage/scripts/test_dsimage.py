@@ -285,7 +285,7 @@ class SortTests(TempTemplatesMixin, unittest.TestCase):
             "双肩包": ["V26007", "V26008"],
             "腰包": ["V26025"],
         })
-        self.assertEqual(dest, source.parent / "VE男包分类")
+        self.assertTrue(dest.samefile(source.parent / "VE男包分类"))
         self.assertTrue((dest / "双肩包" / "V26007" / "V26007.jpg").is_file())
         self.assertTrue((dest / "双肩包" / "V26008" / "V26008正面.jpg").is_file())
         self.assertTrue((dest / "腰包" / "V26025" / "未标题-7.png").is_file())
