@@ -5,7 +5,7 @@ description: 电商商品图技能，也能当普通生图工具用。套图走�
 
 # dsimage
 
-脚本出图。你定**路**、看图、在该写的地方写 prompt、改模板。命令在本技能目录跑（Windows `python`，其他 `python3`）：`python scripts/dsimage.py <子命令>`。
+脚本出图。你定**路**、看图、在该写的地方写 prompt、改模板。命令在本技能目录用 Dsivio 内置 Python 跑：`dsivio python scripts/dsimage.py <子命令>`（bash 与 PowerShell 通用；内置 Python 3.12 已带 Pillow，不需要系统 Python 或 pip）。只有 `dsivio python` 报告内置运行时缺失（退出码 127）时，才把 `dsivio python` 换成系统 Python 3（Windows `python`，其他 `python3`）跑同一命令。不在 Dsivio 里（Claude Code、Codex、Cursor、OpenClaw 等）时没有 `dsivio` 命令（shell 报 command not found、退出码 127；PowerShell 报“无法识别”），同样直接换成系统 Python 3。
 
 一个模板 = `templates/<名>/`：`template.json` + `h1.png…` + 可选 `assets/`。同一甲方多套放 `templates/{甲方}/`，共用 `要求.json`。
 有 `.env` 就能出图；没有 → `SETUP.md`。对话里给了接口地址 / key → 立刻按 `SETUP.md` 第 2 步（`setup env` 不带 `--model`），拉列表等人选模型。不回显 key，不手改 `.env`。
@@ -92,12 +92,12 @@ smart 多个品：一品一个子代理，指令里只给 `brief.md` 路径和�
 要铺一批时：**先出两个品**交给用户审核（颜色 / 款式差一些的更好；不够两个就全出）。有问题改对应模板再 redo 这两个；点头了才 `run` 铺其余。单品源没有「其余」，试出过了就是完。
 
 ```bash
-python scripts/dsimage.py init --template <名> --source <甲方夹|单品夹|一张图> [--out <成图根>]
-python scripts/dsimage.py run <成图根> --only <SKU1> <SKU2>   # 先出两个
-python scripts/dsimage.py preview <成图根> --only <SKU1> <SKU2>
-python scripts/dsimage.py run <成图根>                        # 点头后铺；已有的跳过；--redo 重出
-python scripts/dsimage.py status <成图根>
-python scripts/dsimage.py deliver <成图根>                    # 模板写了 output.deliver 才有必要
+dsivio python scripts/dsimage.py init --template <名> --source <甲方夹|单品夹|一张图> [--out <成图根>]
+dsivio python scripts/dsimage.py run <成图根> --only <SKU1> <SKU2>   # 先出两个
+dsivio python scripts/dsimage.py preview <成图根> --only <SKU1> <SKU2>
+dsivio python scripts/dsimage.py run <成图根>                        # 点头后铺；已有的跳过；--redo 重出
+dsivio python scripts/dsimage.py status <成图根>
+dsivio python scripts/dsimage.py deliver <成图根>                    # 模板写了 output.deliver 才有必要
 ```
 
 smart 多一步：先给这两个试出品写 `prompts.json` 再 `run --only`；模板定了、用户点头后，再写其余品的 prompt 铺开。

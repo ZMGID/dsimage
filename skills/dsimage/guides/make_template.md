@@ -19,8 +19,8 @@ templates/
 ```
 
 ```bash
-python scripts/dsimage.py template init <模板名> --from "<样图夹>" --mode replace --client <甲方>
-python scripts/dsimage.py template init <模板名> --blank --slots 9 --mode smart --client <甲方>
+dsivio python scripts/dsimage.py template init <模板名> --from "<样图夹>" --mode replace --client <甲方>
+dsivio python scripts/dsimage.py template init <模板名> --blank --slots 9 --mode smart --client <甲方>
 ```
 
 `--client` 会建甲方夹、写或更新 `要求.json` 的 `templates`。本套和别的套一样的字段（语言、风格、分辨率、brand）只写在 `要求.json`，不要再抄进 `template.json`；这一套独有的才写模板。出图时模板同名字段覆盖 `要求.json`。夹名不在 `templates` 列表里，脚本会拒绝加载。
@@ -46,7 +46,7 @@ python scripts/dsimage.py template init <模板名> --blank --slots 9 --mode sma
 甲方给了一套做好的图（一个品 9 张），以后只换品。
 
 ```bash
-python scripts/dsimage.py template init <模板名> --from "<样图夹>" --mode replace --category "<品类>" --language "<图内文字语言>"
+dsivio python scripts/dsimage.py template init <模板名> --from "<样图夹>" --mode replace --category "<品类>" --language "<图内文字语言>"
 # 同一甲方还有别的套：加上 --client <甲方>，语言写进 要求.json 而不是这条
 ```
 
@@ -70,7 +70,7 @@ python scripts/dsimage.py template init <模板名> --from "<样图夹>" --mode 
 - 模板要用的固定素材（logo、背面参考）放 `assets/`，refs 里写相对路径。
 
 ```bash
-python scripts/dsimage.py template check <模板名>
+dsivio python scripts/dsimage.py template check <模板名>
 ```
 
 通过后按 `replace.md` 用两个品试出，对着样图改到像，再铺。

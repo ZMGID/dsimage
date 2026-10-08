@@ -34,7 +34,7 @@ SKILL.md 第一问里已经答过的（风格 / 张数 / 语言 / 分辨率）�
 ## 3. 建 smart 模板
 
 ```bash
-python scripts/dsimage.py template init <模板名> --blank --slots 7 --mode smart --category "<品类>" --language "<语言>"
+dsivio python scripts/dsimage.py template init <模板名> --blank --slots 7 --mode smart --category "<品类>" --language "<语言>"
 ```
 
 填 `templates/<模板名>/template.json`：
@@ -46,7 +46,7 @@ python scripts/dsimage.py template init <模板名> --blank --slots 7 --mode sma
 - 用户有参考图，可拷进模板夹填 `example`（smart 里只当版式参考）。
 
 ```bash
-python scripts/dsimage.py template check <模板名>
+dsivio python scripts/dsimage.py template check <模板名>
 ```
 
 ## 4. 出图

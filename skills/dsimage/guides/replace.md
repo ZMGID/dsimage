@@ -9,15 +9,15 @@
 ## 流程
 
 ```bash
-python scripts/dsimage.py template list
-python scripts/dsimage.py init --template <模板名> --source "<甲方大文件夹>"
+dsivio python scripts/dsimage.py template list
+dsivio python scripts/dsimage.py init --template <模板名> --source "<甲方大文件夹>"
 ```
 
 `init` 打印每个品选到的白图；多图的品列出候选。逐个看图，定白图：
 
 ```bash
-python scripts/dsimage.py set "<成图根>" V26008 --front "<路径>" [--back "<路径>"]
-python scripts/dsimage.py set "<成图根>" V26031 --kind bag        # 模板有 product_kinds 且这个品不是默认品类
+dsivio python scripts/dsimage.py set "<成图根>" V26008 --front "<路径>" [--back "<路径>"]
+dsivio python scripts/dsimage.py set "<成图根>" V26031 --kind bag        # 模板有 product_kinds 且这个品不是默认品类
 ```
 
 品没有背面图、模板有槽位要背面（`init` 那行显示「背面 派生」）→ 先派生并看一眼：
@@ -25,9 +25,9 @@ python scripts/dsimage.py set "<成图根>" V26031 --kind bag        # 模板有
 打开 `_dsimage/V26007/back.png`：同一个产品的背面？颜色、材质、五金、比例对不对？不对 → 改模板 `derive.back.prompt`（或加一张 `assets/` 背面参考进 `derive.back.refs`）后 `derive --redo`；或者自己找一张背面图 `set --back`。对了再出套图。默认先出两个品（颜色 / 款式差一些的更好）：
 
 ```bash
-python scripts/dsimage.py derive "<成图根>" --only V26007 V26008
-python scripts/dsimage.py run "<成图根>" --only V26007 V26008
-python scripts/dsimage.py preview "<成图根>" --only V26007 V26008
+dsivio python scripts/dsimage.py derive "<成图根>" --only V26007 V26008
+dsivio python scripts/dsimage.py run "<成图根>" --only V26007 V26008
+dsivio python scripts/dsimage.py preview "<成图根>" --only V26007 V26008
 ```
 
 打开预览图对照模板示例图。查四件事：版式没动；文字/图标一个没多没少；产品换成了这个品（形、色、材质、五金、logo、挂件）；背面页的颜色跟产品图而不是母版。
@@ -36,9 +36,9 @@ python scripts/dsimage.py preview "<成图根>" --only V26007 V26008
 用户点头后铺全部（已出的跳过）：
 
 ```bash
-python scripts/dsimage.py run "<成图根>"
-python scripts/dsimage.py status "<成图根>"
-python scripts/dsimage.py deliver "<成图根>"      # 模板 output.deliver 有值时；压到各品夹 deliver/，成图原件不动
+dsivio python scripts/dsimage.py run "<成图根>"
+dsivio python scripts/dsimage.py status "<成图根>"
+dsivio python scripts/dsimage.py deliver "<成图根>"      # 模板 output.deliver 有值时；压到各品夹 deliver/，成图原件不动
 ```
 
 失败的槽位同一条 `run` 再跑一次即可。

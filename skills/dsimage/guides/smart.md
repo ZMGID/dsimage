@@ -9,9 +9,9 @@
 ## 流程
 
 ```bash
-python scripts/dsimage.py init --template <模板名或甲方/模板名> --source "<甲方夹|单品夹|一张图>"
+dsivio python scripts/dsimage.py init --template <模板名或甲方/模板名> --source "<甲方夹|单品夹|一张图>"
 # 多图的品先 set --front；见 SKILL.md
-python scripts/dsimage.py run "<成图根>" --only <SKU1> <SKU2>    # 先给这两个写 brief
+dsivio python scripts/dsimage.py run "<成图根>" --only <SKU1> <SKU2>    # 先给这两个写 brief
 ```
 
 第一次 `run` 不出图：给这两个还没 prompt 的品写 `_dsimage/<SKU>/brief.md` + `prompts.json`（键 = 槽位 id，值空）。其余品先别写。
@@ -33,9 +33,9 @@ python scripts/dsimage.py run "<成图根>" --only <SKU1> <SKU2>    # 先给这�
 多个品：先挑两个试出品写 `prompts.json`（一品一个子代理也行）。主会话指令只带该品 `brief.md` 路径和产品图，只许写该品 `prompts.json`（不出图、不改模板、不 init）。这两个出完、用户点头后，再给其余写 prompt，主会话一条 `run` 铺开。
 
 ```bash
-python scripts/dsimage.py run "<成图根>" --only <SKU1> <SKU2>     # 先出两个
-python scripts/dsimage.py preview "<成图根>" --only <SKU1> <SKU2>
-python scripts/dsimage.py run "<成图根>"                          # 点头后铺其余
+dsivio python scripts/dsimage.py run "<成图根>" --only <SKU1> <SKU2>     # 先出两个
+dsivio python scripts/dsimage.py preview "<成图根>" --only <SKU1> <SKU2>
+dsivio python scripts/dsimage.py run "<成图根>"                          # 点头后铺其余
 ```
 
 改 prompt 后 `run --redo --only <SKU> --slot H3` 只重出那槽。
@@ -45,7 +45,7 @@ python scripts/dsimage.py run "<成图根>"                          # 点头后
 一个品的整套效果被用户认可，后面同类品只想换货：
 
 ```bash
-python scripts/dsimage.py template freeze "<成图根>" <SKU> <新模板名>   # 可加 --client <甲方>
+dsivio python scripts/dsimage.py template freeze "<成图根>" <SKU> <新模板名>   # 可加 --client <甲方>
 ```
 
 会把这个品的 9 张成图拷成新模板的示例图，每槽 prompt = 换货前缀 + 当时的生成 prompt。打开新模板 `template.json` 通读一遍，把「生成一个…」的口吻改成「保留母版…只换产品」，`template check` 通过后就是 replace 模板。

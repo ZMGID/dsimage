@@ -4,7 +4,7 @@
 > `按 https://raw.githubusercontent.com/ZMGID/dsimage/main/skills/dsimage/SETUP.md 安装并配置 dsimage`
 
 用户说「更新 dsimage」→ 直接看第 4 节。
-下面所有命令都在**技能目录**跑（Windows `python`，macOS/Linux `python3`）。
+下面所有命令都在**技能目录**跑，写作 `dsivio python scripts/dsimage.py …`（Dsivio 内置 Python 3.12）。只有 `dsivio python` 报告内置运行时缺失（退出码 127）时，才把 `dsivio python` 换成系统 Python 3（Windows `python`，macOS/Linux `python3`）跑同一命令。不在 Dsivio 里（Claude Code、Codex、Cursor、OpenClaw 等）时没有 `dsivio` 命令（shell 报 command not found、退出码 127；PowerShell 报“无法识别”），同样直接换成系统 Python 3。
 
 ## 1. 装文件
 
@@ -38,10 +38,10 @@
 
 | URL 里的主机 | 命令 |
 |---|---|
-| `api.openai.com` | `python scripts/dsimage.py setup env --provider openai --key <KEY>` |
-| `api.x.ai` | `python scripts/dsimage.py setup env --provider grok --key <KEY>` |
-| `generativelanguage.googleapis.com` | `python scripts/dsimage.py setup env --provider gemini --key <KEY>` |
-| 其他 | `python scripts/dsimage.py setup env --provider custom --base-url <用户给的地址> --key <KEY>` |
+| `api.openai.com` | `dsivio python scripts/dsimage.py setup env --provider openai --key <KEY>` |
+| `api.x.ai` | `dsivio python scripts/dsimage.py setup env --provider grok --key <KEY>` |
+| `generativelanguage.googleapis.com` | `dsivio python scripts/dsimage.py setup env --provider gemini --key <KEY>` |
+| 其他 | `dsivio python scripts/dsimage.py setup env --provider custom --base-url <用户给的地址> --key <KEY>` |
 
 它会写 `.env`，再拉模型列表打出来（官方三家和网关都拉；拉不到就用内置名单）。把列表原样给用户，**推荐的可以标出来并建议用哪个**，然后停下来等他回模型名或序号。
 
@@ -50,7 +50,7 @@
 用户选定后才：
 
 ```bash
-python scripts/dsimage.py setup model <用户选的模型名>
+dsivio python scripts/dsimage.py setup model <用户选的模型名>
 ```
 
 这条会**直接试出一张**（拿模板示例图当参考，出一张白底图，1k，一次费用），不用再问「要不要试」。成功会打印图片路径和库里的模板清单。打开图看一眼是不是白底上的那个包。
@@ -74,12 +74,12 @@ python scripts/dsimage.py setup model <用户选的模型名>
 ## 4. 更新
 
 ```bash
-python scripts/dsimage.py update            # 从 GitHub 拉 main 覆盖技能文件
-python scripts/dsimage.py update --dry-run  # 先看会改什么
-python scripts/dsimage.py update --from <本地仓库夹或 zip>   # 没网 / 想用本地版本
+dsivio python scripts/dsimage.py update            # 从 GitHub 拉 main 覆盖技能文件
+dsivio python scripts/dsimage.py update --dry-run  # 先看会改什么
+dsivio python scripts/dsimage.py update --from <本地仓库夹或 zip>   # 没网 / 想用本地版本
 ```
 
-只动 `SKILL.md`、`SETUP.md`、`guides/`、`knowledge/`、`scripts/` 和内置模板；**`.env` 和用户自建模板原位不动**（自建 = 新版里没有的模板夹或甲方夹）。已装目录本身就是仓库克隆时它会改走 `git pull`。跑完打印新增 / 更新 / 删除了什么和模板清单，照着汇报；再跑一遍 `python scripts/test_dsimage.py` 确认。
+只动 `SKILL.md`、`SETUP.md`、`guides/`、`knowledge/`、`scripts/` 和内置模板；**`.env` 和用户自建模板原位不动**（自建 = 新版里没有的模板夹或甲方夹）。已装目录本身就是仓库克隆时它会改走 `git pull`。跑完打印新增 / 更新 / 删除了什么和模板清单，照着汇报；再跑一遍 `dsivio python scripts/test_dsimage.py` 确认。
 
 找不到已装目录就按第 1 节的表逐个找；找不到问用户。
 
